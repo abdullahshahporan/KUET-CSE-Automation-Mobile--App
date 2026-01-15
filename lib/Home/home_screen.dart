@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../Attendance/attendance_screen.dart';
 import '../Result/result_screen.dart';
 import '../Curriculum/curriculum_screen.dart';
+import 'package:kuet_cse_automation/Home/Features/Schedule/unified_schedule_screen.dart';
+import 'package:kuet_cse_automation/Home/Features/Assignment/Assignment_Screen.dart';
+import 'package:kuet_cse_automation/Home/Features/Notice/Notice_Screen.dart';
+import 'package:kuet_cse_automation/Home/Features/Attendance/Attendance_tracker_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -17,60 +21,6 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Welcome Card
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.blue[600]!, Colors.cyan[500]!],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.blue.withOpacity(0.3),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.computer,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Welcome!',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'KUET Computer Science & Engineering',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w300,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            
             // Features Grid
             Text(
               'Features',
@@ -118,6 +68,7 @@ class HomeScreen extends StatelessWidget {
                     MaterialPageRoute(builder: (context) => const CurriculumScreen()),
                   ),
                 ),
+                
                 _buildFeatureCard(
                   icon: Icons.schedule,
                   title: 'Class Schedule',
@@ -132,18 +83,25 @@ class HomeScreen extends StatelessWidget {
                   isDarkMode: isDarkMode,
                   onTap: () {},
                 ),
+               
                 _buildFeatureCard(
-                  icon: Icons.book,
-                  title: 'Resources',
+                  context: context,
+                  icon: Icons.present_to_all,
+                  title: 'Attendance Tracker',
                   color: Colors.indigo,
                   isDarkMode: isDarkMode,
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AttendanceTrackerScreen()),
+                    );
+                  },
                 ),
+                
               ],
             ),
             const SizedBox(height: 24),
-            
-            // Recent Updates
+           // Recent Updates
             Text(
               'Recent Updates',
               style: TextStyle(
@@ -177,6 +135,37 @@ class HomeScreen extends StatelessWidget {
               color: Colors.red,
               isDarkMode: isDarkMode,
             ),
+            const SizedBox(height: 24),
+            Text(
+              'Upcoming Schedules',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: isDarkMode ? Colors.white : Colors.black87,
+              ),
+            ),
+            
+            _buildUpdateCard(
+              title: 'Class Rescheduled',
+              subtitle: 'Algorithm Analysis - Tomorrow 10 AM',
+              time: '5 hours ago',
+              icon: Icons.event,
+              color: Colors.orange,
+              isDarkMode: isDarkMode,
+            ),
+            _buildUpdateCard(
+              title: 'Exam Notice',
+              subtitle: 'Mid-term exams starting next week',
+              time: '1 day ago',
+              icon: Icons.warning,
+              color: Colors.red,
+              isDarkMode: isDarkMode,
+            ),
+            const SizedBox(height: 24),
+            
+            
+            
+           
           ],
         ),
       ),
@@ -189,6 +178,7 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildFeatureCard({
+    required BuildContext context,
     required IconData icon,
     required String title,
     required Color color,

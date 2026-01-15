@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:intl/intl.dart';
+import 'package:kuet_cse_automation/Hamburger%20Menu/Faculty_Info_screen.dart';
+import 'package:kuet_cse_automation/Hamburger%20Menu/Result_Screen.dart';
+//import 'package:kuet_cse_automation/Profile/profile_screen.dart';
 
 class HamburgerDrawer extends StatefulWidget {
   final bool isDarkMode;
@@ -151,24 +154,33 @@ class _HamburgerDrawerState extends State<HamburgerDrawer> {
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 children: [
                   _buildMenuItem(
-                    icon: Icons.home,
-                    title: 'Home',
+                    icon: Icons.school,
+                    title: 'Faculty Info',
                     onTap: () {
                       Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const FacultyInfoScreen()),
+                      );
                     },
                   ),
                   _buildMenuItem(
-                    icon: Icons.schedule,
-                    title: 'Schedule',
+                    icon: Icons.book_online_sharp,
+                    title: 'Result',
                     onTap: () {
                       Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ResultScreen()),
+                      );
                     },
                   ),
                   _buildMenuItem(
                     icon: Icons.library_books,
-                    title: 'Resources',
+                    title: 'Curriculum',
                     onTap: () {
                       Navigator.pop(context);
+                      // Curriculum screen can be added later
                     },
                   ),
                   _buildMenuItem(
@@ -176,6 +188,7 @@ class _HamburgerDrawerState extends State<HamburgerDrawer> {
                     title: 'Profile',
                     onTap: () {
                       Navigator.pop(context);
+                      // Navigate to bottom nav Profile tab
                     },
                   ),
                   const Divider(height: 1),

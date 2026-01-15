@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:kuet_cse_automation/Common%20Screen/main_bottom_navbar_screen.dart';
+import 'package:kuet_cse_automation/Auth/Sign_In_Screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -30,7 +30,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     
     Timer(const Duration(seconds: 4), () {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const MainBottomNavBarScreen()),
+        MaterialPageRoute(builder: (context) => const SignInScreen()),
       );
     });
   }
