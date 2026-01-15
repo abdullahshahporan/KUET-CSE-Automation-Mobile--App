@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../Attendance/attendance_screen.dart';
+import '../Result/result_screen.dart';
+import '../Curriculum/curriculum_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -86,6 +89,36 @@ class HomeScreen extends StatelessWidget {
               mainAxisSpacing: 16,
               children: [
                 _buildFeatureCard(
+                  icon: Icons.fact_check,
+                  title: 'Attendance',
+                  color: Colors.green,
+                  isDarkMode: isDarkMode,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AttendanceScreen()),
+                  ),
+                ),
+                _buildFeatureCard(
+                  icon: Icons.grade,
+                  title: 'Results',
+                  color: Colors.blue,
+                  isDarkMode: isDarkMode,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ResultScreen()),
+                  ),
+                ),
+                _buildFeatureCard(
+                  icon: Icons.library_books,
+                  title: 'Curriculum',
+                  color: Colors.teal,
+                  isDarkMode: isDarkMode,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const CurriculumScreen()),
+                  ),
+                ),
+                _buildFeatureCard(
                   icon: Icons.schedule,
                   title: 'Class Schedule',
                   color: Colors.purple,
@@ -93,30 +126,9 @@ class HomeScreen extends StatelessWidget {
                   onTap: () {},
                 ),
                 _buildFeatureCard(
-                  icon: Icons.assignment,
-                  title: 'Assignments',
-                  color: Colors.orange,
-                  isDarkMode: isDarkMode,
-                  onTap: () {},
-                ),
-                _buildFeatureCard(
-                  icon: Icons.grade,
-                  title: 'Results',
-                  color: Colors.green,
-                  isDarkMode: isDarkMode,
-                  onTap: () {},
-                ),
-                _buildFeatureCard(
                   icon: Icons.notifications,
                   title: 'Notices',
                   color: Colors.red,
-                  isDarkMode: isDarkMode,
-                  onTap: () {},
-                ),
-                _buildFeatureCard(
-                  icon: Icons.people,
-                  title: 'Faculty',
-                  color: Colors.teal,
                   isDarkMode: isDarkMode,
                   onTap: () {},
                 ),
