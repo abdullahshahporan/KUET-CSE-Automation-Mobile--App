@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../Attendance/attendance_screen.dart';
+import '../Result/result_screen.dart';
+import '../Curriculum/curriculum_screen.dart';
 import 'package:kuet_cse_automation/Home/Features/Schedule/unified_schedule_screen.dart';
 import 'package:kuet_cse_automation/Home/Features/Assignment/Assignment_Screen.dart';
 import 'package:kuet_cse_automation/Home/Features/Notice/Notice_Screen.dart';
@@ -36,44 +39,49 @@ class HomeScreen extends StatelessWidget {
               mainAxisSpacing: 16,
               children: [
                 _buildFeatureCard(
-                  context: context,
-                  icon: Icons.schedule,
-                  title: 'Schedule',
-                  color: Colors.purple,
+                  icon: Icons.fact_check,
+                  title: 'Attendance',
+                  color: Colors.green,
                   isDarkMode: isDarkMode,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const UnifiedScheduleScreen()),
-                    );
-                  },
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AttendanceScreen()),
+                  ),
                 ),
                 _buildFeatureCard(
-                  context: context,
-                  icon: Icons.assignment,
-                  title: 'Assignments',
-                  color: Colors.orange,
+                  icon: Icons.grade,
+                  title: 'Results',
+                  color: Colors.blue,
                   isDarkMode: isDarkMode,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const AssignmentScreen()),
-                    );
-                  },
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ResultScreen()),
+                  ),
+                ),
+                _buildFeatureCard(
+                  icon: Icons.library_books,
+                  title: 'Curriculum',
+                  color: Colors.teal,
+                  isDarkMode: isDarkMode,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const CurriculumScreen()),
+                  ),
                 ),
                 
                 _buildFeatureCard(
-                  context: context,
+                  icon: Icons.schedule,
+                  title: 'Class Schedule',
+                  color: Colors.purple,
+                  isDarkMode: isDarkMode,
+                  onTap: () {},
+                ),
+                _buildFeatureCard(
                   icon: Icons.notifications,
                   title: 'Notices',
                   color: Colors.red,
                   isDarkMode: isDarkMode,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const NoticeScreen()),
-                    );
-                  },
+                  onTap: () {},
                 ),
                
                 _buildFeatureCard(
