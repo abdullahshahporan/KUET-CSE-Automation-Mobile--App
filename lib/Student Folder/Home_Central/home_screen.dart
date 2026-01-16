@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../Student Folder/Attendance/attendance_screen.dart';
-import '../Student Folder/Result/result_screen.dart';
-import '../Student Folder/Curriculum/curriculum_screen.dart';
+import '../Attendance/attendance_screen.dart';
+import '../Result/result_screen.dart';
+import '../Curriculum/curriculum_screen.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Home/Features/Attendance/Attendance_tracker_screen.dart';
 
 class HomeScreen extends StatelessWidget {

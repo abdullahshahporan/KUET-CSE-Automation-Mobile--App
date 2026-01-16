@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kuet_cse_automation/Home/Features/Schedule/class_schedule/class_schedule_providers.dart';
+import 'package:kuet_cse_automation/Student%20Folder/Home/Features/Schedule/class_schedule/class_schedule_providers.dart';
 import 'package:intl/intl.dart';
 
 class ClassScheduleScreen extends ConsumerWidget {

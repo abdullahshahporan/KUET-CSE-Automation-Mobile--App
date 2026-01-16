@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:kuet_cse_automation/Auth/Sign_Up_Screen.dart';
 import 'package:kuet_cse_automation/Auth/Reset_Password_Screen.dart';
-import 'package:kuet_cse_automation/Common%20Screen/main_bottom_navbar_screen.dart';
+import 'package:kuet_cse_automation/Student%20Folder/Common%20Screen/main_bottom_navbar_screen.dart';
+import 'package:kuet_cse_automation/Tacher%20Folder/Teacher_nav_bar.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -17,9 +18,10 @@ class _SignInScreenState extends State<SignInScreen> {
   bool _obscurePassword = true;
   bool _isLoading = false;
 
-  // Test credentials
-  static const String _testEmail = 'test@gmail.com';
-  static const String _testPassword = 'A123456@';
+  // Demo credentials for student and teacher
+  static const String _studentEmail = 'poran2107056@stud.kuet.ac.bd';
+  static const String _teacherEmail = 'imran@cse.kuet.ac.bd';
+  static const String _demoPassword = '123456@';
 
   @override
   void dispose() {
@@ -35,13 +37,31 @@ class _SignInScreenState extends State<SignInScreen> {
       // Simulate API call
       await Future.delayed(const Duration(seconds: 1));
 
-      if (_emailController.text == _testEmail &&
-          _passwordController.text == _testPassword) {
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+
+      // Check if credentials match
+      if ((email == _studentEmail || email == _teacherEmail) &&
+          password == _demoPassword) {
         if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const MainBottomNavBarScreen()),
-          );
+          // Route based on email domain
+          if (email.endsWith('@cse.kuet.ac.bd')) {
+            // Teacher login
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const TeacherMainBottomNavBarScreen(),
+              ),
+            );
+          } else if (email.endsWith('@stud.kuet.ac.bd')) {
+            // Student login
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const MainBottomNavBarScreen(),
+              ),
+            );
+          }
         }
       } else {
         if (mounted) {
@@ -73,7 +93,7 @@ class _SignInScreenState extends State<SignInScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 40),
-                
+
                 // Logo/Icon
                 Center(
                   child: Container(
@@ -120,7 +140,9 @@ class _SignInScreenState extends State<SignInScreen> {
                         'Sign in to KUET CSE Automation',
                         style: TextStyle(
                           fontSize: 16,
-                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                          color: isDarkMode
+                              ? Colors.grey[400]
+                              : Colors.grey[600],
                         ),
                       ),
                     ],
@@ -145,7 +167,9 @@ class _SignInScreenState extends State<SignInScreen> {
                     hintText: 'Enter your email',
                     prefixIcon: const Icon(Icons.email_outlined),
                     filled: true,
-                    fillColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                    fillColor: isDarkMode
+                        ? const Color(0xFF1E1E1E)
+                        : Colors.white,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -153,19 +177,26 @@ class _SignInScreenState extends State<SignInScreen> {
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
-                        color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+                        color: isDarkMode
+                            ? Colors.grey[800]!
+                            : Colors.grey[200]!,
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.blue[600]!, width: 2),
+                      borderSide: BorderSide(
+                        color: Colors.blue[600]!,
+                        width: 2,
+                      ),
                     ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
                     }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                    if (!RegExp(
+                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                    ).hasMatch(value)) {
                       return 'Please enter a valid email';
                     }
                     return null;
@@ -191,14 +222,18 @@ class _SignInScreenState extends State<SignInScreen> {
                     prefixIcon: const Icon(Icons.lock_outlined),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
                       ),
                       onPressed: () {
                         setState(() => _obscurePassword = !_obscurePassword);
                       },
                     ),
                     filled: true,
-                    fillColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                    fillColor: isDarkMode
+                        ? const Color(0xFF1E1E1E)
+                        : Colors.white,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -206,12 +241,17 @@ class _SignInScreenState extends State<SignInScreen> {
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
-                        color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+                        color: isDarkMode
+                            ? Colors.grey[800]!
+                            : Colors.grey[200]!,
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.blue[600]!, width: 2),
+                      borderSide: BorderSide(
+                        color: Colors.blue[600]!,
+                        width: 2,
+                      ),
                     ),
                   ),
                   validator: (value) {
@@ -230,7 +270,9 @@ class _SignInScreenState extends State<SignInScreen> {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const ResetPasswordScreen()),
+                        MaterialPageRoute(
+                          builder: (context) => const ResetPasswordScreen(),
+                        ),
                       );
                     },
                     child: Text(
@@ -264,7 +306,9 @@ class _SignInScreenState extends State<SignInScreen> {
                             width: 24,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : const Text(
@@ -292,7 +336,9 @@ class _SignInScreenState extends State<SignInScreen> {
                       child: Text(
                         'OR',
                         style: TextStyle(
-                          color: isDarkMode ? Colors.grey[500] : Colors.grey[600],
+                          color: isDarkMode
+                              ? Colors.grey[500]
+                              : Colors.grey[600],
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -314,14 +360,18 @@ class _SignInScreenState extends State<SignInScreen> {
                       Text(
                         "Don't have an account? ",
                         style: TextStyle(
-                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                          color: isDarkMode
+                              ? Colors.grey[400]
+                              : Colors.grey[600],
                         ),
                       ),
                       TextButton(
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const SignUpScreen()),
+                            MaterialPageRoute(
+                              builder: (context) => const SignUpScreen(),
+                            ),
                           );
                         },
                         child: Text(
@@ -350,10 +400,14 @@ class _SignInScreenState extends State<SignInScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.info_outline, color: Colors.amber[700], size: 20),
+                          Icon(
+                            Icons.info_outline,
+                            color: Colors.amber[700],
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Text(
-                            'Test Credentials',
+                            'Demo Credentials',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.amber[900],
@@ -363,16 +417,25 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Email: $_testEmail',
+                        'Student: $_studentEmail',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.amber[900],
                         ),
                       ),
                       Text(
-                        'Password: $_testPassword',
+                        'Teacher: $_teacherEmail',
                         style: TextStyle(
                           fontSize: 12,
+                          color: Colors.amber[900],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Password: $_demoPassword',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
                           color: Colors.amber[900],
                         ),
                       ),

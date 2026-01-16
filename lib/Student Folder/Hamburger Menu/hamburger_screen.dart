@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:intl/intl.dart';
-import 'package:kuet_cse_automation/Hamburger%20Menu/Faculty_Info_screen.dart';
-import 'package:kuet_cse_automation/Hamburger%20Menu/Result_Screen.dart';
+import 'package:kuet_cse_automation/Student%20Folder/Hamburger%20Menu/Faculty_Info_screen.dart';
+import 'package:kuet_cse_automation/Student%20Folder/Hamburger%20Menu/Result_Screen.dart';
 //import 'package:kuet_cse_automation/Profile/profile_screen.dart';
 
 class HamburgerDrawer extends StatefulWidget {

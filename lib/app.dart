@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kuet_cse_automation/Common%20Screen/splash_screen.dart';
+import 'package:kuet_cse_automation/Student%20Folder/Common%20Screen/splash_screen.dart';
 import 'package:kuet_cse_automation/app_theme.dart';
 import 'package:provider/provider.dart' as provider;
 

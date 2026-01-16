@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kuet_cse_automation/Home/Features/Schedule/exam_schedule/exam_schedule_providers.dart';
+import 'package:kuet_cse_automation/Student%20Folder/Home/Features/Schedule/exam_schedule/exam_schedule_providers.dart';
 
 class ExamScheduleScreen extends ConsumerWidget {
   const ExamScheduleScreen({super.key});

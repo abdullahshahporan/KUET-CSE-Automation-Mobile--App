@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
-import '../Student Folder/Attendance/attendance_screen.dart';
-import '../Student Folder/Result/result_screen.dart';
-import '../Student Folder/Curriculum/curriculum_screen.dart';
-import 'package:kuet_cse_automation/Student%20Folder/Home/Features/Attendance/Attendance_tracker_screen.dart';
+import 'package:kuet_cse_automation/Tacher%20Folder/Courses/Course_info.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class TeacherHomeScreen extends StatelessWidget {
+  const TeacherHomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
       backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.grey[100],
       body: SingleChildScrollView(
@@ -20,7 +17,7 @@ class HomeScreen extends StatelessWidget {
           children: [
             // Features Grid
             Text(
-              'Features',
+              'Teacher Dashboard',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -37,75 +34,65 @@ class HomeScreen extends StatelessWidget {
               children: [
                 _buildFeatureCard(
                   context: context,
-                  icon: Icons.fact_check,
-                  title: 'Attendance',
+                  icon: Icons.class_,
+                  title: 'My Courses',
+                  color: Colors.blue,
+                  isDarkMode: isDarkMode,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CourseInfoScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _buildFeatureCard(
+                  context: context,
+                  icon: Icons.people,
+                  title: 'Students',
                   color: Colors.green,
                   isDarkMode: isDarkMode,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const AttendanceScreen()),
-                  ),
+                  onTap: () {},
+                ),
+                _buildFeatureCard(
+                  context: context,
+                  icon: Icons.assignment,
+                  title: 'Assignments',
+                  color: Colors.orange,
+                  isDarkMode: isDarkMode,
+                  onTap: () {},
                 ),
                 _buildFeatureCard(
                   context: context,
                   icon: Icons.grade,
-                  title: 'Results',
-                  color: Colors.blue,
-                  isDarkMode: isDarkMode,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const ResultScreen()),
-                  ),
-                ),
-                _buildFeatureCard(
-                  context: context,
-                  icon: Icons.library_books,
-                  title: 'Curriculum',
-                  color: Colors.teal,
-                  isDarkMode: isDarkMode,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const CurriculumScreen()),
-                  ),
-                ),
-                
-                _buildFeatureCard(
-                  context: context,
-                  icon: Icons.schedule,
-                  title: 'Class Schedule',
+                  title: 'Grading',
                   color: Colors.purple,
                   isDarkMode: isDarkMode,
                   onTap: () {},
                 ),
                 _buildFeatureCard(
                   context: context,
-                  icon: Icons.notifications,
-                  title: 'Notices',
+                  icon: Icons.schedule,
+                  title: 'Schedule',
+                  color: Colors.teal,
+                  isDarkMode: isDarkMode,
+                  onTap: () {},
+                ),
+                _buildFeatureCard(
+                  context: context,
+                  icon: Icons.announcement,
+                  title: 'Announcements',
                   color: Colors.red,
                   isDarkMode: isDarkMode,
                   onTap: () {},
                 ),
-               
-                _buildFeatureCard(
-                  context: context,
-                  icon: Icons.present_to_all,
-                  title: 'Attendance Tracker',
-                  color: Colors.indigo,
-                  isDarkMode: isDarkMode,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const AttendanceTrackerScreen()),
-                    );
-                  },
-                ),
-                
               ],
             ),
             const SizedBox(height: 24),
-           // Recent Updates
+            // Recent Activities
             Text(
-              'Recent Updates',
+              'Recent Activities',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -113,68 +100,32 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            _buildUpdateCard(
-              title: 'New Assignment Posted',
-              subtitle: 'Data Structures - Assignment 3',
-              time: '2 hours ago',
+            _buildActivityCard(
+              title: 'New Assignment Submission',
+              subtitle: 'Data Structures - 15 submissions',
+              time: '1 hour ago',
               icon: Icons.assignment_turned_in,
               color: Colors.blue,
               isDarkMode: isDarkMode,
             ),
-            _buildUpdateCard(
-              title: 'Class Rescheduled',
+            _buildActivityCard(
+              title: 'Class Scheduled',
               subtitle: 'Algorithm Analysis - Tomorrow 10 AM',
-              time: '5 hours ago',
+              time: '3 hours ago',
               icon: Icons.event,
+              color: Colors.green,
+              isDarkMode: isDarkMode,
+            ),
+            _buildActivityCard(
+              title: 'Grade Updated',
+              subtitle: 'Database Systems - Mid-term results',
+              time: '1 day ago',
+              icon: Icons.grade,
               color: Colors.orange,
               isDarkMode: isDarkMode,
             ),
-            _buildUpdateCard(
-              title: 'Exam Notice',
-              subtitle: 'Mid-term exams starting next week',
-              time: '1 day ago',
-              icon: Icons.warning,
-              color: Colors.red,
-              isDarkMode: isDarkMode,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Upcoming Schedules',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: isDarkMode ? Colors.white : Colors.black87,
-              ),
-            ),
-            
-            _buildUpdateCard(
-              title: 'Class Rescheduled',
-              subtitle: 'Algorithm Analysis - Tomorrow 10 AM',
-              time: '5 hours ago',
-              icon: Icons.event,
-              color: Colors.orange,
-              isDarkMode: isDarkMode,
-            ),
-            _buildUpdateCard(
-              title: 'Exam Notice',
-              subtitle: 'Mid-term exams starting next week',
-              time: '1 day ago',
-              icon: Icons.warning,
-              color: Colors.red,
-              isDarkMode: isDarkMode,
-            ),
-            const SizedBox(height: 24),
-            
-            
-            
-           
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        backgroundColor: Colors.blue[600],
-        child: const Icon(Icons.add),
       ),
     );
   }
@@ -210,15 +161,12 @@ class HomeScreen extends StatelessWidget {
                 color: color.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                icon,
-                size: 40,
-                color: color,
-              ),
+              child: Icon(icon, size: 40, color: color),
             ),
             const SizedBox(height: 12),
             Text(
               title,
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -231,7 +179,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildUpdateCard({
+  Widget _buildActivityCard({
     required String title,
     required String subtitle,
     required String time,
@@ -259,13 +207,9 @@ class HomeScreen extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 24,
-            ),
+            child: Icon(icon, color: color, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -276,7 +220,7 @@ class HomeScreen extends StatelessWidget {
                   title,
                   style: TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                     color: isDarkMode ? Colors.white : Colors.black87,
                   ),
                 ),

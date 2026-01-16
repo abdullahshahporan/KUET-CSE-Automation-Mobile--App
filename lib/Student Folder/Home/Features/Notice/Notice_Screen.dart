@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kuet_cse_automation/providers/app_providers.dart';
+import 'package:kuet_cse_automation/Student%20Folder/providers/app_providers.dart';
 
 class NoticeScreen extends ConsumerWidget {
   const NoticeScreen({super.key});

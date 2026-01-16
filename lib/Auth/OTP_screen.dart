@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:kuet_cse_automation/Common%20Screen/main_bottom_navbar_screen.dart';
+import 'package:kuet_cse_automation/Student%20Folder/Common%20Screen/main_bottom_navbar_screen.dart';
+import 'package:kuet_cse_automation/Tacher%20Folder/Teacher_nav_bar.dart';
 
 class OTPScreen extends StatefulWidget {
   final String email;
-  
+
   const OTPScreen({super.key, required this.email});
 
   @override
@@ -16,10 +17,7 @@ class _OTPScreenState extends State<OTPScreen> {
     6,
     (index) => TextEditingController(),
   );
-  final List<FocusNode> _focusNodes = List.generate(
-    6,
-    (index) => FocusNode(),
-  );
+  final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
   bool _isLoading = false;
 
   // Test OTP
@@ -42,7 +40,7 @@ class _OTPScreenState extends State<OTPScreen> {
 
   Future<void> _verifyOTP() async {
     final otp = _enteredOTP;
-    
+
     if (otp.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -68,13 +66,37 @@ class _OTPScreenState extends State<OTPScreen> {
         );
 
         await Future.delayed(const Duration(milliseconds: 500));
-        
+
         if (mounted) {
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const MainBottomNavBarScreen()),
-            (route) => false,
-          );
+          // Route based on email domain
+          if (widget.email.endsWith('@cse.kuet.ac.bd')) {
+            // Teacher registration
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const TeacherMainBottomNavBarScreen(),
+              ),
+              (route) => false,
+            );
+          } else if (widget.email.endsWith('@stud.kuet.ac.bd')) {
+            // Student registration
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const MainBottomNavBarScreen(),
+              ),
+              (route) => false,
+            );
+          } else {
+            // Default to student for other domains
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const MainBottomNavBarScreen(),
+              ),
+              (route) => false,
+            );
+          }
         }
       }
     } else {
@@ -132,7 +154,7 @@ class _OTPScreenState extends State<OTPScreen> {
           child: Column(
             children: [
               const SizedBox(height: 20),
-              
+
               // Icon
               Container(
                 padding: const EdgeInsets.all(20),
@@ -198,7 +220,9 @@ class _OTPScreenState extends State<OTPScreen> {
                       decoration: InputDecoration(
                         counterText: '',
                         filled: true,
-                        fillColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                        fillColor: isDarkMode
+                            ? const Color(0xFF1E1E1E)
+                            : Colors.white,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none,
@@ -206,25 +230,28 @@ class _OTPScreenState extends State<OTPScreen> {
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
-                            color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+                            color: isDarkMode
+                                ? Colors.grey[800]!
+                                : Colors.grey[200]!,
                             width: 2,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.blue[600]!, width: 2),
+                          borderSide: BorderSide(
+                            color: Colors.blue[600]!,
+                            width: 2,
+                          ),
                         ),
                       ),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       onChanged: (value) {
                         if (value.isNotEmpty && index < 5) {
                           _focusNodes[index + 1].requestFocus();
                         } else if (value.isEmpty && index > 0) {
                           _focusNodes[index - 1].requestFocus();
                         }
-                        
+
                         // Auto-verify when all digits are entered
                         if (index == 5 && value.isNotEmpty) {
                           FocusScope.of(context).unfocus();
@@ -270,7 +297,11 @@ class _OTPScreenState extends State<OTPScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: Colors.amber[700], size: 20),
+                    Icon(
+                      Icons.info_outline,
+                      color: Colors.amber[700],
+                      size: 20,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -318,7 +349,9 @@ class _OTPScreenState extends State<OTPScreen> {
                           width: 24,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
                       : const Text(

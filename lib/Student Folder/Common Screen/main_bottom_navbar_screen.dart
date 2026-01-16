@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:kuet_cse_automation/Common%20Screen/appbar_screen.dart';
-import 'package:kuet_cse_automation/Hamburger%20Menu/hamburger_screen.dart';
-import 'package:kuet_cse_automation/Home/home_screen.dart';
-import 'package:kuet_cse_automation/Home/Features/Schedule/unified_schedule_screen.dart';
-import 'package:kuet_cse_automation/Resource/resource_screen.dart';
-import 'package:kuet_cse_automation/Profile/profile_screen.dart';
+import 'package:kuet_cse_automation/Student%20Folder/Common%20Screen/appbar_screen.dart';
+import 'package:kuet_cse_automation/Student%20Folder/Hamburger%20Menu/hamburger_screen.dart';
+import 'package:kuet_cse_automation/Student%20Folder/Home/home_screen.dart';
+import 'package:kuet_cse_automation/Student%20Folder/Home/Features/Schedule/unified_schedule_screen.dart';
+import 'package:kuet_cse_automation/Student%20Folder/Resource/resource_screen.dart';
+import 'package:kuet_cse_automation/Student%20Folder/Profile/profile_screen.dart';
 import 'package:kuet_cse_automation/app_theme.dart';
 import 'package:provider/provider.dart';
 

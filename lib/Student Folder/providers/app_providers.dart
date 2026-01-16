@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kuet_cse_automation/models/app_models.dart';
+import 'package:kuet_cse_automation/Student%20Folder/models/app_models.dart';
 
 // Providers for Notice, Assignment, and Attendance features
 // Schedule providers are in Home/Features/Schedule folder
