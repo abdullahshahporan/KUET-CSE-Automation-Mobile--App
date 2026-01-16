@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import '../Attendance/attendance_screen.dart';
 import '../Result/result_screen.dart';
 import '../Curriculum/curriculum_screen.dart';
-import 'package:kuet_cse_automation/Home/Features/Schedule/unified_schedule_screen.dart';
-import 'package:kuet_cse_automation/Home/Features/Assignment/Assignment_Screen.dart';
-import 'package:kuet_cse_automation/Home/Features/Notice/Notice_Screen.dart';
 import 'package:kuet_cse_automation/Home/Features/Attendance/Attendance_tracker_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -39,6 +36,7 @@ class HomeScreen extends StatelessWidget {
               mainAxisSpacing: 16,
               children: [
                 _buildFeatureCard(
+                  context: context,
                   icon: Icons.fact_check,
                   title: 'Attendance',
                   color: Colors.green,
@@ -49,6 +47,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 _buildFeatureCard(
+                  context: context,
                   icon: Icons.grade,
                   title: 'Results',
                   color: Colors.blue,
@@ -59,6 +58,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 _buildFeatureCard(
+                  context: context,
                   icon: Icons.library_books,
                   title: 'Curriculum',
                   color: Colors.teal,
@@ -70,6 +70,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 
                 _buildFeatureCard(
+                  context: context,
                   icon: Icons.schedule,
                   title: 'Class Schedule',
                   color: Colors.purple,
@@ -77,6 +78,7 @@ class HomeScreen extends StatelessWidget {
                   onTap: () {},
                 ),
                 _buildFeatureCard(
+                  context: context,
                   icon: Icons.notifications,
                   title: 'Notices',
                   color: Colors.red,
