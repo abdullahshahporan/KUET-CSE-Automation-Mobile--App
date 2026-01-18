@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kuet_cse_automation/Tacher%20Folder/Courses/Course_info.dart';
+import 'package:kuet_cse_automation/Tacher%20Folder/Assignments/assignment_screen.dart';
 
 class TeacherHomeScreen extends StatelessWidget {
   const TeacherHomeScreen({super.key});
@@ -61,7 +62,14 @@ class TeacherHomeScreen extends StatelessWidget {
                   title: 'Assignments',
                   color: Colors.orange,
                   isDarkMode: isDarkMode,
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AssignmentScreen(),
+                      ),
+                    );
+                  },
                 ),
                 _buildFeatureCard(
                   context: context,
