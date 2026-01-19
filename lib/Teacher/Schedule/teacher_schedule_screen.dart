@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../Student Folder/data/teacher_static_data.dart';
+import '../data/teacher_static_data.dart';
 
 /// Teacher Schedule screen - view and manage class schedule
 class TeacherScheduleScreen extends StatelessWidget {
@@ -100,7 +100,7 @@ class TeacherScheduleScreen extends StatelessWidget {
             // Schedule by Day
             ...schedule.map((day) => _buildDayCard(
               day['day'] as String,
-              day['classes'] as List<Map<String, String>>,
+              (day['classes'] as List).cast<Map<String, dynamic>>().map((e) => Map<String, String>.from(e)).toList(),
               isDarkMode,
             )),
           ],

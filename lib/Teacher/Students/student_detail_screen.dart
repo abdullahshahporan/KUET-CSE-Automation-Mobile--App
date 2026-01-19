@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../Student Folder/models/user_model.dart';
-import '../../Student Folder/data/teacher_static_data.dart';
+import '../data/teacher_static_data.dart';
 
 /// Student Detail screen - view individual student details
 class StudentDetailScreen extends StatelessWidget {

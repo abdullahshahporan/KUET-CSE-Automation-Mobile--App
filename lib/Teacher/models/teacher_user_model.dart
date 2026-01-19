@@ -1,4 +1,4 @@
-/// User and role models for KUET CSE Automation App
+/// Teacher user model for KUET CSE Automation App
 
 /// User roles in the system
 enum UserRole {
@@ -53,43 +53,26 @@ class AppUser {
   });
 }
 
-/// Student user with additional properties
-class StudentUser extends AppUser {
-  final String roll;
-  final String batch;
-  final int currentYear;
-  final int currentTerm;
-  final String section; // A or B
+/// Teacher user with additional properties
+class TeacherUser extends AppUser {
+  final String designation;
+  final String? officeRoom;
+  final List<String> assignedCourses;
+  final String? phone;
+  final String? employeeId;
+  final int experience;
 
-  const StudentUser({
+  const TeacherUser({
     required super.id,
     required super.name,
     required super.email,
-    required this.roll,
-    required this.batch,
-    required this.currentYear,
-    required this.currentTerm,
-    required this.section,
+    required this.designation,
+    this.officeRoom,
+    this.assignedCourses = const [],
+    this.phone,
+    this.employeeId,
+    this.experience = 0,
     super.department,
     super.photoUrl,
-  }) : super(role: UserRole.student);
-
-  /// Get sessional group based on roll
-  String get sessionalGroup {
-    final rollNum = int.tryParse(roll.substring(roll.length - 3)) ?? 0;
-    if (rollNum <= 30) return 'A1';
-    if (rollNum <= 60) return 'A2';
-    if (rollNum <= 90) return 'B1';
-    return 'B2';
-  }
-
-  /// Get formatted batch (e.g., "2021")
-  String get formattedBatch => '20$batch';
-
-  /// Get semester name (e.g., "3rd Year 2nd Term")
-  String get semesterName {
-    final yearSuffix = currentYear == 1 ? 'st' : currentYear == 2 ? 'nd' : currentYear == 3 ? 'rd' : 'th';
-    final termSuffix = currentTerm == 1 ? 'st' : 'nd';
-    return '$currentYear$yearSuffix Year $currentTerm$termSuffix Term';
-  }
+  }) : super(role: UserRole.teacher);
 }

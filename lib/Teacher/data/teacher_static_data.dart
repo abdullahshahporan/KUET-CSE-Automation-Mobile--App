@@ -1,8 +1,9 @@
 /// Static data for teacher features - Multi-Semester Support
 /// This will be replaced with dynamic data from database later
 
-import '../models/user_model.dart';
-import '../models/course_model.dart';
+import '../models/teacher_user_model.dart';
+import '../../Student Folder/models/user_model.dart';
+import '../../Student Folder/models/course_model.dart';
 
 /// Extended course model for teacher with semester info
 class TeacherCourse {
@@ -54,7 +55,11 @@ const TeacherUser currentTeacher = TeacherUser(
   id: 'T001',
   name: 'Dr. M. M. A. Hashem',
   email: 'hashem@cse.kuet.ac.bd',
+  phone: '+880 1711-123456',
+  employeeId: 'EMP-CSE-001',
   designation: 'Professor',
+  department: 'Computer Science & Engineering',
+  experience: 15,
   officeRoom: 'Room 301, CSE Building',
   assignedCourses: ['CSE 2101', 'CSE 2102', 'CSE 3201', 'CSE 3202'],
 );
@@ -427,6 +432,3 @@ List<StudentUser> getStudentsBySessionalGroup(String group) {
   );
   return getStudentsForCourse(course, group);
 }
-
-/// Get all students from all batches
-List<StudentUser> get students21 => generateStudentsForBatch(21, 'A') + generateStudentsForBatch(21, 'B');

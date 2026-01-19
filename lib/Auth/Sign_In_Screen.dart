@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kuet_cse_automation/Auth/Sign_Up_Screen.dart';
 import 'package:kuet_cse_automation/Auth/Reset_Password_Screen.dart';
 import 'package:kuet_cse_automation/Student Folder/Common Screen/main_bottom_navbar_screen.dart';
+import 'package:kuet_cse_automation/Teacher/teacher_dashboard.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -18,8 +19,9 @@ class _SignInScreenState extends State<SignInScreen> {
   bool _isLoading = false;
 
   // Test credentials
-  static const String _testEmail = 'test@gmail.com';
-  static const String _testPassword = 'A123456@';
+  static const String _studentEmail = 'student@stud.kuet.ac.bd';
+  static const String _teacherEmail = 'teacher@kuet.ac.bd';
+  static const String _testPassword = '123456@';
 
   @override
   void dispose() {
@@ -35,19 +37,41 @@ class _SignInScreenState extends State<SignInScreen> {
       // Simulate API call
       await Future.delayed(const Duration(seconds: 1));
 
-      if (_emailController.text == _testEmail &&
-          _passwordController.text == _testPassword) {
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const MainBottomNavBarScreen()),
-          );
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+
+      if (password == _testPassword) {
+        if (email == _studentEmail) {
+          // Navigate to Student Dashboard
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const MainBottomNavBarScreen()),
+            );
+          }
+        } else if (email == _teacherEmail) {
+          // Navigate to Teacher Dashboard
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const TeacherDashboard()),
+            );
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Invalid email address'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
         }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Invalid email or password'),
+              content: Text('Invalid password'),
               backgroundColor: Colors.red,
             ),
           );
@@ -393,17 +417,28 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Email: $_testEmail',
+                        'Student: $_studentEmail',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
                           color: Colors.amber[900],
                         ),
                       ),
                       Text(
+                        'Teacher: $_teacherEmail',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.amber[900],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
                         'Password: $_testPassword',
                         style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.amber[900],
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.indigo[900],
                         ),
                       ),
                     ],

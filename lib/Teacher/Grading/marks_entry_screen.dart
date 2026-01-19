@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../Student Folder/data/teacher_static_data.dart';
+import '../data/teacher_static_data.dart';
 import '../../Student Folder/models/course_model.dart';
 import '../../Student Folder/models/user_model.dart';
 import '../../theme/app_colors.dart';
