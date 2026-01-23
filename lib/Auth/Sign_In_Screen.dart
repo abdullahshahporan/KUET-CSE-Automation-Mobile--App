@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kuet_cse_automation/Auth/Sign_Up_Screen.dart';
 import 'package:kuet_cse_automation/Auth/Reset_Password_Screen.dart';
 import 'package:kuet_cse_automation/Student Folder/Common Screen/main_bottom_navbar_screen.dart';
-import 'package:kuet_cse_automation/Teacher/teacher_dashboard.dart';
+import 'package:kuet_cse_automation/Teacher/teacher_navbar/teacher_navbar_screen.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -54,7 +54,7 @@ class _SignInScreenState extends State<SignInScreen> {
           if (mounted) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const TeacherDashboard()),
+              MaterialPageRoute(builder: (context) => const TeacherMainScreen()),
             );
           }
         } else {
