@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../Attendance/attendance_screen.dart';
-import '../Result/result_screen.dart';
 import '../Curriculum/curriculum_screen.dart';
-import 'package:kuet_cse_automation/Student%20Folder/Home/Features/Attendance/Attendance_tracker_screen.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Home/Features/Schedule/unified_schedule_screen.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Home/Features/Notice/Notice_Screen.dart';
 import 'package:kuet_cse_automation/theme/app_colors.dart';
@@ -53,7 +51,7 @@ class HomeScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          '6 Items',
+                          '4 Items',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -96,20 +94,6 @@ class HomeScreen extends StatelessWidget {
                 ),
                 _buildFeatureCard(
                   context: context,
-                  icon: Icons.emoji_events_rounded,
-                  title: 'Results',
-                  subtitle: 'View your grades',
-                  gradient: const [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
-                  isDarkMode: isDarkMode,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ResultScreen(),
-                    ),
-                  ),
-                ),
-                _buildFeatureCard(
-                  context: context,
                   icon: Icons.menu_book_rounded,
                   title: 'Curriculum',
                   subtitle: 'Course syllabus',
@@ -147,20 +131,6 @@ class HomeScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => const NoticeScreen(),
-                    ),
-                  ),
-                ),
-                _buildFeatureCard(
-                  context: context,
-                  icon: Icons.analytics_rounded,
-                  title: 'Attendance Tracker',
-                  subtitle: 'Monitor progress',
-                  gradient: const [Color(0xFF6366F1), Color(0xFF4F46E5)],
-                  isDarkMode: isDarkMode,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AttendanceTrackerScreen(),
                     ),
                   ),
                 ),
