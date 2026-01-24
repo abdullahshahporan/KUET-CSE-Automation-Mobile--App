@@ -36,9 +36,18 @@ class AppTheme {
       ),
     ),
     textTheme: const TextTheme(
-      displayLarge: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
-      displayMedium: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
-      displaySmall: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+      displayLarge: TextStyle(
+        color: Colors.black87,
+        fontWeight: FontWeight.bold,
+      ),
+      displayMedium: TextStyle(
+        color: Colors.black87,
+        fontWeight: FontWeight.bold,
+      ),
+      displaySmall: TextStyle(
+        color: Colors.black87,
+        fontWeight: FontWeight.bold,
+      ),
       bodyLarge: TextStyle(color: Colors.black87),
       bodyMedium: TextStyle(color: Colors.black87),
       bodySmall: TextStyle(color: Colors.black54),
@@ -85,9 +94,18 @@ class AppTheme {
       ),
     ),
     textTheme: TextTheme(
-      displayLarge: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-      displayMedium: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-      displaySmall: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      displayLarge: const TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.bold,
+      ),
+      displayMedium: const TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.bold,
+      ),
+      displaySmall: const TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.bold,
+      ),
       bodyLarge: const TextStyle(color: Colors.white),
       bodyMedium: const TextStyle(color: Colors.white),
       bodySmall: TextStyle(color: AppColors.darkTextSecondary),
@@ -111,7 +129,8 @@ class ThemeProvider extends ChangeNotifier {
 
   ThemeMode get themeMode => _isDarkMode ? ThemeMode.dark : ThemeMode.light;
 
-  ThemeData get currentTheme => _isDarkMode ? AppTheme.darkTheme : AppTheme.lightTheme;
+  ThemeData get currentTheme =>
+      _isDarkMode ? AppTheme.darkTheme : AppTheme.lightTheme;
 
   void toggleTheme() {
     _isDarkMode = !_isDarkMode;

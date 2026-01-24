@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:kuet_cse_automation/Auth/OTP_screen.dart';
+import '../theme/app_colors.dart';
 
 class FirstPasswordScreen extends StatefulWidget {
   final String email;
-  
+
   const FirstPasswordScreen({super.key, required this.email});
 
   @override
@@ -20,7 +21,7 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
 
   // Password strength
   String _passwordStrength = '';
-  Color _strengthColor = Colors.grey;
+  Color _strengthColor = AppColors.textMuted;
   double _strengthProgress = 0.0;
 
   @override
@@ -32,7 +33,7 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
 
   void _checkPasswordStrength(String password) {
     int score = 0;
-    
+
     if (password.length >= 8) score++;
     if (password.contains(RegExp(r'[A-Z]'))) score++;
     if (password.contains(RegExp(r'[a-z]'))) score++;
@@ -42,19 +43,19 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
     setState(() {
       if (score == 0 || password.isEmpty) {
         _passwordStrength = '';
-        _strengthColor = Colors.grey;
+        _strengthColor = AppColors.textMuted;
         _strengthProgress = 0.0;
       } else if (score <= 2) {
         _passwordStrength = 'Weak';
-        _strengthColor = Colors.red;
+        _strengthColor = AppColors.danger;
         _strengthProgress = 0.33;
       } else if (score <= 3) {
         _passwordStrength = 'Medium';
-        _strengthColor = Colors.orange;
+        _strengthColor = AppColors.warning;
         _strengthProgress = 0.66;
       } else {
         _passwordStrength = 'Strong';
-        _strengthColor = Colors.green;
+        _strengthColor = AppColors.success;
         _strengthProgress = 1.0;
       }
     });
@@ -69,7 +70,7 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
 
       if (mounted) {
         setState(() => _isLoading = false);
-        
+
         // Navigate to OTP screen
         Navigator.pushReplacement(
           context,
@@ -86,14 +87,14 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.grey[50],
+      backgroundColor: AppColors.background(isDarkMode),
       appBar: AppBar(
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        backgroundColor: AppColors.surface(isDarkMode),
         elevation: 0,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back_ios_new,
-            color: isDarkMode ? Colors.white : Colors.black87,
+            color: AppColors.textPrimary(isDarkMode),
             size: 20,
           ),
           onPressed: () => Navigator.pop(context),
@@ -101,7 +102,7 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
         title: Text(
           'Set Password',
           style: TextStyle(
-            color: isDarkMode ? Colors.white : Colors.black87,
+            color: AppColors.textPrimary(isDarkMode),
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
@@ -116,19 +117,19 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 20),
-                
+
                 // Icon
                 Center(
                   child: Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.1),
+                      color: AppColors.primary.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.lock_outline,
                       size: 50,
-                      color: Colors.blue[600],
+                      color: AppColors.primary,
                     ),
                   ),
                 ),
@@ -143,7 +144,7 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: isDarkMode ? Colors.white : Colors.black87,
+                          color: AppColors.textPrimary(isDarkMode),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -151,7 +152,7 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
                         'Set a strong password for your account',
                         style: TextStyle(
                           fontSize: 14,
-                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                          color: AppColors.textSecondary(isDarkMode),
                         ),
                       ),
                     ],
@@ -163,26 +164,32 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                    color: AppColors.surface(isDarkMode),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
-                    ),
+                    border: Border.all(color: AppColors.border(isDarkMode)),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.email_outlined, color: Colors.blue[600], size: 20),
+                      Icon(
+                        Icons.email_outlined,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           widget.email,
                           style: TextStyle(
-                            color: isDarkMode ? Colors.white : Colors.black87,
+                            color: AppColors.textPrimary(isDarkMode),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
-                      Icon(Icons.check_circle, color: Colors.green[600], size: 20),
+                      Icon(
+                        Icons.check_circle,
+                        color: AppColors.success,
+                        size: 20,
+                      ),
                     ],
                   ),
                 ),
@@ -194,7 +201,7 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+                    color: AppColors.textSecondary(isDarkMode),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -202,19 +209,29 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
                   controller: _passwordController,
                   obscureText: _obscurePassword,
                   onChanged: _checkPasswordStrength,
+                  style: TextStyle(color: AppColors.textPrimary(isDarkMode)),
                   decoration: InputDecoration(
                     hintText: 'Enter your password',
-                    prefixIcon: const Icon(Icons.lock_outlined),
+                    hintStyle: TextStyle(
+                      color: AppColors.textSecondary(isDarkMode),
+                    ),
+                    prefixIcon: Icon(
+                      Icons.lock_outlined,
+                      color: AppColors.textSecondary(isDarkMode),
+                    ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: AppColors.textSecondary(isDarkMode),
                       ),
                       onPressed: () {
                         setState(() => _obscurePassword = !_obscurePassword);
                       },
                     ),
                     filled: true,
-                    fillColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                    fillColor: AppColors.surface(isDarkMode),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -222,12 +239,15 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
-                        color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+                        color: AppColors.border(isDarkMode),
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.blue[600]!, width: 2),
+                      borderSide: BorderSide(
+                        color: AppColors.primary,
+                        width: 2,
+                      ),
                     ),
                   ),
                   validator: (value) {
@@ -264,7 +284,9 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
                             'Password Strength:',
                             style: TextStyle(
                               fontSize: 12,
-                              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                              color: isDarkMode
+                                  ? Colors.grey[400]
+                                  : Colors.grey[600],
                             ),
                           ),
                           Text(
@@ -282,8 +304,10 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
                         borderRadius: BorderRadius.circular(4),
                         child: LinearProgressIndicator(
                           value: _strengthProgress,
-                          backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                          valueColor: AlwaysStoppedAnimation<Color>(_strengthColor),
+                          backgroundColor: AppColors.border(isDarkMode),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            _strengthColor,
+                          ),
                           minHeight: 6,
                         ),
                       ),
@@ -298,26 +322,39 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+                    color: AppColors.textSecondary(isDarkMode),
                   ),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: _obscureConfirmPassword,
+                  style: TextStyle(color: AppColors.textPrimary(isDarkMode)),
                   decoration: InputDecoration(
                     hintText: 'Re-enter your password',
-                    prefixIcon: const Icon(Icons.lock_outlined),
+                    hintStyle: TextStyle(
+                      color: AppColors.textSecondary(isDarkMode),
+                    ),
+                    prefixIcon: Icon(
+                      Icons.lock_outlined,
+                      color: AppColors.textSecondary(isDarkMode),
+                    ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                        _obscureConfirmPassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: AppColors.textSecondary(isDarkMode),
                       ),
                       onPressed: () {
-                        setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
+                        setState(
+                          () => _obscureConfirmPassword =
+                              !_obscureConfirmPassword,
+                        );
                       },
                     ),
                     filled: true,
-                    fillColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                    fillColor: AppColors.surface(isDarkMode),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -325,12 +362,15 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
-                        color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+                        color: AppColors.border(isDarkMode),
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.blue[600]!, width: 2),
+                      borderSide: BorderSide(
+                        color: AppColors.primary,
+                        width: 2,
+                      ),
                     ),
                   ),
                   validator: (value) {
@@ -349,9 +389,9 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.1),
+                    color: AppColors.border(isDarkMode).withOpacity(0.3),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.border(isDarkMode)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -361,7 +401,7 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
-                          color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+                          color: AppColors.textSecondary(isDarkMode),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -369,7 +409,10 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
                       _buildRequirement('One uppercase letter', isDarkMode),
                       _buildRequirement('One lowercase letter', isDarkMode),
                       _buildRequirement('One number', isDarkMode),
-                      _buildRequirement('One special character (!@#\$...)', isDarkMode),
+                      _buildRequirement(
+                        'One special character (!@#\$...)',
+                        isDarkMode,
+                      ),
                     ],
                   ),
                 ),
@@ -382,7 +425,7 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _setPassword,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[600],
+                      backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -395,7 +438,9 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
                             width: 24,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : Row(
@@ -431,14 +476,14 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
           Icon(
             Icons.check_circle_outline,
             size: 16,
-            color: isDarkMode ? Colors.grey[500] : Colors.grey[600],
+            color: AppColors.textSecondary(isDarkMode),
           ),
           const SizedBox(width: 8),
           Text(
             text,
             style: TextStyle(
               fontSize: 12,
-              color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+              color: AppColors.textSecondary(isDarkMode),
             ),
           ),
         ],

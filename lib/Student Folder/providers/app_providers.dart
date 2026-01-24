@@ -10,7 +10,8 @@ final noticesProvider = Provider<List<Notice>>((ref) {
     Notice(
       id: '1',
       title: 'Mid-Term Exam Schedule Published',
-      description: 'The mid-term examination schedule for Spring 2026 semester has been published. Please check your respective class groups.',
+      description:
+          'The mid-term examination schedule for Spring 2026 semester has been published. Please check your respective class groups.',
       date: 'January 12, 2026',
       category: 'Exam',
       isImportant: true,
@@ -18,7 +19,8 @@ final noticesProvider = Provider<List<Notice>>((ref) {
     Notice(
       id: '2',
       title: 'Department Seminar on AI',
-      description: 'A seminar on "Recent Advances in Artificial Intelligence" will be held on January 20, 2026 at 3:00 PM in the seminar hall.',
+      description:
+          'A seminar on "Recent Advances in Artificial Intelligence" will be held on January 20, 2026 at 3:00 PM in the seminar hall.',
       date: 'January 10, 2026',
       category: 'Event',
       isImportant: false,
@@ -26,7 +28,8 @@ final noticesProvider = Provider<List<Notice>>((ref) {
     Notice(
       id: '3',
       title: 'Lab Report Submission Deadline',
-      description: 'All pending lab reports must be submitted by January 25, 2026. Late submissions will not be accepted.',
+      description:
+          'All pending lab reports must be submitted by January 25, 2026. Late submissions will not be accepted.',
       date: 'January 8, 2026',
       category: 'Academic',
       isImportant: true,
@@ -34,7 +37,8 @@ final noticesProvider = Provider<List<Notice>>((ref) {
     Notice(
       id: '4',
       title: 'University Closed - National Holiday',
-      description: 'The university will remain closed on January 26, 2026 due to national holiday.',
+      description:
+          'The university will remain closed on January 26, 2026 due to national holiday.',
       date: 'January 5, 2026',
       category: 'Holiday',
       isImportant: false,
@@ -42,7 +46,8 @@ final noticesProvider = Provider<List<Notice>>((ref) {
     Notice(
       id: '5',
       title: 'Project Proposal Submission',
-      description: 'Final year students are requested to submit their project proposals by February 1, 2026.',
+      description:
+          'Final year students are requested to submit their project proposals by February 1, 2026.',
       date: 'January 3, 2026',
       category: 'Project',
       isImportant: true,
@@ -57,7 +62,8 @@ final assignmentsProvider = Provider<List<Assignment>>((ref) {
       id: '1',
       title: 'Binary Search Tree Implementation',
       courseName: 'Data Structures (CSE 2101)',
-      description: 'Implement a complete BST with insert, delete, search, and traversal operations.',
+      description:
+          'Implement a complete BST with insert, delete, search, and traversal operations.',
       deadline: 'January 20, 2026',
       status: 'pending',
       marks: 20,
@@ -66,7 +72,8 @@ final assignmentsProvider = Provider<List<Assignment>>((ref) {
       id: '2',
       title: 'Dijkstra\'s Algorithm Analysis',
       courseName: 'Algorithm Analysis (CSE 2103)',
-      description: 'Analyze the time complexity of Dijkstra\'s algorithm and implement it in C++.',
+      description:
+          'Analyze the time complexity of Dijkstra\'s algorithm and implement it in C++.',
       deadline: 'January 18, 2026',
       status: 'pending',
       marks: 15,
@@ -75,7 +82,8 @@ final assignmentsProvider = Provider<List<Assignment>>((ref) {
       id: '3',
       title: 'Database Normalization',
       courseName: 'Database Management (CSE 2105)',
-      description: 'Normalize the given database schema up to 3NF and create ER diagram.',
+      description:
+          'Normalize the given database schema up to 3NF and create ER diagram.',
       deadline: 'January 25, 2026',
       status: 'pending',
       marks: 25,
@@ -84,7 +92,8 @@ final assignmentsProvider = Provider<List<Assignment>>((ref) {
       id: '4',
       title: 'UML Diagrams for Library System',
       courseName: 'Software Engineering (CSE 2107)',
-      description: 'Create complete UML diagrams (Use Case, Class, Sequence) for a library management system.',
+      description:
+          'Create complete UML diagrams (Use Case, Class, Sequence) for a library management system.',
       deadline: 'January 15, 2026',
       status: 'submitted',
       marks: 20,
@@ -93,7 +102,8 @@ final assignmentsProvider = Provider<List<Assignment>>((ref) {
       id: '5',
       title: 'Socket Programming',
       courseName: 'Computer Networks (CSE 2109)',
-      description: 'Implement a simple client-server chat application using socket programming.',
+      description:
+          'Implement a simple client-server chat application using socket programming.',
       deadline: 'January 10, 2026',
       status: 'overdue',
       marks: 15,

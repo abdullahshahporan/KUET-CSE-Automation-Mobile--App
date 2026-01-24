@@ -30,10 +30,7 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background(isDarkMode),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
+      body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: _buildBottomNavBar(isDarkMode),
       floatingActionButton: _currentIndex == 0 ? const TeacherFabMenu() : null,
     );
@@ -50,9 +47,7 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
             offset: const Offset(0, -2),
           ),
         ],
-        border: Border(
-          top: BorderSide(color: AppColors.border(isDarkMode)),
-        ),
+        border: Border(top: BorderSide(color: AppColors.border(isDarkMode))),
       ),
       child: SafeArea(
         child: Padding(
@@ -60,10 +55,34 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildNavItem(0, Icons.home_outlined, Icons.home, 'Home', isDarkMode),
-              _buildNavItem(1, Icons.schedule_outlined, Icons.schedule, 'Schedule', isDarkMode),
-              _buildNavItem(2, Icons.meeting_room_outlined, Icons.meeting_room, 'Room Info', isDarkMode),
-              _buildNavItem(3, Icons.person_outline, Icons.person, 'Profile', isDarkMode),
+              _buildNavItem(
+                0,
+                Icons.home_outlined,
+                Icons.home,
+                'Home',
+                isDarkMode,
+              ),
+              _buildNavItem(
+                1,
+                Icons.schedule_outlined,
+                Icons.schedule,
+                'Schedule',
+                isDarkMode,
+              ),
+              _buildNavItem(
+                2,
+                Icons.meeting_room_outlined,
+                Icons.meeting_room,
+                'Room Info',
+                isDarkMode,
+              ),
+              _buildNavItem(
+                3,
+                Icons.person_outline,
+                Icons.person,
+                'Profile',
+                isDarkMode,
+              ),
             ],
           ),
         ),
@@ -71,9 +90,17 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, IconData activeIcon, String label, bool isDarkMode) {
+  Widget _buildNavItem(
+    int index,
+    IconData icon,
+    IconData activeIcon,
+    String label,
+    bool isDarkMode,
+  ) {
     final isSelected = _currentIndex == index;
-    final color = isSelected ? AppColors.primary : AppColors.textSecondary(isDarkMode);
+    final color = isSelected
+        ? AppColors.primary
+        : AppColors.textSecondary(isDarkMode);
 
     return GestureDetector(
       onTap: () => setState(() => _currentIndex = index),
@@ -82,17 +109,15 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+          color: isSelected
+              ? AppColors.primary.withOpacity(0.1)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              isSelected ? activeIcon : icon,
-              color: color,
-              size: 24,
-            ),
+            Icon(isSelected ? activeIcon : icon, color: color, size: 24),
             const SizedBox(height: 4),
             Text(
               label,

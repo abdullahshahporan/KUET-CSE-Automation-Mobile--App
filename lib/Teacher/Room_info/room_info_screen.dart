@@ -9,23 +9,88 @@ class RoomInfoScreen extends StatefulWidget {
   State<RoomInfoScreen> createState() => _RoomInfoScreenState();
 }
 
-class _RoomInfoScreenState extends State<RoomInfoScreen> with SingleTickerProviderStateMixin {
+class _RoomInfoScreenState extends State<RoomInfoScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   final List<RoomData> classrooms = [
-    RoomData(name: 'Room 301', building: 'CSE Building', capacity: 60, type: RoomType.classroom, isAvailable: true),
-    RoomData(name: 'Room 302', building: 'CSE Building', capacity: 60, type: RoomType.classroom, isAvailable: false, occupiedBy: 'CSE 4101 - Dr. K. M. Azharul'),
-    RoomData(name: 'Room 401', building: 'CSE Building', capacity: 80, type: RoomType.classroom, isAvailable: true),
-    RoomData(name: 'Room 402', building: 'CSE Building', capacity: 80, type: RoomType.classroom, isAvailable: false, occupiedBy: 'CSE 2101 - Dr. M. M. A. Hashem'),
-    RoomData(name: 'Room 501', building: 'CSE Building', capacity: 100, type: RoomType.seminar, isAvailable: true),
+    RoomData(
+      name: 'Room 301',
+      building: 'CSE Building',
+      capacity: 60,
+      type: RoomType.classroom,
+      isAvailable: true,
+    ),
+    RoomData(
+      name: 'Room 302',
+      building: 'CSE Building',
+      capacity: 60,
+      type: RoomType.classroom,
+      isAvailable: false,
+      occupiedBy: 'CSE 4101 - Dr. K. M. Azharul',
+    ),
+    RoomData(
+      name: 'Room 401',
+      building: 'CSE Building',
+      capacity: 80,
+      type: RoomType.classroom,
+      isAvailable: true,
+    ),
+    RoomData(
+      name: 'Room 402',
+      building: 'CSE Building',
+      capacity: 80,
+      type: RoomType.classroom,
+      isAvailable: false,
+      occupiedBy: 'CSE 2101 - Dr. M. M. A. Hashem',
+    ),
+    RoomData(
+      name: 'Room 501',
+      building: 'CSE Building',
+      capacity: 100,
+      type: RoomType.seminar,
+      isAvailable: true,
+    ),
   ];
 
   final List<RoomData> labs = [
-    RoomData(name: 'Lab 201', building: 'CSE Building', capacity: 30, type: RoomType.lab, isAvailable: true),
-    RoomData(name: 'Lab 202', building: 'CSE Building', capacity: 30, type: RoomType.lab, isAvailable: false, occupiedBy: 'CSE 3202 Lab - Section A1'),
-    RoomData(name: 'Lab 203', building: 'CSE Building', capacity: 30, type: RoomType.lab, isAvailable: true),
-    RoomData(name: 'Lab 204', building: 'CSE Building', capacity: 30, type: RoomType.lab, isAvailable: false, occupiedBy: 'CSE 2102 Lab - Section B2'),
-    RoomData(name: 'Research Lab', building: 'CSE Building', capacity: 15, type: RoomType.research, isAvailable: true),
+    RoomData(
+      name: 'Lab 201',
+      building: 'CSE Building',
+      capacity: 30,
+      type: RoomType.lab,
+      isAvailable: true,
+    ),
+    RoomData(
+      name: 'Lab 202',
+      building: 'CSE Building',
+      capacity: 30,
+      type: RoomType.lab,
+      isAvailable: false,
+      occupiedBy: 'CSE 3202 Lab - Section A1',
+    ),
+    RoomData(
+      name: 'Lab 203',
+      building: 'CSE Building',
+      capacity: 30,
+      type: RoomType.lab,
+      isAvailable: true,
+    ),
+    RoomData(
+      name: 'Lab 204',
+      building: 'CSE Building',
+      capacity: 30,
+      type: RoomType.lab,
+      isAvailable: false,
+      occupiedBy: 'CSE 2102 Lab - Section B2',
+    ),
+    RoomData(
+      name: 'Research Lab',
+      building: 'CSE Building',
+      capacity: 15,
+      type: RoomType.research,
+      isAvailable: true,
+    ),
   ];
 
   @override
@@ -74,7 +139,7 @@ class _RoomInfoScreenState extends State<RoomInfoScreen> with SingleTickerProvid
 
   Widget _buildRoomList(List<RoomData> rooms, bool isDarkMode) {
     final availableRooms = rooms.where((r) => r.isAvailable).length;
-    
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.all(16),
@@ -101,7 +166,11 @@ class _RoomInfoScreenState extends State<RoomInfoScreen> with SingleTickerProvid
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.meeting_room, color: Colors.white, size: 28),
+                  child: const Icon(
+                    Icons.meeting_room,
+                    color: Colors.white,
+                    size: 28,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Column(
@@ -138,7 +207,7 @@ class _RoomInfoScreenState extends State<RoomInfoScreen> with SingleTickerProvid
 
   Widget _buildRoomCard(RoomData room, bool isDarkMode) {
     final statusColor = room.isAvailable ? AppColors.success : AppColors.danger;
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -159,7 +228,7 @@ class _RoomInfoScreenState extends State<RoomInfoScreen> with SingleTickerProvid
             ),
           ),
           const SizedBox(width: 14),
-          
+
           // Room icon
           Container(
             padding: const EdgeInsets.all(10),
@@ -174,7 +243,7 @@ class _RoomInfoScreenState extends State<RoomInfoScreen> with SingleTickerProvid
             ),
           ),
           const SizedBox(width: 14),
-          
+
           // Room Info
           Expanded(
             child: Column(
@@ -192,7 +261,10 @@ class _RoomInfoScreenState extends State<RoomInfoScreen> with SingleTickerProvid
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: statusColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(6),
@@ -210,7 +282,7 @@ class _RoomInfoScreenState extends State<RoomInfoScreen> with SingleTickerProvid
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  room.isAvailable 
+                  room.isAvailable
                       ? '${room.building} • Capacity: ${room.capacity}'
                       : room.occupiedBy ?? 'In use',
                   style: TextStyle(
@@ -221,7 +293,7 @@ class _RoomInfoScreenState extends State<RoomInfoScreen> with SingleTickerProvid
               ],
             ),
           ),
-          
+
           // Action button
           if (room.isAvailable)
             IconButton(
@@ -267,13 +339,20 @@ class _RoomInfoScreenState extends State<RoomInfoScreen> with SingleTickerProvid
         final isDarkMode = Theme.of(context).brightness == Brightness.dark;
         return AlertDialog(
           backgroundColor: AppColors.surface(isDarkMode),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Text('Request ${room.name}?'),
-          content: Text('Would you like to request this room for your next class?'),
+          content: Text(
+            'Would you like to request this room for your next class?',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary(isDarkMode))),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: AppColors.textSecondary(isDarkMode)),
+              ),
             ),
             ElevatedButton(
               onPressed: () {
@@ -285,8 +364,13 @@ class _RoomInfoScreenState extends State<RoomInfoScreen> with SingleTickerProvid
                   ),
                 );
               },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-              child: const Text('Request', style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+              ),
+              child: const Text(
+                'Request',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );

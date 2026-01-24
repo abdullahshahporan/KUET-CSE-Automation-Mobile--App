@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../../models/attendance_model.dart';
+import '../../../theme/app_colors.dart';
 
 /// Circular progress widget for displaying attendance percentage
 class AttendanceProgressWidget extends StatelessWidget {
@@ -31,7 +32,7 @@ class AttendanceProgressWidget extends StatelessWidget {
             size: Size(size, size),
             painter: _CircleProgressPainter(
               progress: percentage / 100,
-              backgroundColor: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
+              backgroundColor: AppColors.border(isDarkMode),
               progressColor: colors[0],
               gradientColor: colors[1],
               strokeWidth: 15,
@@ -51,7 +52,10 @@ class AttendanceProgressWidget extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: colors[0].withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
@@ -75,13 +79,13 @@ class AttendanceProgressWidget extends StatelessWidget {
   List<Color> _getStatusColors() {
     switch (status) {
       case AttendanceStatus.safe:
-        return [Colors.green[600]!, Colors.teal[400]!];
+        return [AppColors.success, const Color(0xFF14B8A6)];
       case AttendanceStatus.acceptable:
-        return [Colors.amber[600]!, Colors.orange[400]!];
+        return [AppColors.warning, const Color(0xFFF97316)];
       case AttendanceStatus.edging:
-        return [Colors.orange[600]!, Colors.deepOrange[400]!];
+        return [const Color(0xFFF97316), const Color(0xFFEA580C)];
       case AttendanceStatus.alarming:
-        return [Colors.red[600]!, Colors.red[400]!];
+        return [AppColors.danger, const Color(0xFFDC2626)];
     }
   }
 

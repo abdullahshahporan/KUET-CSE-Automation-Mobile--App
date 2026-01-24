@@ -13,8 +13,16 @@ class ClassScheduleScreen extends ConsumerWidget {
 
   Map<String, List<dynamic>> _groupClassesByDay(List<dynamic> classes) {
     final currentDay = _getCurrentDay();
-    final weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    
+    final weekDays = [
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
+
     final currentDayIndex = weekDays.indexOf(currentDay);
     final orderedDays = [
       ...weekDays.sublist(currentDayIndex),
@@ -22,14 +30,14 @@ class ClassScheduleScreen extends ConsumerWidget {
     ];
 
     final Map<String, List<dynamic>> grouped = {};
-    
+
     for (final day in orderedDays) {
       final dayClasses = classes.where((c) => c.day == day).toList();
       if (dayClasses.isNotEmpty) {
         grouped[day] = dayClasses;
       }
     }
-    
+
     return grouped;
   }
 
@@ -105,7 +113,10 @@ class ClassScheduleScreen extends ConsumerWidget {
                   ),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(20),
@@ -158,71 +169,88 @@ class ClassScheduleScreen extends ConsumerWidget {
           ],
 
           // Upcoming Days
-          ...groupedClasses.entries.where((entry) => entry.key != currentDay).map((entry) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  margin: const EdgeInsets.only(bottom: 16, top: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 4,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: Colors.blue[600],
-                          borderRadius: BorderRadius.circular(2),
+          ...groupedClasses.entries
+              .where((entry) => entry.key != currentDay)
+              .map((entry) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16, top: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isDarkMode
+                            ? const Color(0xFF1E1E1E)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDarkMode
+                              ? Colors.grey[800]!
+                              : Colors.grey[200]!,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Text(
-                        entry.key,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: isDarkMode ? Colors.white : Colors.black87,
-                        ),
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${entry.value.length}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue[700],
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 4,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: Colors.blue[600],
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 12),
+                          Text(
+                            entry.key,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: isDarkMode ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${entry.value.length}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue[700],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-                ...entry.value.map((classItem) {
-                  return _buildClassCard(classItem, isDarkMode);
-                }).toList(),
-                const SizedBox(height: 16),
-              ],
-            );
-          }).toList(),
+                    ),
+                    ...entry.value.map((classItem) {
+                      return _buildClassCard(classItem, isDarkMode);
+                    }).toList(),
+                    const SizedBox(height: 16),
+                  ],
+                );
+              })
+              .toList(),
         ],
       ),
     );
   }
 
-  Widget _buildClassCard(dynamic classItem, bool isDarkMode, {bool isToday = false}) {
+  Widget _buildClassCard(
+    dynamic classItem,
+    bool isDarkMode, {
+    bool isToday = false,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -230,7 +258,9 @@ class ClassScheduleScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16),
         border: isToday
             ? Border.all(color: Colors.green.withOpacity(0.5), width: 2)
-            : Border.all(color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!),
+            : Border.all(
+                color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+              ),
         boxShadow: [
           BoxShadow(
             color: isToday
@@ -267,7 +297,10 @@ class ClassScheduleScreen extends ConsumerWidget {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [Colors.blue[600]!, Colors.cyan[500]!],
@@ -287,15 +320,24 @@ class ClassScheduleScreen extends ConsumerWidget {
                         if (isToday) ...[
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.green.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: Colors.green.withOpacity(0.3)),
+                              border: Border.all(
+                                color: Colors.green.withOpacity(0.3),
+                              ),
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.circle, size: 8, color: Colors.green[600]),
+                                Icon(
+                                  Icons.circle,
+                                  size: 8,
+                                  color: Colors.green[600],
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   'Today',

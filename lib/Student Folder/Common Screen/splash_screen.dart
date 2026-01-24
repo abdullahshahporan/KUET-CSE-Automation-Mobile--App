@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:kuet_cse_automation/Auth/Sign_In_Screen.dart';
+import 'package:kuet_cse_automation/theme/app_colors.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -9,25 +10,26 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
-    
+
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2400),
     );
-    
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
     );
-    
+
     _animationController.forward();
-    
+
     Timer(const Duration(seconds: 4), () {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const SignInScreen()),
@@ -44,7 +46,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.darkBackground,
       body: Center(
         child: FadeTransition(
           opacity: _fadeAnimation,
@@ -56,15 +58,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 width: 320,
                 height: 240,
                 decoration: BoxDecoration(
-                  color: Colors.grey[900],
+                  color: AppColors.darkSurface,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.grey[700]!,
-                    width: 8,
-                  ),
+                  border: Border.all(color: AppColors.darkBorder, width: 8),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.blue.withOpacity(0.3),
+                      color: AppColors.primary.withOpacity(0.3),
                       blurRadius: 30,
                       spreadRadius: 5,
                     ),
@@ -73,13 +72,13 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(6),
                   child: Container(
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          Colors.grey[900]!,
-                          Colors.black,
+                          AppColors.darkSurface,
+                          AppColors.darkBackground,
                         ],
                       ),
                     ),
@@ -120,10 +119,10 @@ int fibonacci(int n) {
   if (n <= 1) return n;
   return fibonacci(n - 1) + fibonacci(n - 2);
 }''',
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontFamily: 'Courier',
                                     fontSize: 10,
-                                    color: Colors.green[400],
+                                    color: AppColors.success,
                                     height: 1.2,
                                   ),
                                 ),
@@ -134,11 +133,11 @@ int fibonacci(int n) {
                         // CSE Title with gradient and glow
                         Center(
                           child: ShaderMask(
-                            shaderCallback: (bounds) => LinearGradient(
+                            shaderCallback: (bounds) => const LinearGradient(
                               colors: [
-                                Colors.blue[300]!,
-                                Colors.cyan[300]!,
-                                Colors.blue[400]!,
+                                AppColors.info,
+                                AppColors.primary,
+                                AppColors.accent,
                               ],
                             ).createShader(bounds),
                             child: Text(
@@ -150,11 +149,11 @@ int fibonacci(int n) {
                                 color: Colors.white,
                                 shadows: [
                                   Shadow(
-                                    color: Colors.blue.withOpacity(0.8),
+                                    color: AppColors.primary.withOpacity(0.8),
                                     blurRadius: 20,
                                   ),
                                   Shadow(
-                                    color: Colors.cyan.withOpacity(0.6),
+                                    color: AppColors.info.withOpacity(0.6),
                                     blurRadius: 40,
                                   ),
                                 ],
@@ -173,7 +172,7 @@ int fibonacci(int n) {
                 width: 80,
                 height: 8,
                 decoration: BoxDecoration(
-                  color: Colors.grey[800],
+                  color: AppColors.darkSurfaceElevated,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -182,25 +181,25 @@ int fibonacci(int n) {
                 width: 120,
                 height: 12,
                 decoration: BoxDecoration(
-                  color: Colors.grey[850],
+                  color: AppColors.darkBorder,
                   borderRadius: BorderRadius.circular(6),
                 ),
               ),
               const SizedBox(height: 40),
               // Loading indicator
-              SizedBox(
+              const SizedBox(
                 width: 40,
                 height: 40,
                 child: CircularProgressIndicator(
                   strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue[400]!),
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                 ),
               ),
               const SizedBox(height: 16),
               Text(
                 'KUET CSE Automation',
                 style: TextStyle(
-                  color: Colors.grey[600],
+                  color: AppColors.darkTextSecondary,
                   fontSize: 16,
                   letterSpacing: 2,
                 ),

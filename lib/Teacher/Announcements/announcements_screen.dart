@@ -5,7 +5,7 @@ import '../../theme/app_colors.dart';
 /// Course-specific Announcements Screen
 class AnnouncementsScreen extends StatefulWidget {
   final TeacherCourse? course;
-  
+
   const AnnouncementsScreen({super.key, this.course});
 
   @override
@@ -38,7 +38,10 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
         onPressed: () => _showCreateAnnouncement(context, isDarkMode),
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('New', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        label: const Text(
+          'New',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
       ),
     );
   }
@@ -71,9 +74,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
             Text(
               'Create an announcement to notify students in ${course.code}',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.textSecondary(isDarkMode),
-              ),
+              style: TextStyle(color: AppColors.textSecondary(isDarkMode)),
             ),
           ],
         ),
@@ -93,7 +94,10 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
     );
   }
 
-  Widget _buildAnnouncementCard(Map<String, dynamic> announcement, bool isDarkMode) {
+  Widget _buildAnnouncementCard(
+    Map<String, dynamic> announcement,
+    bool isDarkMode,
+  ) {
     final typeColors = {
       'Class Test': AppColors.danger,
       'Assignment': AppColors.primary,
@@ -116,7 +120,10 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(6),
@@ -133,10 +140,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
               const Spacer(),
               Text(
                 announcement['date'],
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textMuted,
-                ),
+                style: TextStyle(fontSize: 12, color: AppColors.textMuted),
               ),
             ],
           ),
@@ -165,10 +169,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
               const SizedBox(width: 6),
               Text(
                 'Will notify all students in ${course.code}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textMuted,
-                ),
+                style: TextStyle(fontSize: 12, color: AppColors.textMuted),
               ),
             ],
           ),
@@ -214,7 +215,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 Text(
                   'New Announcement',
                   style: TextStyle(
@@ -232,7 +233,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                
+
                 // Type selector
                 Text(
                   'Type',
@@ -245,23 +246,34 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
-                  children: ['Notice', 'Class Test', 'Assignment', 'Quiz'].map((type) {
+                  children: ['Notice', 'Class Test', 'Assignment', 'Quiz'].map((
+                    type,
+                  ) {
                     final isSelected = selectedType == type;
                     return GestureDetector(
                       onTap: () => setModalState(() => selectedType = type),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
-                          color: isSelected ? AppColors.primary : AppColors.surfaceElevated(isDarkMode),
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.surfaceElevated(isDarkMode),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: isSelected ? AppColors.primary : AppColors.border(isDarkMode),
+                            color: isSelected
+                                ? AppColors.primary
+                                : AppColors.border(isDarkMode),
                           ),
                         ),
                         child: Text(
                           type,
                           style: TextStyle(
-                            color: isSelected ? Colors.white : AppColors.textSecondary(isDarkMode),
+                            color: isSelected
+                                ? Colors.white
+                                : AppColors.textSecondary(isDarkMode),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -270,7 +282,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                   }).toList(),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Title
                 TextField(
                   controller: titleController,
@@ -280,17 +292,21 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                     fillColor: AppColors.surfaceElevated(isDarkMode),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: AppColors.border(isDarkMode)),
+                      borderSide: BorderSide(
+                        color: AppColors.border(isDarkMode),
+                      ),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: AppColors.border(isDarkMode)),
+                      borderSide: BorderSide(
+                        color: AppColors.border(isDarkMode),
+                      ),
                     ),
                   ),
                   style: TextStyle(color: AppColors.textPrimary(isDarkMode)),
                 ),
                 const SizedBox(height: 12),
-                
+
                 // Content
                 TextField(
                   controller: contentController,
@@ -301,23 +317,28 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                     fillColor: AppColors.surfaceElevated(isDarkMode),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: AppColors.border(isDarkMode)),
+                      borderSide: BorderSide(
+                        color: AppColors.border(isDarkMode),
+                      ),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: AppColors.border(isDarkMode)),
+                      borderSide: BorderSide(
+                        color: AppColors.border(isDarkMode),
+                      ),
                     ),
                   ),
                   style: TextStyle(color: AppColors.textPrimary(isDarkMode)),
                 ),
                 const SizedBox(height: 20),
-                
+
                 // Post button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      if (titleController.text.isNotEmpty && contentController.text.isNotEmpty) {
+                      if (titleController.text.isNotEmpty &&
+                          contentController.text.isNotEmpty) {
                         setState(() {
                           _announcements.insert(0, {
                             'type': selectedType,
@@ -332,7 +353,9 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                             content: const Text('Announcement posted!'),
                             backgroundColor: AppColors.success,
                             behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                         );
                       }
@@ -340,11 +363,16 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: const Text(
                       'Post Announcement',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),

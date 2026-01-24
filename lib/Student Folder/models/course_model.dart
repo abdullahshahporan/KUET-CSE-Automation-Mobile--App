@@ -19,13 +19,11 @@ class Course {
   });
 
   /// Returns formatted credits string like "3.0 Credits"
-  String get creditsString => '${credits.toStringAsFixed(credits.truncateToDouble() == credits ? 0 : 1)} Credit${credits > 1 ? 's' : ''}';
+  String get creditsString =>
+      '${credits.toStringAsFixed(credits.truncateToDouble() == credits ? 0 : 1)} Credit${credits > 1 ? 's' : ''}';
 
   /// Returns type badge text
   String get typeBadge => type == CourseType.theory ? 'Theory' : 'Lab';
 }
 
-enum CourseType {
-  theory,
-  lab,
-}
+enum CourseType { theory, lab }

@@ -20,28 +20,91 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
   // Get today's schedule
   List<Map<String, String>> _getTodaySchedule() {
     final weekday = DateTime.now().weekday;
-    final dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    final dayNames = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
     final today = dayNames[weekday - 1];
 
     final schedule = [
-      {'day': 'Sunday', 'classes': [
-        {'time': '09:00 - 10:00', 'course': 'CSE 3201', 'room': 'Room 301', 'section': 'A'},
-        {'time': '11:00 - 12:00', 'course': 'CSE 3201', 'room': 'Room 301', 'section': 'B'},
-      ]},
-      {'day': 'Monday', 'classes': [
-        {'time': '10:00 - 01:00', 'course': 'CSE 3202', 'room': 'Lab 201', 'section': 'A1'},
-      ]},
-      {'day': 'Tuesday', 'classes': [
-        {'time': '09:00 - 10:00', 'course': 'CSE 3201', 'room': 'Room 301', 'section': 'A'},
-        {'time': '10:00 - 11:00', 'course': 'CSE 3201', 'room': 'Room 301', 'section': 'B'},
-      ]},
-      {'day': 'Wednesday', 'classes': [
-        {'time': '10:00 - 01:00', 'course': 'CSE 3202', 'room': 'Lab 201', 'section': 'A2'},
-      ]},
-      {'day': 'Thursday', 'classes': [
-        {'time': '02:00 - 03:00', 'course': 'CSE 2101', 'room': 'Room 401', 'section': 'A'},
-        {'time': '03:00 - 04:00', 'course': 'CSE 2101', 'room': 'Room 401', 'section': 'B'},
-      ]},
+      {
+        'day': 'Sunday',
+        'classes': [
+          {
+            'time': '09:00 - 10:00',
+            'course': 'CSE 3201',
+            'room': 'Room 301',
+            'section': 'A',
+          },
+          {
+            'time': '11:00 - 12:00',
+            'course': 'CSE 3201',
+            'room': 'Room 301',
+            'section': 'B',
+          },
+        ],
+      },
+      {
+        'day': 'Monday',
+        'classes': [
+          {
+            'time': '10:00 - 01:00',
+            'course': 'CSE 3202',
+            'room': 'Lab 201',
+            'section': 'A1',
+          },
+        ],
+      },
+      {
+        'day': 'Tuesday',
+        'classes': [
+          {
+            'time': '09:00 - 10:00',
+            'course': 'CSE 3201',
+            'room': 'Room 301',
+            'section': 'A',
+          },
+          {
+            'time': '10:00 - 11:00',
+            'course': 'CSE 3201',
+            'room': 'Room 301',
+            'section': 'B',
+          },
+        ],
+      },
+      {
+        'day': 'Wednesday',
+        'classes': [
+          {
+            'time': '10:00 - 01:00',
+            'course': 'CSE 3202',
+            'room': 'Lab 201',
+            'section': 'A2',
+          },
+        ],
+      },
+      {
+        'day': 'Thursday',
+        'classes': [
+          {
+            'time': '02:00 - 03:00',
+            'course': 'CSE 2101',
+            'room': 'Room 401',
+            'section': 'A',
+          },
+          {
+            'time': '03:00 - 04:00',
+            'course': 'CSE 2101',
+            'room': 'Room 401',
+            'section': 'B',
+          },
+        ],
+      },
       {'day': 'Friday', 'classes': []},
       {'day': 'Saturday', 'classes': []},
     ];
@@ -51,7 +114,10 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
       orElse: () => {'day': today, 'classes': []},
     );
 
-    return (todaySchedule['classes'] as List).cast<Map<String, dynamic>>().map((e) => Map<String, String>.from(e)).toList();
+    return (todaySchedule['classes'] as List)
+        .cast<Map<String, dynamic>>()
+        .map((e) => Map<String, String>.from(e))
+        .toList();
   }
 
   @override
@@ -59,10 +125,10 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final themeProvider = provider.Provider.of<ThemeProvider>(context);
     final todayClasses = _getTodaySchedule();
-    
+
     // Determine courses to display
-    final displayedCourses = _showAllCourses 
-        ? teacherCourses 
+    final displayedCourses = _showAllCourses
+        ? teacherCourses
         : teacherCourses.take(3).toList();
     final hasMoreCourses = teacherCourses.length > 3;
 
@@ -71,7 +137,7 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
         children: [
           // Header with profile and theme toggle
           _buildHeader(context, isDarkMode, themeProvider),
-          
+
           // Content
           Expanded(
             child: SingleChildScrollView(
@@ -81,35 +147,43 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // My Courses Section
-                  _buildSectionHeader('My Courses', '${teacherCourses.length} courses', isDarkMode),
-                  const SizedBox(height: 12),
-                  
-                  // Course Cards
-                  ...displayedCourses.map((course) => _buildCourseCard(course, isDarkMode)),
-                  
-                  // See More Button
-                  if (hasMoreCourses && !_showAllCourses)
-                    _buildSeeMoreButton(isDarkMode),
-                  
-                  // See Less Button when expanded
-                  if (hasMoreCourses && _showAllCourses)
-                    _buildSeeLessButton(isDarkMode),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Upcoming Schedule Section
                   _buildSectionHeader(
-                    'Today\'s Schedule', 
-                    '${todayClasses.length} classes', 
+                    'My Courses',
+                    '${teacherCourses.length} courses',
                     isDarkMode,
                   ),
                   const SizedBox(height: 12),
-                  
+
+                  // Course Cards
+                  ...displayedCourses.map(
+                    (course) => _buildCourseCard(course, isDarkMode),
+                  ),
+
+                  // See More Button
+                  if (hasMoreCourses && !_showAllCourses)
+                    _buildSeeMoreButton(isDarkMode),
+
+                  // See Less Button when expanded
+                  if (hasMoreCourses && _showAllCourses)
+                    _buildSeeLessButton(isDarkMode),
+
+                  const SizedBox(height: 24),
+
+                  // Upcoming Schedule Section
+                  _buildSectionHeader(
+                    'Today\'s Schedule',
+                    '${todayClasses.length} classes',
+                    isDarkMode,
+                  ),
+                  const SizedBox(height: 12),
+
                   if (todayClasses.isEmpty)
                     _buildNoClassesCard(isDarkMode)
                   else
-                    ...todayClasses.map((classInfo) => _buildScheduleCard(classInfo, isDarkMode)),
-                  
+                    ...todayClasses.map(
+                      (classInfo) => _buildScheduleCard(classInfo, isDarkMode),
+                    ),
+
                   const SizedBox(height: 80), // Space for FAB
                 ],
               ),
@@ -120,14 +194,16 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, bool isDarkMode, ThemeProvider themeProvider) {
+  Widget _buildHeader(
+    BuildContext context,
+    bool isDarkMode,
+    ThemeProvider themeProvider,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: AppColors.surface(isDarkMode),
-        border: Border(
-          bottom: BorderSide(color: AppColors.border(isDarkMode)),
-        ),
+        border: Border(bottom: BorderSide(color: AppColors.border(isDarkMode))),
       ),
       child: Row(
         children: [
@@ -155,7 +231,7 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
               ],
             ),
           ),
-          
+
           // Theme Toggle Button
           GestureDetector(
             onTap: () => themeProvider.toggleTheme(),
@@ -163,13 +239,13 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: isDarkMode 
-                    ? Colors.amber.withOpacity(0.15) 
+                color: isDarkMode
+                    ? Colors.amber.withOpacity(0.15)
                     : Colors.indigo.withOpacity(0.15),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isDarkMode 
-                      ? Colors.amber.withOpacity(0.3) 
+                  color: isDarkMode
+                      ? Colors.amber.withOpacity(0.3)
                       : Colors.indigo.withOpacity(0.3),
                   width: 2,
                 ),
@@ -267,7 +343,11 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.expand_less, color: AppColors.textSecondary(isDarkMode), size: 20),
+              Icon(
+                Icons.expand_less,
+                color: AppColors.textSecondary(isDarkMode),
+                size: 20,
+              ),
               const SizedBox(width: 8),
               Text(
                 'Show Less',
@@ -295,11 +375,7 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
       ),
       child: Column(
         children: [
-          Icon(
-            Icons.celebration,
-            size: 48,
-            color: AppColors.success,
-          ),
+          Icon(Icons.celebration, size: 48, color: AppColors.success),
           const SizedBox(height: 12),
           Text(
             'No Classes Today!',
@@ -327,7 +403,9 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
       (c) => c.code == classInfo['course'],
       orElse: () => teacherCourses.first,
     );
-    final color = course.type == CourseType.theory ? AppColors.primary : AppColors.accent;
+    final color = course.type == CourseType.theory
+        ? AppColors.primary
+        : AppColors.accent;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -349,7 +427,7 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
             ),
           ),
           const SizedBox(width: 14),
-          
+
           // Class info
           Expanded(
             child: Column(
@@ -367,7 +445,10 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: color.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(4),
@@ -386,7 +467,11 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(Icons.access_time, size: 14, color: AppColors.textSecondary(isDarkMode)),
+                    Icon(
+                      Icons.access_time,
+                      size: 14,
+                      color: AppColors.textSecondary(isDarkMode),
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       classInfo['time'] ?? '',
@@ -396,7 +481,11 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
                       ),
                     ),
                     const SizedBox(width: 16),
-                    Icon(Icons.room, size: 14, color: AppColors.textSecondary(isDarkMode)),
+                    Icon(
+                      Icons.room,
+                      size: 14,
+                      color: AppColors.textSecondary(isDarkMode),
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       classInfo['room'] ?? '',
@@ -410,7 +499,7 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
               ],
             ),
           ),
-          
+
           // Course type icon
           Container(
             padding: const EdgeInsets.all(8),
@@ -430,7 +519,9 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
   }
 
   Widget _buildCourseCard(TeacherCourse course, bool isDarkMode) {
-    final color = course.type == CourseType.theory ? AppColors.primary : AppColors.accent;
+    final color = course.type == CourseType.theory
+        ? AppColors.primary
+        : AppColors.accent;
     final attendanceCount = course.type == CourseType.theory
         ? getAttendanceCount(course.code, course.sections.first)
         : getAttendanceCount(course.code, course.groups.first);
@@ -467,13 +558,15 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    course.type == CourseType.theory ? Icons.book : Icons.science,
+                    course.type == CourseType.theory
+                        ? Icons.book
+                        : Icons.science,
                     color: color,
                     size: 24,
                   ),
                 ),
                 const SizedBox(width: 14),
-                
+
                 // Course Info
                 Expanded(
                   child: Column(
@@ -491,7 +584,10 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
                           ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: color.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(6),
@@ -518,7 +614,7 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
                     ],
                   ),
                 ),
-                
+
                 // Arrow
                 Icon(
                   Icons.arrow_forward_ios,
@@ -527,9 +623,9 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 14),
-            
+
             // Progress Bar
             Row(
               children: [
@@ -572,29 +668,27 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 14),
-            
+
             // Quick Info Row
             Row(
               children: [
                 _buildInfoChip(
-                  course.type == CourseType.theory 
-                      ? '${course.sections.length} Sections' 
+                  course.type == CourseType.theory
+                      ? '${course.sections.length} Sections'
                       : '${course.groups.length} Groups',
                   Icons.people,
                   isDarkMode,
                 ),
                 const SizedBox(width: 10),
-                _buildInfoChip(
-                  course.creditsString,
-                  Icons.star,
-                  isDarkMode,
-                ),
+                _buildInfoChip(course.creditsString, Icons.star, isDarkMode),
                 const SizedBox(width: 10),
                 _buildInfoChip(
                   course.type == CourseType.theory ? 'Theory' : 'Lab',
-                  course.type == CourseType.theory ? Icons.menu_book : Icons.biotech,
+                  course.type == CourseType.theory
+                      ? Icons.menu_book
+                      : Icons.biotech,
                   isDarkMode,
                 ),
               ],

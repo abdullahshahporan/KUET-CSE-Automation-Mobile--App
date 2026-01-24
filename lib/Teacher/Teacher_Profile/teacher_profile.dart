@@ -16,7 +16,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
       backgroundColor: AppColors.background(isDarkMode),
       appBar: AppBar(
@@ -24,7 +24,10 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
         backgroundColor: AppColors.surface(isDarkMode),
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(isDarkMode)),
+          icon: Icon(
+            Icons.arrow_back,
+            color: AppColors.textPrimary(isDarkMode),
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -34,32 +37,32 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
           children: [
             // Profile Header
             _buildProfileHeader(isDarkMode),
-            
+
             const SizedBox(height: 16),
-            
+
             // Quick Stats
             _buildQuickStats(isDarkMode),
-            
+
             const SizedBox(height: 16),
-            
+
             // Personal Information
             _buildPersonalInfo(isDarkMode),
-            
+
             const SizedBox(height: 16),
-            
+
             // Academic Information
             _buildAcademicInfo(isDarkMode),
-            
+
             const SizedBox(height: 16),
-            
+
             // Settings Section
             _buildSettingsSection(isDarkMode),
-            
+
             const SizedBox(height: 24),
-            
+
             // Logout Button
             _buildLogoutButton(isDarkMode),
-            
+
             const SizedBox(height: 24),
           ],
         ),
@@ -106,9 +109,9 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
               ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Name
           Text(
             currentTeacher.name,
@@ -119,9 +122,9 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
             ),
             textAlign: TextAlign.center,
           ),
-          
+
           const SizedBox(height: 4),
-          
+
           // Designation
           Text(
             currentTeacher.designation,
@@ -131,9 +134,9 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
             ),
             textAlign: TextAlign.center,
           ),
-          
+
           const SizedBox(height: 2),
-          
+
           // Department
           Text(
             currentTeacher.department ?? 'Computer Science & Engineering',
@@ -187,7 +190,13 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color, bool isDarkMode) {
+  Widget _buildStatCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+    bool isDarkMode,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -243,9 +252,19 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
           const SizedBox(height: 16),
           _buildInfoRow(Icons.email, 'Email', currentTeacher.email, isDarkMode),
           const SizedBox(height: 12),
-          _buildInfoRow(Icons.phone, 'Phone', currentTeacher.phone ?? 'Not provided', isDarkMode),
+          _buildInfoRow(
+            Icons.phone,
+            'Phone',
+            currentTeacher.phone ?? 'Not provided',
+            isDarkMode,
+          ),
           const SizedBox(height: 12),
-          _buildInfoRow(Icons.badge, 'Employee ID', currentTeacher.employeeId ?? 'N/A', isDarkMode),
+          _buildInfoRow(
+            Icons.badge,
+            'Employee ID',
+            currentTeacher.employeeId ?? 'N/A',
+            isDarkMode,
+          ),
         ],
       ),
     );
@@ -272,19 +291,44 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          _buildInfoRow(Icons.school, 'Department', currentTeacher.department ?? 'CSE', isDarkMode),
+          _buildInfoRow(
+            Icons.school,
+            'Department',
+            currentTeacher.department ?? 'CSE',
+            isDarkMode,
+          ),
           const SizedBox(height: 12),
-          _buildInfoRow(Icons.work, 'Designation', currentTeacher.designation, isDarkMode),
+          _buildInfoRow(
+            Icons.work,
+            'Designation',
+            currentTeacher.designation,
+            isDarkMode,
+          ),
           const SizedBox(height: 12),
-          _buildInfoRow(Icons.calendar_today, 'Experience', '${currentTeacher.experience} years', isDarkMode),
+          _buildInfoRow(
+            Icons.calendar_today,
+            'Experience',
+            '${currentTeacher.experience} years',
+            isDarkMode,
+          ),
           const SizedBox(height: 12),
-          _buildInfoRow(Icons.library_books, 'Courses', '${teacherCourses.length} courses', isDarkMode),
+          _buildInfoRow(
+            Icons.library_books,
+            'Courses',
+            '${teacherCourses.length} courses',
+            isDarkMode,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String label, String value, bool isDarkMode) {
+  Widget _buildInfoRow(
+    IconData icon,
+    String label,
+    String value,
+    bool isDarkMode,
+  ) {
     return Row(
       children: [
         Container(
@@ -326,7 +370,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
 
   Widget _buildSettingsSection(bool isDarkMode) {
     final themeProvider = provider.Provider.of<ThemeProvider>(context);
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
@@ -347,7 +391,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Dark Mode Toggle
           Row(
             children: [
@@ -355,7 +399,9 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: isDarkMode ? Colors.amber.withOpacity(0.1) : Colors.blue.withOpacity(0.1),
+                  color: isDarkMode
+                      ? Colors.amber.withOpacity(0.1)
+                      : Colors.blue.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -384,9 +430,9 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
               ),
             ],
           ),
-          
+
           const Divider(height: 24),
-          
+
           // Edit Profile Button
           InkWell(
             onTap: () {
@@ -419,14 +465,18 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                       ),
                     ),
                   ),
-                  Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: AppColors.textMuted,
+                  ),
                 ],
               ),
             ),
           ),
-          
+
           const Divider(height: 24),
-          
+
           // Change Password Button
           InkWell(
             onTap: () {
@@ -459,7 +509,11 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                       ),
                     ),
                   ),
-                  Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: AppColors.textMuted,
+                  ),
                 ],
               ),
             ),
@@ -502,7 +556,9 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
         final isDarkMode = Theme.of(context).brightness == Brightness.dark;
         return AlertDialog(
           backgroundColor: AppColors.surface(isDarkMode),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Text(
             'Logout',
             style: TextStyle(color: AppColors.textPrimary(isDarkMode)),
@@ -531,9 +587,14 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.danger,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
-              child: const Text('Logout', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'Logout',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );

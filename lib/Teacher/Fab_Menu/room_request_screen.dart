@@ -12,7 +12,7 @@ class RoomRequestScreen extends StatefulWidget {
 class _RoomRequestScreenState extends State<RoomRequestScreen> {
   final _formKey = GlobalKey<FormState>();
   final _purposeController = TextEditingController();
-  
+
   String? _selectedRoom;
   String? _selectedTimeSlot;
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
@@ -55,7 +55,10 @@ class _RoomRequestScreenState extends State<RoomRequestScreen> {
         backgroundColor: AppColors.surface(isDarkMode),
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(isDarkMode)),
+          icon: Icon(
+            Icons.arrow_back,
+            color: AppColors.textPrimary(isDarkMode),
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -81,7 +84,11 @@ class _RoomRequestScreenState extends State<RoomRequestScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.meeting_room, color: Colors.white, size: 32),
+                    const Icon(
+                      Icons.meeting_room,
+                      color: Colors.white,
+                      size: 32,
+                    ),
                     const SizedBox(width: 16),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,7 +129,12 @@ class _RoomRequestScreenState extends State<RoomRequestScreen> {
                   child: DropdownButton<String>(
                     value: _selectedRoom,
                     isExpanded: true,
-                    hint: Text('Choose a room', style: TextStyle(color: AppColors.textSecondary(isDarkMode))),
+                    hint: Text(
+                      'Choose a room',
+                      style: TextStyle(
+                        color: AppColors.textSecondary(isDarkMode),
+                      ),
+                    ),
                     dropdownColor: AppColors.surface(isDarkMode),
                     items: availableRooms.map((room) {
                       return DropdownMenuItem(
@@ -130,14 +142,18 @@ class _RoomRequestScreenState extends State<RoomRequestScreen> {
                         child: Row(
                           children: [
                             Icon(
-                              room['type'] == 'Computer Lab' ? Icons.computer : Icons.meeting_room,
+                              room['type'] == 'Computer Lab'
+                                  ? Icons.computer
+                                  : Icons.meeting_room,
                               size: 18,
                               color: AppColors.textSecondary(isDarkMode),
                             ),
                             const SizedBox(width: 8),
                             Text(
                               '${room['name']} (${room['capacity']} seats)',
-                              style: TextStyle(color: AppColors.textPrimary(isDarkMode)),
+                              style: TextStyle(
+                                color: AppColors.textPrimary(isDarkMode),
+                              ),
                             ),
                           ],
                         ),
@@ -183,7 +199,10 @@ class _RoomRequestScreenState extends State<RoomRequestScreen> {
                         ),
                       ),
                       const Spacer(),
-                      Icon(Icons.arrow_drop_down, color: AppColors.textSecondary(isDarkMode)),
+                      Icon(
+                        Icons.arrow_drop_down,
+                        color: AppColors.textSecondary(isDarkMode),
+                      ),
                     ],
                   ),
                 ),
@@ -201,12 +220,19 @@ class _RoomRequestScreenState extends State<RoomRequestScreen> {
                   return GestureDetector(
                     onTap: () => setState(() => _selectedTimeSlot = slot),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
-                        color: isSelected ? AppColors.primary : AppColors.surface(isDarkMode),
+                        color: isSelected
+                            ? AppColors.primary
+                            : AppColors.surface(isDarkMode),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: isSelected ? AppColors.primary : AppColors.border(isDarkMode),
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.border(isDarkMode),
                         ),
                       ),
                       child: Text(
@@ -214,7 +240,9 @@ class _RoomRequestScreenState extends State<RoomRequestScreen> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: isSelected ? Colors.white : AppColors.textPrimary(isDarkMode),
+                          color: isSelected
+                              ? Colors.white
+                              : AppColors.textPrimary(isDarkMode),
                         ),
                       ),
                     ),
@@ -231,8 +259,11 @@ class _RoomRequestScreenState extends State<RoomRequestScreen> {
                 style: TextStyle(color: AppColors.textPrimary(isDarkMode)),
                 maxLines: 3,
                 decoration: InputDecoration(
-                  hintText: 'e.g., Extra class for CSE 3201, Meeting with students...',
-                  hintStyle: TextStyle(color: AppColors.textSecondary(isDarkMode)),
+                  hintText:
+                      'e.g., Extra class for CSE 3201, Meeting with students...',
+                  hintStyle: TextStyle(
+                    color: AppColors.textSecondary(isDarkMode),
+                  ),
                   filled: true,
                   fillColor: AppColors.surface(isDarkMode),
                   border: OutlineInputBorder(
@@ -248,7 +279,8 @@ class _RoomRequestScreenState extends State<RoomRequestScreen> {
                     borderSide: BorderSide(color: AppColors.primary, width: 2),
                   ),
                 ),
-                validator: (value) => value?.isEmpty ?? true ? 'Purpose is required' : null,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Purpose is required' : null,
               ),
               const SizedBox(height: 32),
 
@@ -270,7 +302,9 @@ class _RoomRequestScreenState extends State<RoomRequestScreen> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
                       : const Text(
@@ -304,7 +338,7 @@ class _RoomRequestScreenState extends State<RoomRequestScreen> {
 
   void _submitRequest() {
     if (!_formKey.currentState!.validate()) return;
-    
+
     if (_selectedRoom == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -330,14 +364,14 @@ class _RoomRequestScreenState extends State<RoomRequestScreen> {
     // Simulate request submission
     Future.delayed(const Duration(seconds: 2), () {
       setState(() => _isLoading = false);
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Room request for $_selectedRoom submitted!'),
           backgroundColor: AppColors.success,
         ),
       );
-      
+
       Navigator.pop(context);
     });
   }

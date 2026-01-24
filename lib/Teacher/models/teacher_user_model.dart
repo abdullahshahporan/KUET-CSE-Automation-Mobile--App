@@ -1,11 +1,7 @@
 /// Teacher user model for KUET CSE Automation App
 
 /// User roles in the system
-enum UserRole {
-  student,
-  teacher,
-  admin,
-}
+enum UserRole { student, teacher, admin }
 
 /// Extension to get role from email domain
 extension UserRoleExtension on UserRole {

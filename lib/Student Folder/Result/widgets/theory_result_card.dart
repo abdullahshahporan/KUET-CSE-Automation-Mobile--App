@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../models/result_model.dart';
+import '../../../theme/app_colors.dart';
 
 /// Card widget displaying theory course result
 class TheoryResultCard extends StatelessWidget {
   final TheoryResult result;
 
-  const TheoryResultCard({
-    super.key,
-    required this.result,
-  });
+  const TheoryResultCard({super.key, required this.result});
 
   @override
   Widget build(BuildContext context) {
@@ -17,11 +15,12 @@ class TheoryResultCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        color: AppColors.surface(isDarkMode),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border(isDarkMode)),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.1),
+            color: AppColors.shadow(isDarkMode),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -33,13 +32,13 @@ class TheoryResultCard extends StatelessWidget {
           // Header
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.blue[600]!, Colors.cyan[500]!],
+                colors: [AppColors.primary, AppColors.info],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: const BorderRadius.only(
+              borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
               ),
@@ -100,7 +99,7 @@ class TheoryResultCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+                    color: AppColors.textSecondary(isDarkMode),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -115,7 +114,8 @@ class TheoryResultCard extends StatelessWidget {
                           isDarkMode,
                         ),
                       ),
-                      if (i < result.classTests.length - 1) const SizedBox(width: 8),
+                      if (i < result.classTests.length - 1)
+                        const SizedBox(width: 8),
                     ],
                   ],
                 ),
@@ -151,7 +151,7 @@ class TheoryResultCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
@@ -161,15 +161,15 @@ class TheoryResultCard extends StatelessWidget {
                         'Continuous Assessment',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          color: isDarkMode ? Colors.white : Colors.black87,
+                          color: AppColors.textPrimary(isDarkMode),
                         ),
                       ),
                       Text(
                         '${result.continuousAssessment.toStringAsFixed(1)}/90',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.blue[700],
+                          color: AppColors.primary,
                         ),
                       ),
                     ],
@@ -183,26 +183,28 @@ class TheoryResultCard extends StatelessWidget {
     );
   }
 
-  Widget _buildScoreBox(String label, double score, double max, bool isDarkMode) {
+  Widget _buildScoreBox(
+    String label,
+    double score,
+    double max,
+    bool isDarkMode,
+  ) {
     final percentage = score / max;
     Color color;
     if (percentage >= 0.8) {
-      color = Colors.green;
+      color = AppColors.success;
     } else if (percentage >= 0.6) {
-      color = Colors.orange;
+      color = AppColors.warning;
     } else {
-      color = Colors.red;
+      color = AppColors.danger;
     }
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDarkMode ? Colors.grey[850] : Colors.grey[100],
+        color: AppColors.background(isDarkMode),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-          width: 1,
-        ),
+        border: Border.all(color: color.withOpacity(0.3), width: 1),
       ),
       child: Column(
         children: [
@@ -210,7 +212,7 @@ class TheoryResultCard extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 12,
-              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+              color: AppColors.textSecondary(isDarkMode),
             ),
           ),
           const SizedBox(height: 4),
@@ -226,7 +228,7 @@ class TheoryResultCard extends StatelessWidget {
             '/${max.toInt()}',
             style: TextStyle(
               fontSize: 11,
-              color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+              color: AppColors.textSecondary(isDarkMode),
             ),
           ),
         ],

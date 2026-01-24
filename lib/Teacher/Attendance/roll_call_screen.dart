@@ -63,10 +63,15 @@ class _RollCallScreenState extends State<RollCallScreen>
     super.dispose();
   }
 
-  int get presentCount => _attendance.values.where((s) => s == AttendanceStatus.present).length;
-  int get lateCount => _attendance.values.where((s) => s == AttendanceStatus.late).length;
-  int get absentCount => _attendance.values.where((s) => s == AttendanceStatus.absent).length;
-  double get presentPercentage => _students.isNotEmpty ? (presentCount + lateCount) / _students.length * 100 : 0;
+  int get presentCount =>
+      _attendance.values.where((s) => s == AttendanceStatus.present).length;
+  int get lateCount =>
+      _attendance.values.where((s) => s == AttendanceStatus.late).length;
+  int get absentCount =>
+      _attendance.values.where((s) => s == AttendanceStatus.absent).length;
+  double get presentPercentage => _students.isNotEmpty
+      ? (presentCount + lateCount) / _students.length * 100
+      : 0;
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +104,10 @@ class _RollCallScreenState extends State<RollCallScreen>
             icon: Icon(Icons.check_circle, color: AppColors.success, size: 20),
             label: Text(
               'All Present',
-              style: TextStyle(color: AppColors.success, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: AppColors.success,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -137,20 +145,28 @@ class _RollCallScreenState extends State<RollCallScreen>
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: AppColors.surface(isDarkMode),
-        border: Border(
-          bottom: BorderSide(color: AppColors.border(isDarkMode)),
-        ),
+        border: Border(bottom: BorderSide(color: AppColors.border(isDarkMode))),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStatItem('Present', presentCount, AppColors.present, isDarkMode),
+          _buildStatItem(
+            'Present',
+            presentCount,
+            AppColors.present,
+            isDarkMode,
+          ),
           _buildStatDivider(isDarkMode),
           _buildStatItem('Late', lateCount, AppColors.late, isDarkMode),
           _buildStatDivider(isDarkMode),
           _buildStatItem('Absent', absentCount, AppColors.absent, isDarkMode),
           _buildStatDivider(isDarkMode),
-          _buildStatItem('Total', _students.length, AppColors.primary, isDarkMode),
+          _buildStatItem(
+            'Total',
+            _students.length,
+            AppColors.primary,
+            isDarkMode,
+          ),
         ],
       ),
     );
@@ -192,25 +208,19 @@ class _RollCallScreenState extends State<RollCallScreen>
   }
 
   Widget _buildStatDivider(bool isDarkMode) {
-    return Container(
-      width: 1,
-      height: 40,
-      color: AppColors.border(isDarkMode),
-    );
+    return Container(width: 1, height: 40, color: AppColors.border(isDarkMode));
   }
 
   Widget _buildProgressBar(bool isDarkMode) {
     final progressColor = presentPercentage >= 80
         ? AppColors.success
         : presentPercentage >= 60
-            ? AppColors.warning
-            : AppColors.danger;
+        ? AppColors.warning
+        : AppColors.danger;
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface(isDarkMode),
-      ),
+      decoration: BoxDecoration(color: AppColors.surface(isDarkMode)),
       child: Column(
         children: [
           Row(
@@ -236,8 +246,11 @@ class _RollCallScreenState extends State<RollCallScreen>
                   ),
                   const SizedBox(width: 4),
                   Icon(
-                    presentPercentage >= 80 ? Icons.trending_up : 
-                    presentPercentage >= 60 ? Icons.trending_flat : Icons.trending_down,
+                    presentPercentage >= 80
+                        ? Icons.trending_up
+                        : presentPercentage >= 60
+                        ? Icons.trending_flat
+                        : Icons.trending_down,
                     color: progressColor,
                     size: 20,
                   ),
@@ -258,7 +271,10 @@ class _RollCallScreenState extends State<RollCallScreen>
               AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 height: 8,
-                width: MediaQuery.of(context).size.width * (presentPercentage / 100) * 0.9,
+                width:
+                    MediaQuery.of(context).size.width *
+                    (presentPercentage / 100) *
+                    0.9,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [progressColor.withOpacity(0.8), progressColor],
@@ -280,12 +296,17 @@ class _RollCallScreenState extends State<RollCallScreen>
     );
   }
 
-  Widget _buildStudentCard(StudentUser student, AttendanceStatus status, int index, bool isDarkMode) {
+  Widget _buildStudentCard(
+    StudentUser student,
+    AttendanceStatus status,
+    int index,
+    bool isDarkMode,
+  ) {
     final statusColor = status == AttendanceStatus.present
         ? AppColors.present
         : status == AttendanceStatus.late
-            ? AppColors.late
-            : AppColors.absent;
+        ? AppColors.late
+        : AppColors.absent;
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
@@ -294,10 +315,7 @@ class _RollCallScreenState extends State<RollCallScreen>
       builder: (context, value, child) {
         return Transform.translate(
           offset: Offset(0, 20 * (1 - value)),
-          child: Opacity(
-            opacity: value,
-            child: child,
-          ),
+          child: Opacity(opacity: value, child: child),
         );
       },
       child: Container(
@@ -306,10 +324,7 @@ class _RollCallScreenState extends State<RollCallScreen>
         decoration: BoxDecoration(
           color: AppColors.surfaceElevated(isDarkMode),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: statusColor.withOpacity(0.3),
-            width: 1.5,
-          ),
+          border: Border.all(color: statusColor.withOpacity(0.3), width: 1.5),
           boxShadow: [
             BoxShadow(
               color: statusColor.withOpacity(0.08),
@@ -357,10 +372,7 @@ class _RollCallScreenState extends State<RollCallScreen>
                   const SizedBox(height: 2),
                   Text(
                     'Roll: ${student.roll}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textMuted,
-                    ),
+                    style: TextStyle(fontSize: 11, color: AppColors.textMuted),
                   ),
                 ],
               ),
@@ -373,7 +385,8 @@ class _RollCallScreenState extends State<RollCallScreen>
                   label: 'P',
                   color: AppColors.present,
                   isSelected: status == AttendanceStatus.present,
-                  onTap: () => _setStatus(student.roll, AttendanceStatus.present),
+                  onTap: () =>
+                      _setStatus(student.roll, AttendanceStatus.present),
                 ),
                 const SizedBox(width: 8),
                 AnimatedStatusButton(
@@ -387,7 +400,8 @@ class _RollCallScreenState extends State<RollCallScreen>
                   label: 'A',
                   color: AppColors.absent,
                   isSelected: status == AttendanceStatus.absent,
-                  onTap: () => _setStatus(student.roll, AttendanceStatus.absent),
+                  onTap: () =>
+                      _setStatus(student.roll, AttendanceStatus.absent),
                 ),
               ],
             ),
@@ -402,9 +416,7 @@ class _RollCallScreenState extends State<RollCallScreen>
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface(isDarkMode),
-        border: Border(
-          top: BorderSide(color: AppColors.border(isDarkMode)),
-        ),
+        border: Border(top: BorderSide(color: AppColors.border(isDarkMode))),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -453,8 +465,20 @@ class _RollCallScreenState extends State<RollCallScreen>
   }
 
   String _formatDate(DateTime date) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
@@ -480,7 +504,7 @@ class _RollCallScreenState extends State<RollCallScreen>
 
     if (mounted) {
       setState(() => _isSaving = false);
-      
+
       // Show success animation
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -515,7 +539,9 @@ class _RollCallScreenState extends State<RollCallScreen>
           ),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           margin: const EdgeInsets.all(16),
           duration: const Duration(seconds: 3),
         ),

@@ -10,20 +10,62 @@ class TeacherScheduleScreen extends StatelessWidget {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     final schedule = [
-      {'day': 'Sunday', 'classes': [
-        {'time': '09:00 - 10:00', 'course': 'CSE 3201', 'room': 'Room 301', 'section': 'A'},
-        {'time': '11:00 - 12:00', 'course': 'CSE 3201', 'room': 'Room 301', 'section': 'B'},
-      ]},
-      {'day': 'Monday', 'classes': [
-        {'time': '10:00 - 01:00', 'course': 'CSE 3202', 'room': 'Lab 201', 'section': 'A1'},
-      ]},
-      {'day': 'Tuesday', 'classes': [
-        {'time': '09:00 - 10:00', 'course': 'CSE 3201', 'room': 'Room 301', 'section': 'A'},
-        {'time': '10:00 - 11:00', 'course': 'CSE 3201', 'room': 'Room 301', 'section': 'B'},
-      ]},
-      {'day': 'Wednesday', 'classes': [
-        {'time': '10:00 - 01:00', 'course': 'CSE 3202', 'room': 'Lab 201', 'section': 'A2'},
-      ]},
+      {
+        'day': 'Sunday',
+        'classes': [
+          {
+            'time': '09:00 - 10:00',
+            'course': 'CSE 3201',
+            'room': 'Room 301',
+            'section': 'A',
+          },
+          {
+            'time': '11:00 - 12:00',
+            'course': 'CSE 3201',
+            'room': 'Room 301',
+            'section': 'B',
+          },
+        ],
+      },
+      {
+        'day': 'Monday',
+        'classes': [
+          {
+            'time': '10:00 - 01:00',
+            'course': 'CSE 3202',
+            'room': 'Lab 201',
+            'section': 'A1',
+          },
+        ],
+      },
+      {
+        'day': 'Tuesday',
+        'classes': [
+          {
+            'time': '09:00 - 10:00',
+            'course': 'CSE 3201',
+            'room': 'Room 301',
+            'section': 'A',
+          },
+          {
+            'time': '10:00 - 11:00',
+            'course': 'CSE 3201',
+            'room': 'Room 301',
+            'section': 'B',
+          },
+        ],
+      },
+      {
+        'day': 'Wednesday',
+        'classes': [
+          {
+            'time': '10:00 - 01:00',
+            'course': 'CSE 3202',
+            'room': 'Lab 201',
+            'section': 'A2',
+          },
+        ],
+      },
       {'day': 'Thursday', 'classes': []},
     ];
 
@@ -38,7 +80,9 @@ class TeacherScheduleScreen extends StatelessWidget {
             icon: const Icon(Icons.edit_calendar),
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Schedule modification coming soon!')),
+                const SnackBar(
+                  content: Text('Schedule modification coming soon!'),
+                ),
               );
             },
           ),
@@ -98,11 +142,16 @@ class TeacherScheduleScreen extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Schedule by Day
-            ...schedule.map((day) => _buildDayCard(
-              day['day'] as String,
-              (day['classes'] as List).cast<Map<String, dynamic>>().map((e) => Map<String, String>.from(e)).toList(),
-              isDarkMode,
-            )),
+            ...schedule.map(
+              (day) => _buildDayCard(
+                day['day'] as String,
+                (day['classes'] as List)
+                    .cast<Map<String, dynamic>>()
+                    .map((e) => Map<String, String>.from(e))
+                    .toList(),
+                isDarkMode,
+              ),
+            ),
           ],
         ),
       ),
@@ -110,12 +159,19 @@ class TeacherScheduleScreen extends StatelessWidget {
   }
 
   int _countTotalClasses(List<Map<String, dynamic>> schedule) {
-    return schedule.fold(0, (sum, day) => sum + (day['classes'] as List).length);
+    return schedule.fold(
+      0,
+      (sum, day) => sum + (day['classes'] as List).length,
+    );
   }
 
-  Widget _buildDayCard(String day, List<Map<String, String>> classes, bool isDarkMode) {
+  Widget _buildDayCard(
+    String day,
+    List<Map<String, String>> classes,
+    bool isDarkMode,
+  ) {
     final isToday = _isToday(day);
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -145,13 +201,18 @@ class TeacherScheduleScreen extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: isToday ? Colors.purple : (isDarkMode ? Colors.white : Colors.black87),
+                    color: isToday
+                        ? Colors.purple
+                        : (isDarkMode ? Colors.white : Colors.black87),
                   ),
                 ),
                 if (isToday) ...[
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.purple,
                       borderRadius: BorderRadius.circular(10),
@@ -224,14 +285,21 @@ class TeacherScheduleScreen extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: color.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         cls['section']!,
-                        style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: color,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],
@@ -263,7 +331,15 @@ class TeacherScheduleScreen extends StatelessWidget {
   }
 
   bool _isToday(String day) {
-    final weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    final weekdays = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
     final today = DateTime.now().weekday - 1;
     return weekdays[today] == day;
   }

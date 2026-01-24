@@ -10,8 +10,10 @@ class ExamScheduleScreen extends ConsumerWidget {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final selectedCategory = ref.watch(selectedExamCategoryProvider);
     final allExams = ref.watch(examScheduleProvider);
-    
-    final filteredExams = allExams.where((exam) => exam.category == selectedCategory).toList();
+
+    final filteredExams = allExams
+        .where((exam) => exam.category == selectedCategory)
+        .toList();
 
     return Container(
       color: isDarkMode ? const Color(0xFF121212) : Colors.grey[50],
@@ -79,7 +81,9 @@ class ExamScheduleScreen extends ConsumerWidget {
                           child: Icon(
                             Icons.event_busy_rounded,
                             size: 64,
-                            color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
+                            color: isDarkMode
+                                ? Colors.grey[600]
+                                : Colors.grey[400],
                           ),
                         ),
                         const SizedBox(height: 24),
@@ -88,7 +92,9 @@ class ExamScheduleScreen extends ConsumerWidget {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
-                            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                            color: isDarkMode
+                                ? Colors.grey[400]
+                                : Colors.grey[600],
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -96,7 +102,9 @@ class ExamScheduleScreen extends ConsumerWidget {
                           'Check other categories',
                           style: TextStyle(
                             fontSize: 14,
-                            color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+                            color: isDarkMode
+                                ? Colors.grey[500]
+                                : Colors.grey[500],
                           ),
                         ),
                       ],
@@ -126,7 +134,8 @@ class ExamScheduleScreen extends ConsumerWidget {
     required bool isDarkMode,
   }) {
     return GestureDetector(
-      onTap: () => ref.read(selectedExamCategoryProvider.notifier).state = category,
+      onTap: () =>
+          ref.read(selectedExamCategoryProvider.notifier).state = category,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeInOut,
@@ -206,10 +215,7 @@ class ExamScheduleScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-          width: 2,
-        ),
+        border: Border.all(color: color.withOpacity(0.3), width: 2),
         boxShadow: [
           BoxShadow(
             color: color.withOpacity(0.15),
@@ -238,7 +244,10 @@ class ExamScheduleScreen extends ConsumerWidget {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(10),
@@ -256,7 +265,10 @@ class ExamScheduleScreen extends ConsumerWidget {
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [Colors.blue[600]!, Colors.cyan[500]!],
@@ -276,7 +288,7 @@ class ExamScheduleScreen extends ConsumerWidget {
               ],
             ),
           ),
-          
+
           // Content
           Padding(
             padding: const EdgeInsets.all(20),
@@ -348,11 +360,7 @@ class ExamScheduleScreen extends ConsumerWidget {
             color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(
-            icon,
-            size: 18,
-            color: color,
-          ),
+          child: Icon(icon, size: 18, color: color),
         ),
         const SizedBox(width: 12),
         Expanded(

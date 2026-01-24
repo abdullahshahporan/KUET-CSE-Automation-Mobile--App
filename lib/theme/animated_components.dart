@@ -41,12 +41,14 @@ class _AnimatedPressButtonState extends State<AnimatedPressButton>
       vsync: this,
       duration: const Duration(milliseconds: 100),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: widget.pressScale).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-    _shadowAnimation = Tween<double>(begin: 8.0, end: 2.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: widget.pressScale,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _shadowAnimation = Tween<double>(
+      begin: 8.0,
+      end: 2.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -71,7 +73,7 @@ class _AnimatedPressButtonState extends State<AnimatedPressButton>
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return GestureDetector(
       onTapDown: widget.onTap != null ? _onTapDown : null,
       onTapUp: widget.onTap != null ? _onTapUp : null,
@@ -144,12 +146,14 @@ class _AnimatedCardState extends State<AnimatedCard>
       vsync: this,
       duration: const Duration(milliseconds: 150),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
-    _glowAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.98,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    _glowAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
   }
 
   @override
@@ -162,13 +166,15 @@ class _AnimatedCardState extends State<AnimatedCard>
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final accentColor = widget.accentColor ?? AppColors.primary;
-    
+
     return GestureDetector(
       onTapDown: widget.onTap != null ? (_) => _controller.forward() : null,
-      onTapUp: widget.onTap != null ? (_) {
-        _controller.reverse();
-        widget.onTap?.call();
-      } : null,
+      onTapUp: widget.onTap != null
+          ? (_) {
+              _controller.reverse();
+              widget.onTap?.call();
+            }
+          : null,
       onTapCancel: widget.onTap != null ? () => _controller.reverse() : null,
       child: AnimatedBuilder(
         animation: _controller,
@@ -191,7 +197,9 @@ class _AnimatedCardState extends State<AnimatedCard>
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: accentColor.withOpacity(0.05 + (_glowAnimation.value * 0.1)),
+                    color: accentColor.withOpacity(
+                      0.05 + (_glowAnimation.value * 0.1),
+                    ),
                     blurRadius: 12,
                     spreadRadius: _glowAnimation.value * 2,
                     offset: const Offset(0, 4),
@@ -227,16 +235,13 @@ class GlowContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       padding: padding ?? const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface(isDarkMode),
         borderRadius: borderRadius ?? BorderRadius.circular(16),
-        border: Border.all(
-          color: glowColor.withOpacity(0.2),
-          width: 1,
-        ),
+        border: Border.all(color: glowColor.withOpacity(0.2), width: 1),
         boxShadow: [
           BoxShadow(
             color: glowColor.withOpacity(glowIntensity),
@@ -287,9 +292,10 @@ class _AnimatedStatusButtonState extends State<AnimatedStatusButton>
       vsync: this,
       duration: const Duration(milliseconds: 100),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.85).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.85,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -317,7 +323,9 @@ class _AnimatedStatusButtonState extends State<AnimatedStatusButton>
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: widget.isSelected ? widget.color : widget.color.withOpacity(0.1),
+                color: widget.isSelected
+                    ? widget.color
+                    : widget.color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: widget.color,
@@ -357,32 +365,26 @@ class SmoothPageRoute<T> extends PageRouteBuilder<T> {
   final Widget page;
 
   SmoothPageRoute({required this.page})
-      : super(
-          pageBuilder: (context, animation, secondaryAnimation) => page,
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final fadeAnimation = CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOut,
-            );
-            final slideAnimation = Tween<Offset>(
-              begin: const Offset(0.03, 0),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOut,
-            ));
+    : super(
+        pageBuilder: (context, animation, secondaryAnimation) => page,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final fadeAnimation = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOut,
+          );
+          final slideAnimation = Tween<Offset>(
+            begin: const Offset(0.03, 0),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut));
 
-            return FadeTransition(
-              opacity: fadeAnimation,
-              child: SlideTransition(
-                position: slideAnimation,
-                child: child,
-              ),
-            );
-          },
-          transitionDuration: const Duration(milliseconds: 250),
-          reverseTransitionDuration: const Duration(milliseconds: 200),
-        );
+          return FadeTransition(
+            opacity: fadeAnimation,
+            child: SlideTransition(position: slideAnimation, child: child),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 250),
+        reverseTransitionDuration: const Duration(milliseconds: 200),
+      );
 }
 
 /// Shimmer loading effect for dark mode
@@ -390,11 +392,7 @@ class ShimmerEffect extends StatefulWidget {
   final Widget child;
   final bool isLoading;
 
-  const ShimmerEffect({
-    super.key,
-    required this.child,
-    this.isLoading = true,
-  });
+  const ShimmerEffect({super.key, required this.child, this.isLoading = true});
 
   @override
   State<ShimmerEffect> createState() => _ShimmerEffectState();
@@ -412,9 +410,10 @@ class _ShimmerEffectState extends State<ShimmerEffect>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat();
-    _animation = Tween<double>(begin: -1.0, end: 2.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _animation = Tween<double>(
+      begin: -1.0,
+      end: 2.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override

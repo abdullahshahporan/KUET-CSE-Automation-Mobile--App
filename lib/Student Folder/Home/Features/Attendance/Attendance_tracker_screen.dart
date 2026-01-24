@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kuet_cse_automation/Student%20Folder/providers/app_providers.dart';
+import 'package:kuet_cse_automation/theme/app_colors.dart';
 
 class AttendanceTrackerScreen extends ConsumerWidget {
   const AttendanceTrackerScreen({super.key});
@@ -17,13 +18,17 @@ class AttendanceTrackerScreen extends ConsumerWidget {
       totalClasses += record.totalClasses;
       totalAttended += record.attendedClasses;
     }
-    final overallPercentage = (totalAttended / totalClasses * 100).toStringAsFixed(2);
+    final overallPercentage = (totalAttended / totalClasses * 100)
+        .toStringAsFixed(2);
 
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.grey[100],
+      backgroundColor: AppColors.background(isDarkMode),
       appBar: AppBar(
-        title: const Text('Attendance Tracker'),
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        title: Text(
+          'Attendance Tracker',
+          style: TextStyle(color: AppColors.textPrimary(isDarkMode)),
+        ),
+        backgroundColor: AppColors.surface(isDarkMode),
         elevation: 0,
       ),
       body: Column(
@@ -33,15 +38,15 @@ class AttendanceTrackerScreen extends ConsumerWidget {
             margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.blue[700]!, Colors.cyan[500]!],
+              gradient: const LinearGradient(
+                colors: [AppColors.primary, AppColors.info],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.blue.withOpacity(0.3),
+                  color: AppColors.primary.withOpacity(0.3),
                   blurRadius: 15,
                   offset: const Offset(0, 5),
                 ),
@@ -92,14 +97,17 @@ class AttendanceTrackerScreen extends ConsumerWidget {
                   margin: const EdgeInsets.only(bottom: 16),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                    color: AppColors.surface(isDarkMode),
                     borderRadius: BorderRadius.circular(16),
                     border: isLow
-                        ? Border.all(color: Colors.red.withOpacity(0.5), width: 2)
-                        : null,
+                        ? Border.all(
+                            color: AppColors.danger.withOpacity(0.5),
+                            width: 2,
+                          )
+                        : Border.all(color: AppColors.border(isDarkMode)),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: AppColors.shadow(isDarkMode),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -119,15 +127,15 @@ class AttendanceTrackerScreen extends ConsumerWidget {
                                   style: TextStyle(
                                     fontSize: 17,
                                     fontWeight: FontWeight.bold,
-                                    color: isDarkMode ? Colors.white : Colors.black87,
+                                    color: AppColors.textPrimary(isDarkMode),
                                   ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   record.courseCode,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 13,
-                                    color: Colors.blue[600],
+                                    color: AppColors.primary,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -137,7 +145,9 @@ class AttendanceTrackerScreen extends ConsumerWidget {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: _getPercentageColor(percentage).withOpacity(0.15),
+                              color: _getPercentageColor(
+                                percentage,
+                              ).withOpacity(0.15),
                               shape: BoxShape.circle,
                             ),
                             child: Text(
@@ -157,28 +167,28 @@ class AttendanceTrackerScreen extends ConsumerWidget {
                           Icon(
                             Icons.check_circle,
                             size: 16,
-                            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                            color: AppColors.textSecondary(isDarkMode),
                           ),
                           const SizedBox(width: 6),
                           Text(
                             'Present: ${record.attendedClasses}',
                             style: TextStyle(
                               fontSize: 14,
-                              color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+                              color: AppColors.textSecondary(isDarkMode),
                             ),
                           ),
                           const SizedBox(width: 20),
                           Icon(
                             Icons.cancel,
                             size: 16,
-                            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                            color: AppColors.textSecondary(isDarkMode),
                           ),
                           const SizedBox(width: 6),
                           Text(
                             'Absent: ${record.totalClasses - record.attendedClasses}',
                             style: TextStyle(
                               fontSize: 14,
-                              color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+                              color: AppColors.textSecondary(isDarkMode),
                             ),
                           ),
                         ],
@@ -190,7 +200,7 @@ class AttendanceTrackerScreen extends ConsumerWidget {
                         child: LinearProgressIndicator(
                           value: percentage / 100,
                           minHeight: 8,
-                          backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[300],
+                          backgroundColor: AppColors.border(isDarkMode),
                           valueColor: AlwaysStoppedAnimation<Color>(
                             _getPercentageColor(percentage),
                           ),
@@ -201,14 +211,18 @@ class AttendanceTrackerScreen extends ConsumerWidget {
                           padding: const EdgeInsets.only(top: 12),
                           child: Row(
                             children: [
-                              Icon(Icons.warning, size: 16, color: Colors.red[700]),
+                              const Icon(
+                                Icons.warning,
+                                size: 16,
+                                color: AppColors.danger,
+                              ),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
                                   'Attendance below 80%! Need ${_calculateRequiredClasses(record)} consecutive classes.',
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 12,
-                                    color: Colors.red[700],
+                                    color: AppColors.danger,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -228,10 +242,10 @@ class AttendanceTrackerScreen extends ConsumerWidget {
   }
 
   Color _getPercentageColor(double percentage) {
-    if (percentage >= 90) return Colors.green;
-    if (percentage >= 80) return Colors.blue;
-    if (percentage >= 70) return Colors.orange;
-    return Colors.red;
+    if (percentage >= 90) return AppColors.success;
+    if (percentage >= 80) return AppColors.primary;
+    if (percentage >= 70) return AppColors.warning;
+    return AppColors.danger;
   }
 
   int _calculateRequiredClasses(record) {

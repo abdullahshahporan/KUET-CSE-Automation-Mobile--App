@@ -68,7 +68,11 @@ class StudentDetailScreen extends StatelessWidget {
                     radius: 45,
                     backgroundColor: Colors.white.withOpacity(0.2),
                     child: Text(
-                      student.name.split(' ').map((n) => n.isNotEmpty ? n[0] : '').take(2).join(),
+                      student.name
+                          .split(' ')
+                          .map((n) => n.isNotEmpty ? n[0] : '')
+                          .take(2)
+                          .join(),
                       style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -97,11 +101,20 @@ class StudentDetailScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _buildBadge('Section ${student.section}', Colors.white.withOpacity(0.2)),
+                      _buildBadge(
+                        'Section ${student.section}',
+                        Colors.white.withOpacity(0.2),
+                      ),
                       const SizedBox(width: 8),
-                      _buildBadge('Batch ${student.formattedBatch}', Colors.white.withOpacity(0.2)),
+                      _buildBadge(
+                        'Batch ${student.formattedBatch}',
+                        Colors.white.withOpacity(0.2),
+                      ),
                       const SizedBox(width: 8),
-                      _buildBadge(student.sessionalGroup, Colors.white.withOpacity(0.2)),
+                      _buildBadge(
+                        student.sessionalGroup,
+                        Colors.white.withOpacity(0.2),
+                      ),
                     ],
                   ),
                 ],
@@ -120,8 +133,8 @@ class StudentDetailScreen extends StatelessWidget {
                     attendancePercentage >= 80
                         ? Colors.green
                         : attendancePercentage >= 60
-                            ? Colors.orange
-                            : Colors.red,
+                        ? Colors.orange
+                        : Colors.red,
                     isDarkMode,
                   ),
                 ),
@@ -149,8 +162,16 @@ class StudentDetailScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            _buildDetailRow('Department', student.department ?? 'CSE', isDarkMode),
-            _buildDetailRow('Current Semester', student.semesterName, isDarkMode),
+            _buildDetailRow(
+              'Department',
+              student.department ?? 'CSE',
+              isDarkMode,
+            ),
+            _buildDetailRow(
+              'Current Semester',
+              student.semesterName,
+              isDarkMode,
+            ),
             _buildDetailRow('Email', student.email, isDarkMode),
             const SizedBox(height: 24),
 
@@ -175,8 +196,18 @@ class StudentDetailScreen extends StatelessWidget {
                   _buildMarksRow('CT-1', grades.ct1, 20, isDarkMode),
                   _buildMarksRow('CT-2', grades.ct2, 10, isDarkMode),
                   _buildMarksRow('Spot Test', grades.spotTest, 5, isDarkMode),
-                  _buildMarksRow('Assignment', grades.assignment, 5, isDarkMode),
-                  _buildMarksRow('Attendance', grades.attendance, 10, isDarkMode),
+                  _buildMarksRow(
+                    'Assignment',
+                    grades.assignment,
+                    5,
+                    isDarkMode,
+                  ),
+                  _buildMarksRow(
+                    'Attendance',
+                    grades.attendance,
+                    10,
+                    isDarkMode,
+                  ),
                   const Divider(),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -225,7 +256,13 @@ class StudentDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoCard(String label, String value, IconData icon, Color color, bool isDarkMode) {
+  Widget _buildInfoCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+    bool isDarkMode,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -285,7 +322,12 @@ class StudentDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMarksRow(String label, double marks, double max, bool isDarkMode) {
+  Widget _buildMarksRow(
+    String label,
+    double marks,
+    double max,
+    bool isDarkMode,
+  ) {
     final percentage = marks / max;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -307,13 +349,15 @@ class StudentDetailScreen extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: percentage,
                 minHeight: 6,
-                backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                backgroundColor: isDarkMode
+                    ? Colors.grey[800]
+                    : Colors.grey[200],
                 valueColor: AlwaysStoppedAnimation<Color>(
                   percentage >= 0.8
                       ? Colors.green
                       : percentage >= 0.5
-                          ? Colors.orange
-                          : Colors.red,
+                      ? Colors.orange
+                      : Colors.red,
                 ),
               ),
             ),

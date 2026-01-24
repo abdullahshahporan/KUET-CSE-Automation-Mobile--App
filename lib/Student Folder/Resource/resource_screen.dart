@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/app_colors.dart';
 
 class ResourcesScreen extends StatelessWidget {
   const ResourcesScreen({super.key});
@@ -6,9 +7,9 @@ class ResourcesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.grey[100],
+      backgroundColor: AppColors.background(isDarkMode),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -19,7 +20,7 @@ class ResourcesScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: isDarkMode ? Colors.white : Colors.black87,
+                color: AppColors.textPrimary(isDarkMode),
               ),
             ),
             const SizedBox(height: 16),
@@ -29,12 +30,42 @@ class ResourcesScreen extends StatelessWidget {
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
                 children: [
-                  _buildResourceCard('Lecture Notes', Icons.description, Colors.blue, isDarkMode),
-                  _buildResourceCard('Previous Papers', Icons.quiz, Colors.orange, isDarkMode),
-                  _buildResourceCard('E-Books', Icons.book, Colors.green, isDarkMode),
-                  _buildResourceCard('Video Lectures', Icons.video_library, Colors.red, isDarkMode),
-                  _buildResourceCard('Assignments', Icons.assignment, Colors.purple, isDarkMode),
-                  _buildResourceCard('Lab Manuals', Icons.science, Colors.teal, isDarkMode),
+                  _buildResourceCard(
+                    'Lecture Notes',
+                    Icons.description,
+                    AppColors.primary,
+                    isDarkMode,
+                  ),
+                  _buildResourceCard(
+                    'Previous Papers',
+                    Icons.quiz,
+                    AppColors.warning,
+                    isDarkMode,
+                  ),
+                  _buildResourceCard(
+                    'E-Books',
+                    Icons.book,
+                    AppColors.success,
+                    isDarkMode,
+                  ),
+                  _buildResourceCard(
+                    'Video Lectures',
+                    Icons.video_library,
+                    AppColors.danger,
+                    isDarkMode,
+                  ),
+                  _buildResourceCard(
+                    'Assignments',
+                    Icons.assignment,
+                    AppColors.accent,
+                    isDarkMode,
+                  ),
+                  _buildResourceCard(
+                    'Lab Manuals',
+                    Icons.science,
+                    AppColors.info,
+                    isDarkMode,
+                  ),
                 ],
               ),
             ),
@@ -44,14 +75,20 @@ class ResourcesScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildResourceCard(String title, IconData icon, Color color, bool isDarkMode) {
+  Widget _buildResourceCard(
+    String title,
+    IconData icon,
+    Color color,
+    bool isDarkMode,
+  ) {
     return Container(
       decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        color: AppColors.surface(isDarkMode),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border(isDarkMode)),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.2),
+            color: AppColors.shadow(isDarkMode),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -75,7 +112,7 @@ class ResourcesScreen extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: isDarkMode ? Colors.white : Colors.grey[800],
+              color: AppColors.textPrimary(isDarkMode),
             ),
           ),
         ],

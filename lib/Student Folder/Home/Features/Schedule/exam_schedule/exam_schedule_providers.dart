@@ -39,7 +39,7 @@ final examScheduleProvider = Provider<List<ExamSchedule>>((ref) {
       room: 'CSE-303',
       syllabus: 'SQL Queries, Joins',
     ),
-    
+
     // Term Final Exams
     ExamSchedule(
       courseName: 'Data Structures',
@@ -71,7 +71,7 @@ final examScheduleProvider = Provider<List<ExamSchedule>>((ref) {
       room: 'Exam Hall - 3',
       syllabus: 'All Topics - Complete Syllabus',
     ),
-    
+
     // Quiz/Viva
     ExamSchedule(
       courseName: 'Database Management',

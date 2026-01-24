@@ -4,6 +4,3 @@ import 'package:kuet_cse_automation/app.dart';
 void main() {
   runApp(CSEApp());
 }
-
-
-

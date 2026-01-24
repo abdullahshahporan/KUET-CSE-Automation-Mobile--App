@@ -8,7 +8,7 @@ import '../../theme/app_colors.dart';
 /// Teacher Grading screen - Course-specific
 class TeacherGradingScreen extends StatefulWidget {
   final TeacherCourse? preSelectedCourse;
-  
+
   const TeacherGradingScreen({super.key, this.preSelectedCourse});
 
   @override
@@ -18,13 +18,15 @@ class TeacherGradingScreen extends StatefulWidget {
 class _TeacherGradingScreenState extends State<TeacherGradingScreen> {
   String? _selectedComponent;
   String _selectedSection = 'A';
-  
+
   TeacherCourse get course => widget.preSelectedCourse!;
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final color = course.type == CourseType.theory ? AppColors.primary : AppColors.accent;
+    final color = course.type == CourseType.theory
+        ? AppColors.primary
+        : AppColors.accent;
 
     return Scaffold(
       backgroundColor: AppColors.background(isDarkMode),
@@ -45,17 +47,62 @@ class _TeacherGradingScreenState extends State<TeacherGradingScreen> {
   Widget _buildComponentList(bool isDarkMode, Color color) {
     final components = course.type == CourseType.theory
         ? [
-            {'name': 'CT-1', 'max': 20, 'icon': Icons.quiz, 'color': AppColors.primary},
-            {'name': 'CT-2', 'max': 10, 'icon': Icons.quiz, 'color': AppColors.info},
-            {'name': 'Spot Test', 'max': 5, 'icon': Icons.flash_on, 'color': AppColors.warning},
-            {'name': 'Assignment', 'max': 5, 'icon': Icons.assignment, 'color': AppColors.success},
-            {'name': 'Attendance', 'max': 10, 'icon': Icons.fact_check, 'color': AppColors.teal},
+            {
+              'name': 'CT-1',
+              'max': 20,
+              'icon': Icons.quiz,
+              'color': AppColors.primary,
+            },
+            {
+              'name': 'CT-2',
+              'max': 10,
+              'icon': Icons.quiz,
+              'color': AppColors.info,
+            },
+            {
+              'name': 'Spot Test',
+              'max': 5,
+              'icon': Icons.flash_on,
+              'color': AppColors.warning,
+            },
+            {
+              'name': 'Assignment',
+              'max': 5,
+              'icon': Icons.assignment,
+              'color': AppColors.success,
+            },
+            {
+              'name': 'Attendance',
+              'max': 10,
+              'icon': Icons.fact_check,
+              'color': AppColors.teal,
+            },
           ]
         : [
-            {'name': 'Lab Task', 'max': 50, 'icon': Icons.task, 'color': AppColors.accent},
-            {'name': 'Lab Report', 'max': 20, 'icon': Icons.description, 'color': AppColors.teal},
-            {'name': 'Quiz', 'max': 10, 'icon': Icons.quiz, 'color': AppColors.warning},
-            {'name': 'Lab Test', 'max': 30, 'icon': Icons.science, 'color': AppColors.primary},
+            {
+              'name': 'Lab Task',
+              'max': 50,
+              'icon': Icons.task,
+              'color': AppColors.accent,
+            },
+            {
+              'name': 'Lab Report',
+              'max': 20,
+              'icon': Icons.description,
+              'color': AppColors.teal,
+            },
+            {
+              'name': 'Quiz',
+              'max': 10,
+              'icon': Icons.quiz,
+              'color': AppColors.warning,
+            },
+            {
+              'name': 'Lab Test',
+              'max': 30,
+              'icon': Icons.science,
+              'color': AppColors.primary,
+            },
           ];
 
     return SingleChildScrollView(
@@ -73,19 +120,27 @@ class _TeacherGradingScreenState extends State<TeacherGradingScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          ...components.map((comp) => _buildComponentCard(
-            comp['name'] as String,
-            comp['max'] as int,
-            comp['icon'] as IconData,
-            comp['color'] as Color,
-            isDarkMode,
-          )),
+          ...components.map(
+            (comp) => _buildComponentCard(
+              comp['name'] as String,
+              comp['max'] as int,
+              comp['icon'] as IconData,
+              comp['color'] as Color,
+              isDarkMode,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildComponentCard(String name, int max, IconData icon, Color color, bool isDarkMode) {
+  Widget _buildComponentCard(
+    String name,
+    int max,
+    IconData icon,
+    Color color,
+    bool isDarkMode,
+  ) {
     return GestureDetector(
       onTap: () => setState(() => _selectedComponent = name),
       child: Container(
@@ -137,8 +192,12 @@ class _TeacherGradingScreenState extends State<TeacherGradingScreen> {
   }
 
   Widget _buildMarksEntry(bool isDarkMode) {
-    final students = getStudentsForCourse(course, 
-        course.type == CourseType.theory ? _selectedSection : '${_selectedSection}1');
+    final students = getStudentsForCourse(
+      course,
+      course.type == CourseType.theory
+          ? _selectedSection
+          : '${_selectedSection}1',
+    );
     final componentInfo = _getComponentInfo();
 
     return Column(
@@ -148,7 +207,9 @@ class _TeacherGradingScreenState extends State<TeacherGradingScreen> {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: AppColors.surface(isDarkMode),
-            border: Border(bottom: BorderSide(color: AppColors.border(isDarkMode))),
+            border: Border(
+              bottom: BorderSide(color: AppColors.border(isDarkMode)),
+            ),
           ),
           child: Row(
             children: [
@@ -179,39 +240,44 @@ class _TeacherGradingScreenState extends State<TeacherGradingScreen> {
                 ),
               ),
               // Section selector
-              ...['A', 'B'].map((s) => Padding(
-                padding: const EdgeInsets.only(left: 8),
-                child: GestureDetector(
-                  onTap: () => setState(() => _selectedSection = s),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: _selectedSection == s 
-                          ? AppColors.primary 
-                          : AppColors.surfaceElevated(isDarkMode),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: _selectedSection == s 
-                            ? AppColors.primary 
-                            : AppColors.border(isDarkMode),
+              ...['A', 'B'].map(
+                (s) => Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedSection = s),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
                       ),
-                    ),
-                    child: Text(
-                      s,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: _selectedSection == s 
-                            ? Colors.white 
-                            : AppColors.textSecondary(isDarkMode),
+                      decoration: BoxDecoration(
+                        color: _selectedSection == s
+                            ? AppColors.primary
+                            : AppColors.surfaceElevated(isDarkMode),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: _selectedSection == s
+                              ? AppColors.primary
+                              : AppColors.border(isDarkMode),
+                        ),
+                      ),
+                      child: Text(
+                        s,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: _selectedSection == s
+                              ? Colors.white
+                              : AppColors.textSecondary(isDarkMode),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              )),
+              ),
             ],
           ),
         ),
-        
+
         // Student list
         Expanded(
           child: ListView.builder(
@@ -220,17 +286,23 @@ class _TeacherGradingScreenState extends State<TeacherGradingScreen> {
             itemCount: students.length,
             itemBuilder: (context, index) {
               final student = students[index];
-              return _buildStudentRow(student, componentInfo['max'] as int, isDarkMode);
+              return _buildStudentRow(
+                student,
+                componentInfo['max'] as int,
+                isDarkMode,
+              );
             },
           ),
         ),
-        
+
         // Save button
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: AppColors.surface(isDarkMode),
-            border: Border(top: BorderSide(color: AppColors.border(isDarkMode))),
+            border: Border(
+              top: BorderSide(color: AppColors.border(isDarkMode)),
+            ),
           ),
           child: SafeArea(
             child: SizedBox(
@@ -300,14 +372,19 @@ class _TeacherGradingScreenState extends State<TeacherGradingScreen> {
           SizedBox(
             width: 70,
             child: TextField(
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               textAlign: TextAlign.center,
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
               ],
               decoration: InputDecoration(
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 10,
+                ),
                 filled: true,
                 fillColor: AppColors.surfaceElevated(isDarkMode),
                 border: OutlineInputBorder(
@@ -354,7 +431,9 @@ class _TeacherGradingScreenState extends State<TeacherGradingScreen> {
   void _saveMarks() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('$_selectedComponent marks saved for Section $_selectedSection!'),
+        content: Text(
+          '$_selectedComponent marks saved for Section $_selectedSection!',
+        ),
         backgroundColor: AppColors.success,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

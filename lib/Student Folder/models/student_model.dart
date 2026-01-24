@@ -29,10 +29,10 @@ class Student {
     final yearSuffix = currentYear == 1
         ? 'st'
         : currentYear == 2
-            ? 'nd'
-            : currentYear == 3
-                ? 'rd'
-                : 'th';
+        ? 'nd'
+        : currentYear == 3
+        ? 'rd'
+        : 'th';
     final termSuffix = currentTerm == 1 ? 'st' : 'nd';
     return '$currentYear$yearSuffix Year $currentTerm$termSuffix Term';
   }

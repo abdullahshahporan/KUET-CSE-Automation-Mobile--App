@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Common%20Screen/appbar_screen.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Hamburger%20Menu/hamburger_screen.dart';
-import 'package:kuet_cse_automation/Student%20Folder/Home/home_screen.dart';
+import 'package:kuet_cse_automation/Student%20Folder/Home_Central/home_screen.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Home/Features/Schedule/unified_schedule_screen.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Resource/resource_screen.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Profile/profile_screen.dart';
 import 'package:kuet_cse_automation/app_theme.dart';
+import 'package:kuet_cse_automation/theme/app_colors.dart';
 import 'package:provider/provider.dart';
 
 class MainBottomNavBarScreen extends StatefulWidget {
@@ -30,9 +31,11 @@ class _MainBottomNavBarScreenState extends State<MainBottomNavBarScreen> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
-    
+
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.grey[100],
+      backgroundColor: isDarkMode
+          ? AppColors.darkBackground
+          : AppColors.lightBackground,
       appBar: CustomAppBar(
         userName: 'Student Name',
         isDarkMode: isDarkMode,
@@ -47,57 +50,109 @@ class _MainBottomNavBarScreenState extends State<MainBottomNavBarScreen> {
         },
         userName: 'Student Name',
       ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
+      body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+          color: isDarkMode ? AppColors.darkSurface : AppColors.lightSurface,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
+              color: isDarkMode
+                  ? Colors.black.withOpacity(0.4)
+                  : Colors.grey.withOpacity(0.15),
+              blurRadius: 20,
+              offset: const Offset(0, -4),
             ),
           ],
         ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-          selectedItemColor: isDarkMode ? Colors.blue[300] : Colors.blue[700],
-          unselectedItemColor: isDarkMode ? Colors.grey[600] : Colors.grey[500],
-          selectedFontSize: 12,
-          unselectedFontSize: 11,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-          elevation: 0,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home),
-              label: 'Home',
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(
+                  index: 0,
+                  icon: Icons.home_rounded,
+                  label: 'Home',
+                  isDarkMode: isDarkMode,
+                ),
+                _buildNavItem(
+                  index: 1,
+                  icon: Icons.calendar_month_rounded,
+                  label: 'Schedule',
+                  isDarkMode: isDarkMode,
+                ),
+                _buildNavItem(
+                  index: 2,
+                  icon: Icons.library_books_rounded,
+                  label: 'Resources',
+                  isDarkMode: isDarkMode,
+                ),
+                _buildNavItem(
+                  index: 3,
+                  icon: Icons.person_rounded,
+                  label: 'Profile',
+                  isDarkMode: isDarkMode,
+                ),
+              ],
             ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.schedule_outlined),
-              activeIcon: Icon(Icons.schedule),
-              label: 'Schedule',
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required int index,
+    required IconData icon,
+    required String label,
+    required bool isDarkMode,
+  }) {
+    final isSelected = _currentIndex == index;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _currentIndex = index;
+        });
+      },
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        padding: EdgeInsets.symmetric(
+          horizontal: isSelected ? 16 : 12,
+          vertical: 8,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withOpacity(0.12)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected
+                  ? AppColors.primary
+                  : (isDarkMode
+                        ? AppColors.darkTextMuted
+                        : AppColors.lightTextSecondary),
+              size: 24,
             ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.library_books_outlined),
-              activeIcon: Icon(Icons.library_books),
-              label: 'Resources',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person),
-              label: 'Profile',
-            ),
+            if (isSelected) ...[
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ],
           ],
         ),
       ),

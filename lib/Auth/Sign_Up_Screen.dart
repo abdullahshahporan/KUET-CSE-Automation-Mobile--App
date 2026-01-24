@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kuet_cse_automation/Auth/First_password_screen.dart';
+import '../theme/app_colors.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -35,9 +36,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Email verified successfully!'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: const Text('Email verified successfully!'),
+            backgroundColor: AppColors.success,
           ),
         );
 
@@ -47,7 +48,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => FirstPasswordScreen(email: _emailController.text),
+              builder: (context) =>
+                  FirstPasswordScreen(email: _emailController.text),
             ),
           );
         }
@@ -60,14 +62,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.grey[50],
+      backgroundColor: AppColors.background(isDarkMode),
       appBar: AppBar(
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        backgroundColor: AppColors.surface(isDarkMode),
         elevation: 0,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back_ios_new,
-            color: isDarkMode ? Colors.white : Colors.black87,
+            color: AppColors.textPrimary(isDarkMode),
             size: 20,
           ),
           onPressed: () => Navigator.pop(context),
@@ -75,7 +77,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         title: Text(
           'Create Account',
           style: TextStyle(
-            color: isDarkMode ? Colors.white : Colors.black87,
+            color: AppColors.textPrimary(isDarkMode),
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
@@ -90,19 +92,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 20),
-                
+
                 // Icon
                 Center(
                   child: Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.1),
+                      color: AppColors.primary.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.person_add,
                       size: 50,
-                      color: Colors.blue[600],
+                      color: AppColors.primary,
                     ),
                   ),
                 ),
@@ -117,7 +119,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: isDarkMode ? Colors.white : Colors.black87,
+                          color: AppColors.textPrimary(isDarkMode),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -125,7 +127,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         'Enter your official KUET email address',
                         style: TextStyle(
                           fontSize: 14,
-                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                          color: AppColors.textSecondary(isDarkMode),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -140,21 +142,28 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+                    color: AppColors.textSecondary(isDarkMode),
                   ),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
+                  style: TextStyle(color: AppColors.textPrimary(isDarkMode)),
                   decoration: InputDecoration(
                     hintText: 'student@kuet.ac.bd',
-                    prefixIcon: const Icon(Icons.email_outlined),
+                    hintStyle: TextStyle(
+                      color: AppColors.textSecondary(isDarkMode),
+                    ),
+                    prefixIcon: Icon(
+                      Icons.email_outlined,
+                      color: AppColors.textSecondary(isDarkMode),
+                    ),
                     suffixIcon: _emailVerified
-                        ? Icon(Icons.check_circle, color: Colors.green[600])
+                        ? Icon(Icons.check_circle, color: AppColors.success)
                         : null,
                     filled: true,
-                    fillColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                    fillColor: AppColors.surface(isDarkMode),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -162,25 +171,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
-                        color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+                        color: AppColors.border(isDarkMode),
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.blue[600]!, width: 2),
+                      borderSide: BorderSide(
+                        color: AppColors.primary,
+                        width: 2,
+                      ),
                     ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
                     }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                    if (!RegExp(
+                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                    ).hasMatch(value)) {
                       return 'Please enter a valid email';
                     }
-                    // Optional: Check for KUET email
-                    //if (!value.endsWith('@kuet.ac.bd')) {
-                    //   return 'Please use your official KUET email';
-                    // }
                     return null;
                   },
                 ),
@@ -190,14 +200,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: AppColors.info.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.info.withOpacity(0.3)),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline, color: Colors.blue[700], size: 24),
+                      Icon(Icons.info_outline, color: AppColors.info, size: 24),
                       const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'A verification code will be sent to your email',
+                          style: TextStyle(
+                            color: AppColors.textSecondary(isDarkMode),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -210,7 +229,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _verifyEmail,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[600],
+                      backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -223,12 +242,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             width: 24,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
-                        : Row(
+                        : const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
+                            children: [
                               Text(
                                 'Verify Email',
                                 style: TextStyle(
@@ -253,7 +274,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       Text(
                         'Already have an account? ',
                         style: TextStyle(
-                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                          color: AppColors.textSecondary(isDarkMode),
                         ),
                       ),
                       TextButton(
@@ -261,7 +282,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         child: Text(
                           'Sign In',
                           style: TextStyle(
-                            color: Colors.blue[600],
+                            color: AppColors.primary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),

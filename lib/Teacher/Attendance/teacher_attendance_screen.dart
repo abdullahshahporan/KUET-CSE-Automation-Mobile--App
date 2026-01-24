@@ -7,22 +7,25 @@ import 'roll_call_screen.dart';
 /// Teacher Attendance screen - Course-specific with date picker
 class TeacherAttendanceScreen extends StatefulWidget {
   final TeacherCourse? preSelectedCourse;
-  
+
   const TeacherAttendanceScreen({super.key, this.preSelectedCourse});
 
   @override
-  State<TeacherAttendanceScreen> createState() => _TeacherAttendanceScreenState();
+  State<TeacherAttendanceScreen> createState() =>
+      _TeacherAttendanceScreenState();
 }
 
 class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
   DateTime _selectedDate = DateTime.now();
-  
+
   TeacherCourse get course => widget.preSelectedCourse!;
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final color = course.type == CourseType.theory ? AppColors.primary : AppColors.accent;
+    final color = course.type == CourseType.theory
+        ? AppColors.primary
+        : AppColors.accent;
 
     return Scaffold(
       backgroundColor: AppColors.background(isDarkMode),
@@ -50,14 +53,16 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
             // Date Selector
             _buildDateCard(isDarkMode),
             const SizedBox(height: 20),
-            
+
             // Progress info
             _buildProgressCard(isDarkMode, color),
             const SizedBox(height: 20),
-            
+
             // Select Section/Group
             Text(
-              course.type == CourseType.theory ? 'Select Section' : 'Select Group',
+              course.type == CourseType.theory
+                  ? 'Select Section'
+                  : 'Select Group',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -65,14 +70,14 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            
+
             if (course.type == CourseType.theory)
               _buildSectionSelector(isDarkMode)
             else
               _buildGroupSelector(isDarkMode),
-            
+
             const SizedBox(height: 24),
-            
+
             // Recent Attendance
             Text(
               'Recent Records',
@@ -106,7 +111,11 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
               color: AppColors.success.withOpacity(0.15),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(Icons.calendar_today, color: AppColors.success, size: 22),
+            child: Icon(
+              Icons.calendar_today,
+              color: AppColors.success,
+              size: 22,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -203,7 +212,9 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
         final color = section == 'A' ? AppColors.primary : AppColors.accent;
         return Expanded(
           child: Padding(
-            padding: EdgeInsets.only(right: section == course.sections.last ? 0 : 10),
+            padding: EdgeInsets.only(
+              right: section == course.sections.last ? 0 : 10,
+            ),
             child: _buildSelectorCard(
               title: 'Section $section',
               subtitle: section == 'A' ? 'Roll 001-060' : 'Roll 061-120',
@@ -291,10 +302,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
             ),
             Text(
               subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                color: color.withOpacity(0.8),
-              ),
+              style: TextStyle(fontSize: 12, color: color.withOpacity(0.8)),
             ),
             Text(
               count,
@@ -356,7 +364,11 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                   color: AppColors.success.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.check_circle, color: AppColors.success, size: 20),
+                child: Icon(
+                  Icons.check_circle,
+                  color: AppColors.success,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -387,8 +399,8 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                   color: session.attendanceRate >= 80
                       ? AppColors.success
                       : session.attendanceRate >= 60
-                          ? AppColors.warning
-                          : AppColors.danger,
+                      ? AppColors.warning
+                      : AppColors.danger,
                 ),
               ),
             ],
@@ -399,8 +411,20 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
   }
 
   String _formatDate(DateTime date) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     final weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return '${weekdays[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}, ${date.year}';
   }
@@ -477,7 +501,9 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                 Center(
                   child: Text(
                     'No records yet',
-                    style: TextStyle(color: AppColors.textSecondary(isDarkMode)),
+                    style: TextStyle(
+                      color: AppColors.textSecondary(isDarkMode),
+                    ),
                   ),
                 )
               else
@@ -513,14 +539,18 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                         ),
                         const Spacer(),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
                           decoration: BoxDecoration(
-                            color: (session.attendanceRate >= 80
-                                    ? AppColors.success
-                                    : session.attendanceRate >= 60
+                            color:
+                                (session.attendanceRate >= 80
+                                        ? AppColors.success
+                                        : session.attendanceRate >= 60
                                         ? AppColors.warning
                                         : AppColors.danger)
-                                .withOpacity(0.15),
+                                    .withOpacity(0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -530,8 +560,8 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                               color: session.attendanceRate >= 80
                                   ? AppColors.success
                                   : session.attendanceRate >= 60
-                                      ? AppColors.warning
-                                      : AppColors.danger,
+                                  ? AppColors.warning
+                                  : AppColors.danger,
                             ),
                           ),
                         ),

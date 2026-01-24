@@ -13,7 +13,8 @@ class AttendanceRecord {
   });
 
   /// Calculate attendance percentage
-  double get percentage => totalClasses > 0 ? (attendedClasses / totalClasses) * 100 : 0;
+  double get percentage =>
+      totalClasses > 0 ? (attendedClasses / totalClasses) * 100 : 0;
 
   /// Get attendance status based on percentage
   AttendanceStatus get status {
@@ -39,8 +40,8 @@ class AttendanceRecord {
 }
 
 enum AttendanceStatus {
-  safe,       // >= 80%
+  safe, // >= 80%
   acceptable, // 70-80%
-  edging,     // 60-70%
-  alarming,   // < 60%
+  edging, // 60-70%
+  alarming, // < 60%
 }

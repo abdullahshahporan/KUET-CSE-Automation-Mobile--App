@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/static_data.dart';
 import 'widgets/theory_result_card.dart';
 import 'widgets/lab_result_card.dart';
+import '../../theme/app_colors.dart';
 
 /// Main Result screen displaying student marks
 class ResultScreen extends StatefulWidget {
@@ -20,15 +21,18 @@ class _ResultScreenState extends State<ResultScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.grey[100],
+      backgroundColor: AppColors.background(isDarkMode),
       appBar: AppBar(
-        title: const Text('Results'),
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        title: Text(
+          'Results',
+          style: TextStyle(color: AppColors.textPrimary(isDarkMode)),
+        ),
+        backgroundColor: AppColors.surface(isDarkMode),
         elevation: 0,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back,
-            color: isDarkMode ? Colors.white : Colors.black87,
+            color: AppColors.textPrimary(isDarkMode),
           ),
           onPressed: () => Navigator.pop(context),
         ),
@@ -43,14 +47,14 @@ class _ResultScreenState extends State<ResultScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.indigo[600]!, Colors.blue[500]!],
+                  colors: [AppColors.primary, AppColors.accent],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.indigo.withOpacity(0.3),
+                    color: AppColors.primary.withOpacity(0.3),
                     blurRadius: 15,
                     offset: const Offset(0, 5),
                   ),
@@ -121,7 +125,7 @@ class _ResultScreenState extends State<ResultScreen> {
                       Icon(
                         Icons.hourglass_empty,
                         size: 64,
-                        color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
+                        color: AppColors.textSecondary(isDarkMode),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -129,7 +133,7 @@ class _ResultScreenState extends State<ResultScreen> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
-                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                          color: AppColors.textSecondary(isDarkMode),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -137,7 +141,7 @@ class _ResultScreenState extends State<ResultScreen> {
                         'Results for this semester will appear here once available.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+                          color: AppColors.textSecondary(isDarkMode),
                         ),
                       ),
                     ],
@@ -151,14 +155,14 @@ class _ResultScreenState extends State<ResultScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: isDarkMode ? Colors.white : Colors.black87,
+                  color: AppColors.textPrimary(isDarkMode),
                 ),
               ),
               const SizedBox(height: 16),
               ...sampleTheoryResults.map(
                 (result) => TheoryResultCard(result: result),
               ),
-              
+
               const SizedBox(height: 24),
 
               // Lab Results
@@ -167,7 +171,7 @@ class _ResultScreenState extends State<ResultScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: isDarkMode ? Colors.white : Colors.black87,
+                  color: AppColors.textPrimary(isDarkMode),
                 ),
               ),
               const SizedBox(height: 16),
@@ -190,7 +194,7 @@ class _ResultScreenState extends State<ResultScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: AppColors.accent,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
@@ -198,14 +202,11 @@ class _ResultScreenState extends State<ResultScreen> {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
           DropdownButton<int>(
             value: value,
-            dropdownColor: Colors.indigo[700],
+            dropdownColor: AppColors.primary,
             underline: const SizedBox(),
             isExpanded: true,
             icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
@@ -216,7 +217,13 @@ class _ResultScreenState extends State<ResultScreen> {
             ),
             items: items.map((item) {
               final suffix = label == 'Year'
-                  ? (item == 1 ? 'st' : item == 2 ? 'nd' : item == 3 ? 'rd' : 'th')
+                  ? (item == 1
+                        ? 'st'
+                        : item == 2
+                        ? 'nd'
+                        : item == 3
+                        ? 'rd'
+                        : 'th')
                   : (item == 1 ? 'st' : 'nd');
               return DropdownMenuItem(
                 value: item,

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Common%20Screen/main_bottom_navbar_screen.dart';
-import 'package:kuet_cse_automation/Tacher%20Folder/Teacher_nav_bar.dart';
+import 'package:kuet_cse_automation/Teacher/teacher_navbar/teacher_navbar_screen.dart';
+import '../theme/app_colors.dart';
 
 class OTPScreen extends StatefulWidget {
   final String email;
@@ -43,9 +44,9 @@ class _OTPScreenState extends State<OTPScreen> {
 
     if (otp.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter complete OTP'),
-          backgroundColor: Colors.orange,
+        SnackBar(
+          content: const Text('Please enter complete OTP'),
+          backgroundColor: AppColors.warning,
         ),
       );
       return;
@@ -59,9 +60,9 @@ class _OTPScreenState extends State<OTPScreen> {
     if (otp == _testOTP) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account created successfully!'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: const Text('Account created successfully!'),
+            backgroundColor: AppColors.success,
           ),
         );
 
@@ -74,7 +75,7 @@ class _OTPScreenState extends State<OTPScreen> {
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(
-                builder: (context) => const TeacherMainBottomNavBarScreen(),
+                builder: (context) => const TeacherMainScreen(),
               ),
               (route) => false,
             );
@@ -102,9 +103,9 @@ class _OTPScreenState extends State<OTPScreen> {
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invalid OTP. Please try again.'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text('Invalid OTP. Please try again.'),
+            backgroundColor: AppColors.danger,
           ),
         );
       }
@@ -115,9 +116,9 @@ class _OTPScreenState extends State<OTPScreen> {
 
   Future<void> _resendOTP() async {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('OTP sent to your email!'),
-        backgroundColor: Colors.green,
+      SnackBar(
+        content: const Text('OTP sent to your email!'),
+        backgroundColor: AppColors.success,
       ),
     );
   }
@@ -127,14 +128,14 @@ class _OTPScreenState extends State<OTPScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.grey[50],
+      backgroundColor: AppColors.background(isDarkMode),
       appBar: AppBar(
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        backgroundColor: AppColors.surface(isDarkMode),
         elevation: 0,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back_ios_new,
-            color: isDarkMode ? Colors.white : Colors.black87,
+            color: AppColors.textPrimary(isDarkMode),
             size: 20,
           ),
           onPressed: () => Navigator.pop(context),
@@ -142,7 +143,7 @@ class _OTPScreenState extends State<OTPScreen> {
         title: Text(
           'Verify OTP',
           style: TextStyle(
-            color: isDarkMode ? Colors.white : Colors.black87,
+            color: AppColors.textPrimary(isDarkMode),
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
@@ -159,13 +160,13 @@ class _OTPScreenState extends State<OTPScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
+                  color: AppColors.primary.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.mark_email_unread,
                   size: 50,
-                  color: Colors.blue[600],
+                  color: AppColors.primary,
                 ),
               ),
               const SizedBox(height: 24),
@@ -176,7 +177,7 @@ class _OTPScreenState extends State<OTPScreen> {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: isDarkMode ? Colors.white : Colors.black87,
+                  color: AppColors.textPrimary(isDarkMode),
                 ),
               ),
               const SizedBox(height: 12),
@@ -184,7 +185,7 @@ class _OTPScreenState extends State<OTPScreen> {
                 'We have sent a 6-digit code to',
                 style: TextStyle(
                   fontSize: 14,
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                  color: AppColors.textSecondary(isDarkMode),
                 ),
               ),
               const SizedBox(height: 4),
@@ -193,7 +194,7 @@ class _OTPScreenState extends State<OTPScreen> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: Colors.blue[600],
+                  color: AppColors.primary,
                 ),
               ),
               const SizedBox(height: 40),
@@ -215,14 +216,12 @@ class _OTPScreenState extends State<OTPScreen> {
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: isDarkMode ? Colors.white : Colors.black87,
+                        color: AppColors.textPrimary(isDarkMode),
                       ),
                       decoration: InputDecoration(
                         counterText: '',
                         filled: true,
-                        fillColor: isDarkMode
-                            ? const Color(0xFF1E1E1E)
-                            : Colors.white,
+                        fillColor: AppColors.surface(isDarkMode),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none,
@@ -230,16 +229,14 @@ class _OTPScreenState extends State<OTPScreen> {
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
-                            color: isDarkMode
-                                ? Colors.grey[800]!
-                                : Colors.grey[200]!,
+                            color: AppColors.border(isDarkMode),
                             width: 2,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
-                            color: Colors.blue[600]!,
+                            color: AppColors.primary,
                             width: 2,
                           ),
                         ),
@@ -270,7 +267,7 @@ class _OTPScreenState extends State<OTPScreen> {
                   Text(
                     "Didn't receive the code? ",
                     style: TextStyle(
-                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                      color: AppColors.textSecondary(isDarkMode),
                     ),
                   ),
                   TextButton(
@@ -278,7 +275,7 @@ class _OTPScreenState extends State<OTPScreen> {
                     child: Text(
                       'Resend',
                       style: TextStyle(
-                        color: Colors.blue[600],
+                        color: AppColors.primary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -291,15 +288,15 @@ class _OTPScreenState extends State<OTPScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.1),
+                  color: AppColors.warning.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                  border: Border.all(color: AppColors.warning.withOpacity(0.3)),
                 ),
                 child: Row(
                   children: [
                     Icon(
                       Icons.info_outline,
-                      color: Colors.amber[700],
+                      color: AppColors.warning,
                       size: 20,
                     ),
                     const SizedBox(width: 12),
@@ -311,14 +308,14 @@ class _OTPScreenState extends State<OTPScreen> {
                             'Test OTP',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: Colors.amber[900],
+                              color: AppColors.textPrimary(isDarkMode),
                             ),
                           ),
                           Text(
                             'Enter: $_testOTP',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.amber[900],
+                              color: AppColors.textSecondary(isDarkMode),
                             ),
                           ),
                         ],
@@ -336,7 +333,7 @@ class _OTPScreenState extends State<OTPScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _verifyOTP,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue[600],
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),

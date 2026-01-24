@@ -17,7 +17,9 @@ class CourseDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final color = course.type == CourseType.theory ? AppColors.primary : AppColors.accent;
+    final color = course.type == CourseType.theory
+        ? AppColors.primary
+        : AppColors.accent;
 
     return Scaffold(
       backgroundColor: AppColors.background(isDarkMode),
@@ -32,7 +34,10 @@ class CourseDetailScreen extends StatelessWidget {
           ),
         ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(isDarkMode)),
+          icon: Icon(
+            Icons.arrow_back,
+            color: AppColors.textPrimary(isDarkMode),
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -45,11 +50,11 @@ class CourseDetailScreen extends StatelessWidget {
             // Course Header Card
             _buildCourseHeader(isDarkMode, color),
             const SizedBox(height: 24),
-            
+
             // Quick Stats Row
             _buildQuickStats(isDarkMode, color),
             const SizedBox(height: 24),
-            
+
             // Actions Section
             Text(
               'Actions',
@@ -60,7 +65,7 @@ class CourseDetailScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            
+
             _buildActionCard(
               context: context,
               icon: Icons.fact_check,
@@ -75,7 +80,7 @@ class CourseDetailScreen extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             _buildActionCard(
               context: context,
               icon: Icons.grading,
@@ -90,7 +95,7 @@ class CourseDetailScreen extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             _buildActionCard(
               context: context,
               icon: Icons.campaign,
@@ -101,11 +106,12 @@ class CourseDetailScreen extends StatelessWidget {
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => CourseAnnouncementsScreen(course: course),
+                  builder: (context) =>
+                      CourseAnnouncementsScreen(course: course),
                 ),
               ),
             ),
-            
+
             _buildActionCard(
               context: context,
               icon: Icons.schedule,
@@ -120,7 +126,7 @@ class CourseDetailScreen extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             _buildActionCard(
               context: context,
               icon: Icons.people,
@@ -135,7 +141,7 @@ class CourseDetailScreen extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 16),
           ],
         ),
@@ -148,7 +154,7 @@ class CourseDetailScreen extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: isDarkMode 
+          colors: isDarkMode
               ? [const Color(0xFF1A1A2E), const Color(0xFF16213E)]
               : [color.withOpacity(0.8), color.withOpacity(0.6)],
           begin: Alignment.topLeft,
@@ -200,7 +206,7 @@ class CourseDetailScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          
+
           // Tags row
           Wrap(
             spacing: 8,
@@ -210,7 +216,9 @@ class CourseDetailScreen extends StatelessWidget {
               _buildTag(course.creditsString, Icons.star),
               _buildTag(
                 course.type == CourseType.theory ? 'Theory' : 'Sessional',
-                course.type == CourseType.theory ? Icons.menu_book : Icons.biotech,
+                course.type == CourseType.theory
+                    ? Icons.menu_book
+                    : Icons.biotech,
               ),
             ],
           ),
@@ -248,7 +256,7 @@ class CourseDetailScreen extends StatelessWidget {
     final attendanceCount = course.type == CourseType.theory
         ? getAttendanceCount(course.code, course.sections.first)
         : getAttendanceCount(course.code, course.groups.first);
-    
+
     final studentCount = course.type == CourseType.theory
         ? course.sections.length * 60
         : course.groups.length * 30;
@@ -278,7 +286,7 @@ class CourseDetailScreen extends StatelessWidget {
         Expanded(
           child: _buildStatCard(
             course.type == CourseType.theory ? 'Sections' : 'Groups',
-            course.type == CourseType.theory 
+            course.type == CourseType.theory
                 ? course.sections.length.toString()
                 : course.groups.length.toString(),
             Icons.groups,
@@ -290,7 +298,13 @@ class CourseDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color, bool isDarkMode) {
+  Widget _buildStatCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+    bool isDarkMode,
+  ) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -375,11 +389,7 @@ class CourseDetailScreen extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: AppColors.textMuted,
-            ),
+            Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
           ],
         ),
       ),

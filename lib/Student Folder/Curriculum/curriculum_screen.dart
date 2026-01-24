@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/course_model.dart';
 import '../data/static_data.dart';
 import 'widgets/course_card.dart';
+import '../../theme/app_colors.dart';
 
 /// Main Curriculum screen displaying semester-wise courses
 class CurriculumScreen extends StatefulWidget {
@@ -19,20 +20,25 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final courses = getCoursesForSemester(_selectedYear, _selectedTerm);
-    final theoryCourses = courses.where((c) => c.type == CourseType.theory).toList();
+    final theoryCourses = courses
+        .where((c) => c.type == CourseType.theory)
+        .toList();
     final labCourses = courses.where((c) => c.type == CourseType.lab).toList();
     final totalCredits = courses.fold(0.0, (sum, c) => sum + c.credits);
 
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.grey[100],
+      backgroundColor: AppColors.background(isDarkMode),
       appBar: AppBar(
-        title: const Text('Curriculum'),
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        title: Text(
+          'Curriculum',
+          style: TextStyle(color: AppColors.textPrimary(isDarkMode)),
+        ),
+        backgroundColor: AppColors.surface(isDarkMode),
         elevation: 0,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back,
-            color: isDarkMode ? Colors.white : Colors.black87,
+            color: AppColors.textPrimary(isDarkMode),
           ),
           onPressed: () => Navigator.pop(context),
         ),
@@ -46,15 +52,15 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.teal[600]!, Colors.green[500]!],
+                gradient: const LinearGradient(
+                  colors: [AppColors.primary, AppColors.accent],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.teal.withOpacity(0.3),
+                    color: AppColors.primary.withOpacity(0.3),
                     blurRadius: 15,
                     offset: const Offset(0, 5),
                   ),
@@ -64,7 +70,11 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.library_books, color: Colors.white, size: 28),
+                      const Icon(
+                        Icons.library_books,
+                        color: Colors.white,
+                        size: 28,
+                      ),
                       const SizedBox(width: 12),
                       const Expanded(
                         child: Column(
@@ -122,8 +132,9 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                  color: AppColors.surface(isDarkMode),
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border(isDarkMode)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -132,31 +143,33 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
                       Icons.menu_book,
                       '${theoryCourses.length}',
                       'Theory',
-                      Colors.blue,
+                      AppColors.primary,
                       isDarkMode,
                     ),
                     Container(
                       width: 1,
                       height: 40,
-                      color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
+                      color: AppColors.border(isDarkMode),
                     ),
                     _buildStatItem(
                       Icons.science,
                       '${labCourses.length}',
                       'Lab',
-                      Colors.purple,
+                      AppColors.accent,
                       isDarkMode,
                     ),
                     Container(
                       width: 1,
                       height: 40,
-                      color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
+                      color: AppColors.border(isDarkMode),
                     ),
                     _buildStatItem(
                       Icons.star,
-                      totalCredits.toStringAsFixed(totalCredits.truncateToDouble() == totalCredits ? 0 : 2),
+                      totalCredits.toStringAsFixed(
+                        totalCredits.truncateToDouble() == totalCredits ? 0 : 2,
+                      ),
                       'Credits',
-                      Colors.amber,
+                      AppColors.warning,
                       isDarkMode,
                     ),
                   ],
@@ -174,7 +187,7 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
                       Icon(
                         Icons.folder_open,
                         size: 64,
-                        color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
+                        color: AppColors.textSecondary(isDarkMode),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -182,7 +195,7 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
-                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                          color: AppColors.textSecondary(isDarkMode),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -190,7 +203,7 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
                         'Course data for this semester will appear here.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+                          color: AppColors.textSecondary(isDarkMode),
                         ),
                       ),
                     ],
@@ -205,12 +218,12 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
+                        color: AppColors.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(
+                      child: const Icon(
                         Icons.menu_book,
-                        color: Colors.blue[600],
+                        color: AppColors.primary,
                         size: 20,
                       ),
                     ),
@@ -220,7 +233,7 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: isDarkMode ? Colors.white : Colors.black87,
+                        color: AppColors.textPrimary(isDarkMode),
                       ),
                     ),
                   ],
@@ -237,12 +250,12 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.purple.withOpacity(0.1),
+                        color: AppColors.accent.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(
+                      child: const Icon(
                         Icons.science,
-                        color: Colors.purple[600],
+                        color: AppColors.accent,
                         size: 20,
                       ),
                     ),
@@ -252,7 +265,7 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: isDarkMode ? Colors.white : Colors.black87,
+                        color: AppColors.textPrimary(isDarkMode),
                       ),
                     ),
                   ],
@@ -284,14 +297,11 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
           DropdownButton<int>(
             value: value,
-            dropdownColor: Colors.teal[700],
+            dropdownColor: AppColors.primary,
             underline: const SizedBox(),
             isExpanded: true,
             icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
@@ -302,7 +312,13 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
             ),
             items: items.map((item) {
               final suffix = label == 'Year'
-                  ? (item == 1 ? 'st' : item == 2 ? 'nd' : item == 3 ? 'rd' : 'th')
+                  ? (item == 1
+                        ? 'st'
+                        : item == 2
+                        ? 'nd'
+                        : item == 3
+                        ? 'rd'
+                        : 'th')
                   : (item == 1 ? 'st' : 'nd');
               return DropdownMenuItem(
                 value: item,
@@ -316,7 +332,13 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
     );
   }
 
-  Widget _buildStatItem(IconData icon, String value, String label, Color color, bool isDarkMode) {
+  Widget _buildStatItem(
+    IconData icon,
+    String value,
+    String label,
+    Color color,
+    bool isDarkMode,
+  ) {
     return Column(
       children: [
         Icon(icon, color: color, size: 24),
@@ -326,14 +348,14 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: isDarkMode ? Colors.white : Colors.black87,
+            color: AppColors.textPrimary(isDarkMode),
           ),
         ),
         Text(
           label,
           style: TextStyle(
             fontSize: 12,
-            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+            color: AppColors.textSecondary(isDarkMode),
           ),
         ),
       ],

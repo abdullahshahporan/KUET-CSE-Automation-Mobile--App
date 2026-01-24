@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/app_colors.dart';
 
 class FacultyInfoScreen extends StatelessWidget {
   const FacultyInfoScreen({super.key});
@@ -6,16 +7,16 @@ class FacultyInfoScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.grey[50],
+      backgroundColor: AppColors.background(isDarkMode),
       appBar: AppBar(
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        backgroundColor: AppColors.surface(isDarkMode),
         elevation: 0,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back_ios_new,
-            color: isDarkMode ? Colors.white : Colors.black87,
+            color: AppColors.textPrimary(isDarkMode),
             size: 20,
           ),
           onPressed: () => Navigator.pop(context),
@@ -23,7 +24,7 @@ class FacultyInfoScreen extends StatelessWidget {
         title: Text(
           'Faculty Information',
           style: TextStyle(
-            color: isDarkMode ? Colors.white : Colors.black87,
+            color: AppColors.textPrimary(isDarkMode),
             fontSize: 22,
             fontWeight: FontWeight.bold,
           ),
@@ -41,7 +42,7 @@ class FacultyInfoScreen extends StatelessWidget {
             isDarkMode: isDarkMode,
           ),
           const SizedBox(height: 24),
-          
+
           // Professors
           _buildSectionHeader('Professors', isDarkMode),
           _buildFacultyCard(
@@ -81,7 +82,7 @@ class FacultyInfoScreen extends StatelessWidget {
             isDarkMode: isDarkMode,
           ),
           const SizedBox(height: 24),
-          
+
           // Assistant Professors
           _buildSectionHeader('Assistant Professors', isDarkMode),
           _buildFacultyCard(
@@ -121,7 +122,7 @@ class FacultyInfoScreen extends StatelessWidget {
             isDarkMode: isDarkMode,
           ),
           const SizedBox(height: 24),
-          
+
           // Lecturers
           _buildSectionHeader('Lecturers', isDarkMode),
           _buildFacultyCard(
@@ -161,7 +162,7 @@ class FacultyInfoScreen extends StatelessWidget {
             isDarkMode: isDarkMode,
           ),
           const SizedBox(height: 24),
-          
+
           // Faculty on Leave
           _buildSectionHeader('Faculty on Leave', isDarkMode),
           _buildFacultyCard(
@@ -213,7 +214,7 @@ class FacultyInfoScreen extends StatelessWidget {
         style: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: isDarkMode ? Colors.white : Colors.black87,
+          color: AppColors.textPrimary(isDarkMode),
           letterSpacing: 0.5,
         ),
       ),
@@ -230,14 +231,12 @@ class FacultyInfoScreen extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        color: AppColors.surface(isDarkMode),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
-        ),
+        border: Border.all(color: AppColors.border(isDarkMode)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: AppColors.shadow(isDarkMode),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -251,20 +250,16 @@ class FacultyInfoScreen extends StatelessWidget {
             height: 50,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.blue[600]!, Colors.cyan[500]!],
+                colors: [AppColors.primary, AppColors.accent],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.person,
-              color: Colors.white,
-              size: 28,
-            ),
+            child: const Icon(Icons.person, color: Colors.white, size: 28),
           ),
           const SizedBox(width: 16),
-          
+
           // Info
           Expanded(
             child: Column(
@@ -275,7 +270,7 @@ class FacultyInfoScreen extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : Colors.black87,
+                    color: AppColors.textPrimary(isDarkMode),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -283,7 +278,7 @@ class FacultyInfoScreen extends StatelessWidget {
                   designation,
                   style: TextStyle(
                     fontSize: 13,
-                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                    color: AppColors.textSecondary(isDarkMode),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -292,7 +287,7 @@ class FacultyInfoScreen extends StatelessWidget {
                     Icon(
                       Icons.email_outlined,
                       size: 14,
-                      color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+                      color: AppColors.textSecondary(isDarkMode),
                     ),
                     const SizedBox(width: 6),
                     Expanded(
@@ -300,7 +295,7 @@ class FacultyInfoScreen extends StatelessWidget {
                         email,
                         style: TextStyle(
                           fontSize: 12,
-                          color: isDarkMode ? Colors.grey[500] : Colors.grey[600],
+                          color: AppColors.textSecondary(isDarkMode),
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),

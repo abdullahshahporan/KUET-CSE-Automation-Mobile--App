@@ -1,11 +1,7 @@
 /// User and role models for KUET CSE Automation App
 
 /// User roles in the system
-enum UserRole {
-  student,
-  teacher,
-  admin,
-}
+enum UserRole { student, teacher, admin }
 
 /// Extension to get role from email domain
 extension UserRoleExtension on UserRole {
@@ -88,7 +84,13 @@ class StudentUser extends AppUser {
 
   /// Get semester name (e.g., "3rd Year 2nd Term")
   String get semesterName {
-    final yearSuffix = currentYear == 1 ? 'st' : currentYear == 2 ? 'nd' : currentYear == 3 ? 'rd' : 'th';
+    final yearSuffix = currentYear == 1
+        ? 'st'
+        : currentYear == 2
+        ? 'nd'
+        : currentYear == 3
+        ? 'rd'
+        : 'th';
     final termSuffix = currentTerm == 1 ? 'st' : 'nd';
     return '$currentYear$yearSuffix Year $currentTerm$termSuffix Term';
   }

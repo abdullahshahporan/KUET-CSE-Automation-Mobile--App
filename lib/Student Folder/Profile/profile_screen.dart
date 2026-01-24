@@ -13,8 +13,12 @@ class ProfileScreen extends StatelessWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: isDarkMode ? AppColors.darkSurfaceElevated : Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: isDarkMode
+              ? AppColors.darkSurfaceElevated
+              : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Text(
             'Logout',
             style: TextStyle(color: AppColors.textPrimary(isDarkMode)),
@@ -26,7 +30,10 @@ class ProfileScreen extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary(isDarkMode))),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: AppColors.textSecondary(isDarkMode)),
+              ),
             ),
             ElevatedButton(
               onPressed: () {
@@ -39,9 +46,14 @@ class ProfileScreen extends StatelessWidget {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.danger,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              child: const Text('Logout', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'Logout',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );
@@ -53,7 +65,7 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final themeProvider = provider.Provider.of<ThemeProvider>(context);
-    
+
     return Scaffold(
       backgroundColor: AppColors.background(isDarkMode),
       body: SingleChildScrollView(
@@ -78,7 +90,9 @@ class ProfileScreen extends StatelessWidget {
                         end: Alignment.bottomRight,
                       ),
                 borderRadius: BorderRadius.circular(20),
-                border: isDarkMode ? Border.all(color: AppColors.darkBorder) : null,
+                border: isDarkMode
+                    ? Border.all(color: AppColors.darkBorder)
+                    : null,
                 boxShadow: isDarkMode
                     ? null
                     : [
@@ -95,12 +109,21 @@ class ProfileScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white.withOpacity(0.3), width: 3),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 3,
+                      ),
                     ),
                     child: CircleAvatar(
                       radius: 45,
-                      backgroundColor: Colors.white.withOpacity(isDarkMode ? 0.1 : 0.2),
-                      child: const Icon(Icons.person, size: 50, color: Colors.white),
+                      backgroundColor: Colors.white.withOpacity(
+                        isDarkMode ? 0.1 : 0.2,
+                      ),
+                      child: const Icon(
+                        Icons.person,
+                        size: 50,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -132,7 +155,7 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            
+
             // Theme Toggle Card
             Container(
               padding: const EdgeInsets.all(16),
@@ -146,7 +169,8 @@ class ProfileScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: (isDarkMode ? Colors.amber : Colors.indigo).withOpacity(0.15),
+                      color: (isDarkMode ? Colors.amber : Colors.indigo)
+                          .withOpacity(0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
@@ -170,7 +194,9 @@ class ProfileScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          isDarkMode ? 'Pitch black theme active' : 'Light theme active',
+                          isDarkMode
+                              ? 'Pitch black theme active'
+                              : 'Light theme active',
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondary(isDarkMode),
@@ -193,23 +219,63 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Profile Options
-            _buildProfileOption(Icons.email, 'Email', 'student@kuet.ac.bd', isDarkMode),
-            _buildProfileOption(Icons.phone, 'Phone', '+880 1XXXXXXXXX', isDarkMode),
-            _buildProfileOption(Icons.location_on, 'Address', 'KUET, Khulna', isDarkMode),
-            _buildProfileOption(Icons.badge, 'Department', 'Computer Science & Engineering', isDarkMode),
-            _buildProfileOption(Icons.calendar_today, 'Session', '2021-22', isDarkMode),
+            _buildProfileOption(
+              Icons.email,
+              'Email',
+              'student@kuet.ac.bd',
+              isDarkMode,
+            ),
+            _buildProfileOption(
+              Icons.phone,
+              'Phone',
+              '+880 1XXXXXXXXX',
+              isDarkMode,
+            ),
+            _buildProfileOption(
+              Icons.location_on,
+              'Address',
+              'KUET, Khulna',
+              isDarkMode,
+            ),
+            _buildProfileOption(
+              Icons.badge,
+              'Department',
+              'Computer Science & Engineering',
+              isDarkMode,
+            ),
+            _buildProfileOption(
+              Icons.calendar_today,
+              'Session',
+              '2021-22',
+              isDarkMode,
+            ),
             const SizedBox(height: 16),
-            
+
             // Settings Section
-            _buildSettingsOption(Icons.notifications_outlined, 'Notifications', isDarkMode, () {}),
+            _buildSettingsOption(
+              Icons.notifications_outlined,
+              'Notifications',
+              isDarkMode,
+              () {},
+            ),
             _buildSettingsOption(Icons.language, 'Language', isDarkMode, () {}),
-            _buildSettingsOption(Icons.help_outline, 'Help & Support', isDarkMode, () {}),
-            _buildSettingsOption(Icons.info_outline, 'About', isDarkMode, () {}),
-            
+            _buildSettingsOption(
+              Icons.help_outline,
+              'Help & Support',
+              isDarkMode,
+              () {},
+            ),
+            _buildSettingsOption(
+              Icons.info_outline,
+              'About',
+              isDarkMode,
+              () {},
+            ),
+
             const SizedBox(height: 16),
-            
+
             // Logout Button
             SizedBox(
               width: double.infinity,
@@ -218,7 +284,9 @@ class ProfileScreen extends StatelessWidget {
                 icon: const Icon(Icons.logout, size: 20),
                 label: const Text('Logout'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isDarkMode ? AppColors.darkSurfaceElevated : Colors.red[50],
+                  backgroundColor: isDarkMode
+                      ? AppColors.darkSurfaceElevated
+                      : Colors.red[50],
                   foregroundColor: AppColors.danger,
                   side: BorderSide(color: AppColors.danger.withOpacity(0.3)),
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -236,7 +304,12 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileOption(IconData icon, String title, String value, bool isDarkMode) {
+  Widget _buildProfileOption(
+    IconData icon,
+    String title,
+    String value,
+    bool isDarkMode,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -284,7 +357,12 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSettingsOption(IconData icon, String title, bool isDarkMode, VoidCallback onTap) {
+  Widget _buildSettingsOption(
+    IconData icon,
+    String title,
+    bool isDarkMode,
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -303,7 +381,11 @@ class ProfileScreen extends StatelessWidget {
                 color: AppColors.textSecondary(isDarkMode).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: AppColors.textSecondary(isDarkMode), size: 20),
+              child: Icon(
+                icon,
+                color: AppColors.textSecondary(isDarkMode),
+                size: 20,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -316,11 +398,7 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
             ),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: AppColors.textMuted,
-            ),
+            Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
           ],
         ),
       ),

@@ -14,7 +14,7 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
-  
+
   String? _selectedCourse;
   AnnouncementType _selectedType = AnnouncementType.notice;
   DateTime? _scheduledDate;
@@ -38,7 +38,10 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
         backgroundColor: AppColors.surface(isDarkMode),
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(isDarkMode)),
+          icon: Icon(
+            Icons.arrow_back,
+            color: AppColors.textPrimary(isDarkMode),
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -105,18 +108,26 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
                   child: DropdownButton<String>(
                     value: _selectedCourse,
                     isExpanded: true,
-                    hint: Text('Choose a course', style: TextStyle(color: AppColors.textSecondary(isDarkMode))),
+                    hint: Text(
+                      'Choose a course',
+                      style: TextStyle(
+                        color: AppColors.textSecondary(isDarkMode),
+                      ),
+                    ),
                     dropdownColor: AppColors.surface(isDarkMode),
                     items: teacherCourses.map((course) {
                       return DropdownMenuItem(
                         value: course.code,
                         child: Text(
                           '${course.code} - ${course.title}',
-                          style: TextStyle(color: AppColors.textPrimary(isDarkMode)),
+                          style: TextStyle(
+                            color: AppColors.textPrimary(isDarkMode),
+                          ),
                         ),
                       );
                     }).toList(),
-                    onChanged: (value) => setState(() => _selectedCourse = value),
+                    onChanged: (value) =>
+                        setState(() => _selectedCourse = value),
                   ),
                 ),
               ),
@@ -133,12 +144,19 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
                   return GestureDetector(
                     onTap: () => setState(() => _selectedType = type),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
-                        color: isSelected ? AppColors.primary : AppColors.surface(isDarkMode),
+                        color: isSelected
+                            ? AppColors.primary
+                            : AppColors.surface(isDarkMode),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: isSelected ? AppColors.primary : AppColors.border(isDarkMode),
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.border(isDarkMode),
                         ),
                       ),
                       child: Text(
@@ -146,7 +164,9 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          color: isSelected ? Colors.white : AppColors.textPrimary(isDarkMode),
+                          color: isSelected
+                              ? Colors.white
+                              : AppColors.textPrimary(isDarkMode),
                         ),
                       ),
                     ),
@@ -161,8 +181,12 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
               TextFormField(
                 controller: _titleController,
                 style: TextStyle(color: AppColors.textPrimary(isDarkMode)),
-                decoration: _inputDecoration('Enter announcement title', isDarkMode),
-                validator: (value) => value?.isEmpty ?? true ? 'Title is required' : null,
+                decoration: _inputDecoration(
+                  'Enter announcement title',
+                  isDarkMode,
+                ),
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Title is required' : null,
               ),
               const SizedBox(height: 20),
 
@@ -173,8 +197,12 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
                 controller: _contentController,
                 style: TextStyle(color: AppColors.textPrimary(isDarkMode)),
                 maxLines: 5,
-                decoration: _inputDecoration('Write your announcement...', isDarkMode),
-                validator: (value) => value?.isEmpty ?? true ? 'Content is required' : null,
+                decoration: _inputDecoration(
+                  'Write your announcement...',
+                  isDarkMode,
+                ),
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Content is required' : null,
               ),
               const SizedBox(height: 20),
 
@@ -202,14 +230,17 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.calendar_today, color: AppColors.textSecondary(isDarkMode)),
+                      Icon(
+                        Icons.calendar_today,
+                        color: AppColors.textSecondary(isDarkMode),
+                      ),
                       const SizedBox(width: 12),
                       Text(
-                        _scheduledDate != null 
+                        _scheduledDate != null
                             ? '${_scheduledDate!.day}/${_scheduledDate!.month}/${_scheduledDate!.year}'
                             : 'Select a date',
                         style: TextStyle(
-                          color: _scheduledDate != null 
+                          color: _scheduledDate != null
                               ? AppColors.textPrimary(isDarkMode)
                               : AppColors.textSecondary(isDarkMode),
                         ),
@@ -218,7 +249,11 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
                       if (_scheduledDate != null)
                         GestureDetector(
                           onTap: () => setState(() => _scheduledDate = null),
-                          child: Icon(Icons.close, color: AppColors.textSecondary(isDarkMode), size: 20),
+                          child: Icon(
+                            Icons.close,
+                            color: AppColors.textSecondary(isDarkMode),
+                            size: 20,
+                          ),
                         ),
                     ],
                   ),
@@ -244,7 +279,9 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
                       : const Text(
@@ -316,7 +353,7 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
 
   void _sendAnnouncement() {
     if (!_formKey.currentState!.validate()) return;
-    
+
     if (_selectedCourse == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -332,14 +369,14 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
     // Simulate sending
     Future.delayed(const Duration(seconds: 2), () {
       setState(() => _isLoading = false);
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Announcement sent successfully!'),
           backgroundColor: AppColors.success,
         ),
       );
-      
+
       Navigator.pop(context);
     });
   }

@@ -3,6 +3,7 @@ import 'package:kuet_cse_automation/Auth/Sign_Up_Screen.dart';
 import 'package:kuet_cse_automation/Auth/Reset_Password_Screen.dart';
 import 'package:kuet_cse_automation/Student Folder/Common Screen/main_bottom_navbar_screen.dart';
 import 'package:kuet_cse_automation/Teacher/teacher_navbar/teacher_navbar_screen.dart';
+import '../theme/app_colors.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -46,7 +47,9 @@ class _SignInScreenState extends State<SignInScreen> {
           if (mounted) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const MainBottomNavBarScreen()),
+              MaterialPageRoute(
+                builder: (context) => const MainBottomNavBarScreen(),
+              ),
             );
           }
         } else if (email == _teacherEmail) {
@@ -54,7 +57,9 @@ class _SignInScreenState extends State<SignInScreen> {
           if (mounted) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const TeacherMainScreen()),
+              MaterialPageRoute(
+                builder: (context) => const TeacherMainScreen(),
+              ),
             );
           }
         } else {
@@ -87,7 +92,7 @@ class _SignInScreenState extends State<SignInScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.grey[50],
+      backgroundColor: AppColors.background(isDarkMode),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -104,14 +109,14 @@ class _SignInScreenState extends State<SignInScreen> {
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Colors.blue[700]!, Colors.cyan[500]!],
+                        colors: [AppColors.primary, AppColors.accent],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.blue.withOpacity(0.3),
+                          color: AppColors.primary.withOpacity(0.3),
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
@@ -135,7 +140,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
-                          color: isDarkMode ? Colors.white : Colors.black87,
+                          color: AppColors.textPrimary(isDarkMode),
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -144,9 +149,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         'Sign in to KUET CSE Automation',
                         style: TextStyle(
                           fontSize: 16,
-                          color: isDarkMode
-                              ? Colors.grey[400]
-                              : Colors.grey[600],
+                          color: AppColors.textSecondary(isDarkMode),
                         ),
                       ),
                     ],
@@ -160,20 +163,25 @@ class _SignInScreenState extends State<SignInScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+                    color: AppColors.textSecondary(isDarkMode),
                   ),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
+                  style: TextStyle(color: AppColors.textPrimary(isDarkMode)),
                   decoration: InputDecoration(
                     hintText: 'Enter your email',
-                    prefixIcon: const Icon(Icons.email_outlined),
+                    hintStyle: TextStyle(
+                      color: AppColors.textSecondary(isDarkMode),
+                    ),
+                    prefixIcon: Icon(
+                      Icons.email_outlined,
+                      color: AppColors.textSecondary(isDarkMode),
+                    ),
                     filled: true,
-                    fillColor: isDarkMode
-                        ? const Color(0xFF1E1E1E)
-                        : Colors.white,
+                    fillColor: AppColors.surface(isDarkMode),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -181,15 +189,13 @@ class _SignInScreenState extends State<SignInScreen> {
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
-                        color: isDarkMode
-                            ? Colors.grey[800]!
-                            : Colors.grey[200]!,
+                        color: AppColors.border(isDarkMode),
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
-                        color: Colors.blue[600]!,
+                        color: AppColors.primary,
                         width: 2,
                       ),
                     ),
@@ -214,30 +220,36 @@ class _SignInScreenState extends State<SignInScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+                    color: AppColors.textSecondary(isDarkMode),
                   ),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
+                  style: TextStyle(color: AppColors.textPrimary(isDarkMode)),
                   decoration: InputDecoration(
                     hintText: 'Enter your password',
-                    prefixIcon: const Icon(Icons.lock_outlined),
+                    hintStyle: TextStyle(
+                      color: AppColors.textSecondary(isDarkMode),
+                    ),
+                    prefixIcon: Icon(
+                      Icons.lock_outlined,
+                      color: AppColors.textSecondary(isDarkMode),
+                    ),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword
                             ? Icons.visibility_off
                             : Icons.visibility,
+                        color: AppColors.textSecondary(isDarkMode),
                       ),
                       onPressed: () {
                         setState(() => _obscurePassword = !_obscurePassword);
                       },
                     ),
                     filled: true,
-                    fillColor: isDarkMode
-                        ? const Color(0xFF1E1E1E)
-                        : Colors.white,
+                    fillColor: AppColors.surface(isDarkMode),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -245,15 +257,13 @@ class _SignInScreenState extends State<SignInScreen> {
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
-                        color: isDarkMode
-                            ? Colors.grey[800]!
-                            : Colors.grey[200]!,
+                        color: AppColors.border(isDarkMode),
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
-                        color: Colors.blue[600]!,
+                        color: AppColors.primary,
                         width: 2,
                       ),
                     ),
@@ -282,7 +292,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     child: Text(
                       'Forgot Password?',
                       style: TextStyle(
-                        color: Colors.blue[600],
+                        color: AppColors.primary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -297,7 +307,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _signIn,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[600],
+                      backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -331,26 +341,20 @@ class _SignInScreenState extends State<SignInScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: Divider(
-                        color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
-                      ),
+                      child: Divider(color: AppColors.border(isDarkMode)),
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
                         'OR',
                         style: TextStyle(
-                          color: isDarkMode
-                              ? Colors.grey[500]
-                              : Colors.grey[600],
+                          color: AppColors.textSecondary(isDarkMode),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
                     Expanded(
-                      child: Divider(
-                        color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
-                      ),
+                      child: Divider(color: AppColors.border(isDarkMode)),
                     ),
                   ],
                 ),
@@ -364,9 +368,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       Text(
                         "Don't have an account? ",
                         style: TextStyle(
-                          color: isDarkMode
-                              ? Colors.grey[400]
-                              : Colors.grey[600],
+                          color: AppColors.textSecondary(isDarkMode),
                         ),
                       ),
                       TextButton(
@@ -381,7 +383,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         child: Text(
                           'Sign Up',
                           style: TextStyle(
-                            color: Colors.blue[600],
+                            color: AppColors.primary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -395,22 +397,28 @@ class _SignInScreenState extends State<SignInScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.indigo.withOpacity(0.1),
+                    color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.indigo.withOpacity(0.3)),
+                    border: Border.all(
+                      color: AppColors.primary.withOpacity(0.3),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.info_outline, color: Colors.amber[700], size: 20),
+                          Icon(
+                            Icons.info_outline,
+                            color: AppColors.warning,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             'Test Credentials',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: Colors.indigo[900],
+                              color: AppColors.textPrimary(isDarkMode),
                             ),
                           ),
                         ],
@@ -421,7 +429,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: Colors.amber[900],
+                          color: AppColors.textSecondary(isDarkMode),
                         ),
                       ),
                       Text(
@@ -429,7 +437,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: Colors.amber[900],
+                          color: AppColors.textSecondary(isDarkMode),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -438,7 +446,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: Colors.indigo[900],
+                          color: AppColors.textPrimary(isDarkMode),
                         ),
                       ),
                     ],

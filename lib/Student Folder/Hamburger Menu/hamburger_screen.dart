@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:intl/intl.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Hamburger%20Menu/Faculty_Info_screen.dart';
-import 'package:kuet_cse_automation/Student%20Folder/Hamburger%20Menu/Result_Screen.dart';
-//import 'package:kuet_cse_automation/Profile/profile_screen.dart';
+import 'package:kuet_cse_automation/Student%20Folder/Result/result_screen.dart';
+import '../../theme/app_colors.dart';
 
 class HamburgerDrawer extends StatefulWidget {
   final bool isDarkMode;
@@ -52,7 +52,7 @@ class _HamburgerDrawerState extends State<HamburgerDrawer> {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      backgroundColor: widget.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+      backgroundColor: AppColors.surface(widget.isDarkMode),
       child: SafeArea(
         child: Column(
           children: [
@@ -62,7 +62,7 @@ class _HamburgerDrawerState extends State<HamburgerDrawer> {
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.blue[700]!, Colors.cyan[500]!],
+                  colors: [AppColors.primary, AppColors.accent],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -80,7 +80,7 @@ class _HamburgerDrawerState extends State<HamburgerDrawer> {
                         child: Icon(
                           Icons.person,
                           size: 50,
-                          color: Colors.blue[700],
+                          color: AppColors.primary,
                         ),
                       ),
                       // Theme toggle icon in top right
@@ -89,11 +89,15 @@ class _HamburgerDrawerState extends State<HamburgerDrawer> {
                           widget.onThemeToggle(!widget.isDarkMode);
                         },
                         icon: Icon(
-                          widget.isDarkMode ? Icons.nightlight_round : Icons.wb_sunny,
+                          widget.isDarkMode
+                              ? Icons.nightlight_round
+                              : Icons.wb_sunny,
                           color: Colors.white,
                           size: 28,
                         ),
-                        tooltip: widget.isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+                        tooltip: widget.isDarkMode
+                            ? 'Switch to Light Mode'
+                            : 'Switch to Dark Mode',
                       ),
                     ],
                   ),
@@ -145,9 +149,9 @@ class _HamburgerDrawerState extends State<HamburgerDrawer> {
                 ],
               ),
             ),
-            
+
             const Divider(height: 1),
-            
+
             // Menu Items (can be extended later)
             Expanded(
               child: ListView(
@@ -160,7 +164,9 @@ class _HamburgerDrawerState extends State<HamburgerDrawer> {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const FacultyInfoScreen()),
+                        MaterialPageRoute(
+                          builder: (context) => const FacultyInfoScreen(),
+                        ),
                       );
                     },
                   ),
@@ -171,7 +177,9 @@ class _HamburgerDrawerState extends State<HamburgerDrawer> {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const ResultScreen()),
+                        MaterialPageRoute(
+                          builder: (context) => const ResultScreen(),
+                        ),
                       );
                     },
                   ),
@@ -211,7 +219,7 @@ class _HamburgerDrawerState extends State<HamburgerDrawer> {
                 ],
               ),
             ),
-            
+
             // Footer
             Padding(
               padding: const EdgeInsets.all(16.0),
@@ -219,7 +227,9 @@ class _HamburgerDrawerState extends State<HamburgerDrawer> {
                 'KUET CSE Automation v1.0',
                 style: TextStyle(
                   fontSize: 12,
-                  color: widget.isDarkMode ? Colors.grey[600] : Colors.grey[500],
+                  color: widget.isDarkMode
+                      ? Colors.grey[600]
+                      : Colors.grey[500],
                 ),
               ),
             ),
@@ -237,13 +247,13 @@ class _HamburgerDrawerState extends State<HamburgerDrawer> {
     return ListTile(
       leading: Icon(
         icon,
-        color: widget.isDarkMode ? Colors.blue[300] : Colors.blue[700],
+        color: widget.isDarkMode ? AppColors.info : AppColors.primary,
       ),
       title: Text(
         title,
         style: TextStyle(
           fontSize: 16,
-          color: widget.isDarkMode ? Colors.white : Colors.black87,
+          color: AppColors.textPrimary(widget.isDarkMode),
         ),
       ),
       onTap: onTap,

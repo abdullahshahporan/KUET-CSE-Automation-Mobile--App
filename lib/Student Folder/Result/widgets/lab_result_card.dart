@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../models/result_model.dart';
+import '../../../theme/app_colors.dart';
 
 /// Card widget displaying lab course result
 class LabResultCard extends StatelessWidget {
   final LabResult result;
 
-  const LabResultCard({
-    super.key,
-    required this.result,
-  });
+  const LabResultCard({super.key, required this.result});
 
   @override
   Widget build(BuildContext context) {
@@ -17,11 +15,12 @@ class LabResultCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        color: AppColors.surface(isDarkMode),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border(isDarkMode)),
         boxShadow: [
           BoxShadow(
-            color: Colors.purple.withOpacity(0.1),
+            color: AppColors.shadow(isDarkMode),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -33,13 +32,13 @@ class LabResultCard extends StatelessWidget {
           // Header
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.purple[600]!, Colors.pink[400]!],
+                colors: [AppColors.accent, Color(0xFFEC4899)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: const BorderRadius.only(
+              borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
               ),
@@ -85,7 +84,10 @@ class LabResultCard extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
@@ -115,22 +117,40 @@ class LabResultCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+                    color: AppColors.textSecondary(isDarkMode),
                   ),
                 ),
                 const SizedBox(height: 12),
-                
+
                 // Lab Task
-                _buildProgressRow('Lab Tasks', result.labTask, 50, Colors.purple, isDarkMode),
+                _buildProgressRow(
+                  'Lab Tasks',
+                  result.labTask,
+                  50,
+                  AppColors.accent,
+                  isDarkMode,
+                ),
                 const SizedBox(height: 8),
-                
+
                 // Lab Report
-                _buildProgressRow('Lab Reports', result.labReport, 20, Colors.pink, isDarkMode),
+                _buildProgressRow(
+                  'Lab Reports',
+                  result.labReport,
+                  20,
+                  const Color(0xFFEC4899),
+                  isDarkMode,
+                ),
                 const SizedBox(height: 8),
-                
+
                 // Lab Quiz
-                _buildProgressRow('Lab Quiz', result.labQuiz, 10, Colors.deepPurple, isDarkMode),
-                
+                _buildProgressRow(
+                  'Lab Quiz',
+                  result.labQuiz,
+                  10,
+                  AppColors.primary,
+                  isDarkMode,
+                ),
+
                 // Lab Test & Viva (if available)
                 if (result.labTest != null || result.centralViva != null) ...[
                   const SizedBox(height: 16),
@@ -139,25 +159,37 @@ class LabResultCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+                      color: AppColors.textSecondary(isDarkMode),
                     ),
                   ),
                   const SizedBox(height: 12),
                   if (result.labTest != null)
-                    _buildProgressRow('Lab Test', result.labTest!, 30, Colors.indigo, isDarkMode),
+                    _buildProgressRow(
+                      'Lab Test',
+                      result.labTest!,
+                      30,
+                      AppColors.info,
+                      isDarkMode,
+                    ),
                   if (result.centralViva != null) ...[
                     const SizedBox(height: 8),
-                    _buildProgressRow('Central Viva', result.centralViva!, 20, Colors.blue, isDarkMode),
+                    _buildProgressRow(
+                      'Central Viva',
+                      result.centralViva!,
+                      20,
+                      AppColors.primary,
+                      isDarkMode,
+                    ),
                   ],
                 ],
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Total
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.purple.withOpacity(0.1),
+                    color: AppColors.accent.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
@@ -167,15 +199,15 @@ class LabResultCard extends StatelessWidget {
                         'Continuous Total',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          color: isDarkMode ? Colors.white : Colors.black87,
+                          color: AppColors.textPrimary(isDarkMode),
                         ),
                       ),
                       Text(
                         '${result.continuousTotal.toStringAsFixed(1)}/80',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.purple[700],
+                          color: AppColors.accent,
                         ),
                       ),
                     ],
@@ -189,9 +221,15 @@ class LabResultCard extends StatelessWidget {
     );
   }
 
-  Widget _buildProgressRow(String label, double score, double max, Color color, bool isDarkMode) {
+  Widget _buildProgressRow(
+    String label,
+    double score,
+    double max,
+    Color color,
+    bool isDarkMode,
+  ) {
     final percentage = score / max;
-    
+
     return Row(
       children: [
         Expanded(
@@ -200,7 +238,7 @@ class LabResultCard extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 13,
-              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+              color: AppColors.textSecondary(isDarkMode),
             ),
           ),
         ),
@@ -210,10 +248,7 @@ class LabResultCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(4),
             child: Stack(
               children: [
-                Container(
-                  height: 8,
-                  color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                ),
+                Container(height: 8, color: AppColors.border(isDarkMode)),
                 FractionallySizedBox(
                   widthFactor: percentage.clamp(0.0, 1.0),
                   child: Container(

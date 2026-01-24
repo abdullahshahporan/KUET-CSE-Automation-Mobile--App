@@ -22,20 +22,22 @@ class TheoryResult {
   double get totalClassTest => classTests.fold(0.0, (sum, ct) => sum + ct);
 
   /// Average class test score
-  double get avgClassTest => classTests.isNotEmpty ? totalClassTest / classTests.length : 0;
+  double get avgClassTest =>
+      classTests.isNotEmpty ? totalClassTest / classTests.length : 0;
 
   /// Continuous assessment total (CT + attendance + assignment)
-  double get continuousAssessment => totalClassTest + attendance + (assignment ?? 0);
+  double get continuousAssessment =>
+      totalClassTest + attendance + (assignment ?? 0);
 }
 
 /// Lab course result with various components
 class LabResult {
   final String courseCode;
   final String courseName;
-  final double labTask;      // Weekly task marks
-  final double labReport;    // Report marks
-  final double labQuiz;      // Quiz marks
-  final double? labTest;     // Lab test marks (after 10 labs)
+  final double labTask; // Weekly task marks
+  final double labReport; // Report marks
+  final double labQuiz; // Quiz marks
+  final double? labTest; // Lab test marks (after 10 labs)
   final double? centralViva; // Central viva marks
 
   const LabResult({
@@ -52,5 +54,6 @@ class LabResult {
   double get continuousTotal => labTask + labReport + labQuiz;
 
   /// Total lab marks (if all components available)
-  double get totalMarks => continuousTotal + (labTest ?? 0) + (centralViva ?? 0);
+  double get totalMarks =>
+      continuousTotal + (labTest ?? 0) + (centralViva ?? 0);
 }

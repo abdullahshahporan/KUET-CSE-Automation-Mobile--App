@@ -32,14 +32,21 @@ class TeacherCourse {
   });
 
   String get semesterName {
-    final yearSuffix = year == 1 ? 'st' : year == 2 ? 'nd' : year == 3 ? 'rd' : 'th';
+    final yearSuffix = year == 1
+        ? 'st'
+        : year == 2
+        ? 'nd'
+        : year == 3
+        ? 'rd'
+        : 'th';
     final termSuffix = term == 1 ? 'st' : 'nd';
     return '$year-$term ($year$yearSuffix Year $term$termSuffix Term)';
   }
 
   String get shortSemester => '$year-$term';
-  
-  String get creditsString => '${credits.toStringAsFixed(credits == credits.roundToDouble() ? 0 : 1)} Credits';
+
+  String get creditsString =>
+      '${credits.toStringAsFixed(credits == credits.roundToDouble() ? 0 : 1)} Credits';
 
   /// Get batch roll prefix based on year (assuming current year is 2026)
   String get batchRollPrefix {
@@ -133,37 +140,37 @@ List<StudentUser> generateStudentsForBatch(int batchYear, String section) {
   final rollPrefix = '2${batchYear.toString().padLeft(2, '0')}7';
   final startRoll = section == 'A' ? 1 : 61;
   final endRoll = section == 'A' ? 60 : 120;
-  
-  return List.generate(
-    endRoll - startRoll + 1,
-    (index) {
-      final rollNum = startRoll + index;
-      final formattedRoll = '$rollPrefix${rollNum.toString().padLeft(3, '0')}';
-      return StudentUser(
-        id: 'S$rollNum',
-        name: _getStudentName(rollNum),
-        email: '$formattedRoll@stud.kuet.ac.bd',
-        roll: formattedRoll,
-        batch: batchYear.toString(),
-        currentYear: 25 - batchYear,
-        currentTerm: 2,
-        section: section,
-      );
-    },
-  );
+
+  return List.generate(endRoll - startRoll + 1, (index) {
+    final rollNum = startRoll + index;
+    final formattedRoll = '$rollPrefix${rollNum.toString().padLeft(3, '0')}';
+    return StudentUser(
+      id: 'S$rollNum',
+      name: _getStudentName(rollNum),
+      email: '$formattedRoll@stud.kuet.ac.bd',
+      roll: formattedRoll,
+      batch: batchYear.toString(),
+      currentYear: 25 - batchYear,
+      currentTerm: 2,
+      section: section,
+    );
+  });
 }
 
 /// Get students for a specific course
-List<StudentUser> getStudentsForCourse(TeacherCourse course, String sectionOrGroup) {
+List<StudentUser> getStudentsForCourse(
+  TeacherCourse course,
+  String sectionOrGroup,
+) {
   final batchYear = 25 - course.year;
-  
+
   if (course.type == CourseType.theory) {
     return generateStudentsForBatch(batchYear, sectionOrGroup);
   } else {
     // Sessional groups
     final section = sectionOrGroup.startsWith('A') ? 'A' : 'B';
     final students = generateStudentsForBatch(batchYear, section);
-    
+
     // Filter by group
     switch (sectionOrGroup) {
       case 'A1':
@@ -195,22 +202,42 @@ List<StudentUser> getStudentsForCourse(TeacherCourse course, String sectionOrGro
 /// Sample student names
 String _getStudentName(int rollNum) {
   final names = [
-    'Asif Jawad', 'Mehedi Hasan', 'Sakib Rahman', 'Tanvir Ahmed', 'Rafiq Islam',
-    'Nusrat Jahan', 'Farhana Akter', 'Sadia Islam', 'Riya Das', 'Priya Roy',
-    'Abdullah Al Mamun', 'Md. Rakib', 'Jahid Hasan', 'Imran Khan', 'Farhan Sadik',
-    'Sumaiya Akter', 'Tahmina Begum', 'Roksana Parvin', 'Mitu Rani', 'Shapla Khatun',
-    'Kamal Ahmed', 'Jamal Uddin', 'Rahim Mia', 'Karim Sheikh', 'Salim Khan',
-    'Fatima Begum', 'Ayesha Siddika', 'Hasina Akter', 'Kulsum Begum', 'Nasrin Jahan',
+    'Asif Jawad',
+    'Mehedi Hasan',
+    'Sakib Rahman',
+    'Tanvir Ahmed',
+    'Rafiq Islam',
+    'Nusrat Jahan',
+    'Farhana Akter',
+    'Sadia Islam',
+    'Riya Das',
+    'Priya Roy',
+    'Abdullah Al Mamun',
+    'Md. Rakib',
+    'Jahid Hasan',
+    'Imran Khan',
+    'Farhan Sadik',
+    'Sumaiya Akter',
+    'Tahmina Begum',
+    'Roksana Parvin',
+    'Mitu Rani',
+    'Shapla Khatun',
+    'Kamal Ahmed',
+    'Jamal Uddin',
+    'Rahim Mia',
+    'Karim Sheikh',
+    'Salim Khan',
+    'Fatima Begum',
+    'Ayesha Siddika',
+    'Hasina Akter',
+    'Kulsum Begum',
+    'Nasrin Jahan',
   ];
   return names[rollNum % names.length];
 }
 
 /// Attendance status enum
-enum AttendanceStatus {
-  present,
-  absent,
-  late,
-}
+enum AttendanceStatus { present, absent, late }
 
 /// Attendance record for a single class session
 class AttendanceSession {
@@ -230,11 +257,17 @@ class AttendanceSession {
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
-  int get presentCount => studentAttendance.values.where((s) => s == AttendanceStatus.present).length;
-  int get absentCount => studentAttendance.values.where((s) => s == AttendanceStatus.absent).length;
-  int get lateCount => studentAttendance.values.where((s) => s == AttendanceStatus.late).length;
+  int get presentCount => studentAttendance.values
+      .where((s) => s == AttendanceStatus.present)
+      .length;
+  int get absentCount => studentAttendance.values
+      .where((s) => s == AttendanceStatus.absent)
+      .length;
+  int get lateCount =>
+      studentAttendance.values.where((s) => s == AttendanceStatus.late).length;
   int get totalCount => studentAttendance.length;
-  double get attendanceRate => totalCount > 0 ? (presentCount + lateCount) / totalCount * 100 : 0;
+  double get attendanceRate =>
+      totalCount > 0 ? (presentCount + lateCount) / totalCount * 100 : 0;
 }
 
 /// Sample attendance sessions
@@ -246,9 +279,11 @@ final List<AttendanceSession> attendanceSessions = [
     sectionOrGroup: 'A',
     studentAttendance: {
       for (var i = 1; i <= 60; i++)
-        '2122${i.toString().padLeft(3, '0')}': 
-          i % 5 == 0 ? AttendanceStatus.absent : 
-          i % 7 == 0 ? AttendanceStatus.late : AttendanceStatus.present,
+        '2122${i.toString().padLeft(3, '0')}': i % 5 == 0
+            ? AttendanceStatus.absent
+            : i % 7 == 0
+            ? AttendanceStatus.late
+            : AttendanceStatus.present,
     },
   ),
   AttendanceSession(
@@ -258,9 +293,11 @@ final List<AttendanceSession> attendanceSessions = [
     sectionOrGroup: 'A',
     studentAttendance: {
       for (var i = 1; i <= 60; i++)
-        '2122${i.toString().padLeft(3, '0')}': 
-          i % 6 == 0 ? AttendanceStatus.absent : 
-          i % 8 == 0 ? AttendanceStatus.late : AttendanceStatus.present,
+        '2122${i.toString().padLeft(3, '0')}': i % 6 == 0
+            ? AttendanceStatus.absent
+            : i % 8 == 0
+            ? AttendanceStatus.late
+            : AttendanceStatus.present,
     },
   ),
   AttendanceSession(
@@ -270,24 +307,33 @@ final List<AttendanceSession> attendanceSessions = [
     sectionOrGroup: 'B',
     studentAttendance: {
       for (var i = 61; i <= 120; i++)
-        '2122${i.toString().padLeft(3, '0')}': 
-          i % 4 == 0 ? AttendanceStatus.absent : AttendanceStatus.present,
+        '2122${i.toString().padLeft(3, '0')}': i % 4 == 0
+            ? AttendanceStatus.absent
+            : AttendanceStatus.present,
     },
   ),
 ];
 
 /// Get attendance sessions for a course and section
-List<AttendanceSession> getAttendanceForCourse(String courseCode, String sectionOrGroup) {
-  return attendanceSessions.where(
-    (s) => s.courseCode == courseCode && s.sectionOrGroup == sectionOrGroup
-  ).toList()..sort((a, b) => b.date.compareTo(a.date));
+List<AttendanceSession> getAttendanceForCourse(
+  String courseCode,
+  String sectionOrGroup,
+) {
+  return attendanceSessions
+      .where(
+        (s) => s.courseCode == courseCode && s.sectionOrGroup == sectionOrGroup,
+      )
+      .toList()
+    ..sort((a, b) => b.date.compareTo(a.date));
 }
 
 /// Get attendance count for a course
 int getAttendanceCount(String courseCode, String sectionOrGroup) {
-  return attendanceSessions.where(
-    (s) => s.courseCode == courseCode && s.sectionOrGroup == sectionOrGroup
-  ).length;
+  return attendanceSessions
+      .where(
+        (s) => s.courseCode == courseCode && s.sectionOrGroup == sectionOrGroup,
+      )
+      .length;
 }
 
 /// Theory grading components
@@ -334,24 +380,22 @@ class SessionalGrades {
     this.centralViva = 0,
   });
 
-  double get total => labTask + labReport + quiz + labTest + project + centralViva;
+  double get total =>
+      labTask + labReport + quiz + labTest + project + centralViva;
 }
 
 /// Sample theory grades
-final List<TheoryGrades> sampleTheoryGrades = List.generate(
-  120,
-  (index) {
-    final roll = '2122${(index + 1).toString().padLeft(3, '0')}';
-    return TheoryGrades(
-      roll: roll,
-      ct1: 12 + (index % 8).toDouble(),
-      ct2: 4 + (index % 6).toDouble(),
-      spotTest: 2 + (index % 3).toDouble(),
-      assignment: 3 + (index % 2).toDouble(),
-      attendance: 6 + (index % 4).toDouble(),
-    );
-  },
-);
+final List<TheoryGrades> sampleTheoryGrades = List.generate(120, (index) {
+  final roll = '2122${(index + 1).toString().padLeft(3, '0')}';
+  return TheoryGrades(
+    roll: roll,
+    ct1: 12 + (index % 8).toDouble(),
+    ct2: 4 + (index % 6).toDouble(),
+    spotTest: 2 + (index % 3).toDouble(),
+    assignment: 3 + (index % 2).toDouble(),
+    attendance: 6 + (index % 4).toDouble(),
+  );
+});
 
 /// Announcement model
 class Announcement {
@@ -376,21 +420,15 @@ class Announcement {
   });
 }
 
-enum AnnouncementType {
-  classTest,
-  assignment,
-  notice,
-  labTest,
-  quiz,
-  other,
-}
+enum AnnouncementType { classTest, assignment, notice, labTest, quiz, other }
 
 /// Sample announcements
 final List<Announcement> sampleAnnouncements = [
   Announcement(
     id: 'A001',
     title: 'CT-1 Scheduled',
-    content: 'Class Test 1 for CSE 3201 will be held on January 25, 2026. Syllabus: Chapter 1-3.',
+    content:
+        'Class Test 1 for CSE 3201 will be held on January 25, 2026. Syllabus: Chapter 1-3.',
     courseCode: 'CSE 3201',
     teacherName: 'Dr. M. M. A. Hashem',
     createdAt: DateTime(2026, 1, 18),
@@ -400,7 +438,8 @@ final List<Announcement> sampleAnnouncements = [
   Announcement(
     id: 'A002',
     title: 'Assignment Submission',
-    content: 'Submit Assignment 2 by January 30, 2026. Topic: Software Design Patterns.',
+    content:
+        'Submit Assignment 2 by January 30, 2026. Topic: Software Design Patterns.',
     courseCode: 'CSE 3201',
     teacherName: 'Dr. M. M. A. Hashem',
     createdAt: DateTime(2026, 1, 16),

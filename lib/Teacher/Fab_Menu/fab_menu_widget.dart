@@ -11,7 +11,8 @@ class TeacherFabMenu extends StatefulWidget {
   State<TeacherFabMenu> createState() => _TeacherFabMenuState();
 }
 
-class _TeacherFabMenuState extends State<TeacherFabMenu> with SingleTickerProviderStateMixin {
+class _TeacherFabMenuState extends State<TeacherFabMenu>
+    with SingleTickerProviderStateMixin {
   bool _isExpanded = false;
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
@@ -70,14 +71,16 @@ class _TeacherFabMenuState extends State<TeacherFabMenu> with SingleTickerProvid
                 _toggleMenu();
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const RoomRequestScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const RoomRequestScreen(),
+                  ),
                 );
               },
               isDarkMode: isDarkMode,
             ),
           ),
           const SizedBox(height: 12),
-          
+
           // Announcement Option
           ScaleTransition(
             scale: _scaleAnimation,
@@ -89,7 +92,9 @@ class _TeacherFabMenuState extends State<TeacherFabMenu> with SingleTickerProvid
                 _toggleMenu();
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const SendAnnouncementScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const SendAnnouncementScreen(),
+                  ),
                 );
               },
               isDarkMode: isDarkMode,
@@ -97,7 +102,7 @@ class _TeacherFabMenuState extends State<TeacherFabMenu> with SingleTickerProvid
           ),
           const SizedBox(height: 16),
         ],
-        
+
         // Main FAB
         RotationTransition(
           turns: _rotateAnimation,
@@ -150,7 +155,7 @@ class _TeacherFabMenuState extends State<TeacherFabMenu> with SingleTickerProvid
           ),
         ),
         const SizedBox(width: 12),
-        
+
         // Mini FAB
         FloatingActionButton.small(
           heroTag: label,
