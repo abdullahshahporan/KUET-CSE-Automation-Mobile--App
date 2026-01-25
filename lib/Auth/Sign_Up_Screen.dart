@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kuet_cse_automation/Auth/First_password_screen.dart';
 import '../theme/app_colors.dart';
+import '../services/supabase_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -21,40 +22,110 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
+  // Determine role from email domain
+  String _getRoleFromEmail(String email) {
+    email = email.toLowerCase();
+    if (email.endsWith('@stud.kuet.ac.bd')) {
+      return 'STUDENT';
+    } else if (email.endsWith('@cse.kuet.ac.bd')) {
+      return 'TEACHER';
+    } else if (email.endsWith('@kuet.ac.bd')) {
+      return 'OFFICER_STAFF';
+    }
+    return 'STUDENT'; // Default fallback
+  }
+
   Future<void> _verifyEmail() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
-      // Simulate email verification
-      await Future.delayed(const Duration(seconds: 2));
+      try {
+        final email = _emailController.text.trim().toLowerCase();
 
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _emailVerified = true;
-        });
+        // STEP 1: Check if email exists in users table (pre-seeded by admin)
+        final response = await SupabaseService.from(
+          'users',
+        ).select('id, email, password_hash').eq('email', email).maybeSingle();
 
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Email verified successfully!'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-
-        // Navigate to first password screen
-        await Future.delayed(const Duration(milliseconds: 500));
         if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  FirstPasswordScreen(email: _emailController.text),
+          setState(() => _isLoading = false);
+
+          if (response == null) {
+            // Email not found - Not authorized
+            _showErrorDialog(
+              'Email Not Found',
+              'Your email is not registered in the system. '
+                  'Please contact the office to register your email first.',
+            );
+            return;
+          }
+
+          // STEP 2: Check if user has already completed signup
+          if (response['password_hash'] != null) {
+            _showErrorDialog(
+              'Account Already Exists',
+              'This email is already registered. Please sign in instead.',
+            );
+            return;
+          }
+
+          // STEP 3: Determine role from email domain
+          final role = _getRoleFromEmail(email);
+
+          // STEP 4: Email verified - Proceed to password setup
+          setState(() => _emailVerified = true);
+
+          // Show success message with detected role
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Email verified! Registering as ${role.replaceAll('_', ' ')}',
+              ),
+              backgroundColor: AppColors.success,
             ),
+          );
+
+          // Navigate to password screen with user data
+          await Future.delayed(const Duration(milliseconds: 500));
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => FirstPasswordScreen(
+                  email: email,
+                  userId: response['id'],
+                  userRole: role,
+                ),
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          _showErrorDialog(
+            'Connection Error',
+            'Failed to verify email. Please check your internet connection and try again.',
           );
         }
       }
     }
+  }
+
+  void _showErrorDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -191,6 +262,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ).hasMatch(value)) {
                       return 'Please enter a valid email';
                     }
+                    // Validate KUET email domain
+                    final lowerEmail = value.toLowerCase();
+                    if (!lowerEmail.endsWith('@kuet.ac.bd') &&
+                        !lowerEmail.endsWith('@stud.kuet.ac.bd') &&
+                        !lowerEmail.endsWith('@cse.kuet.ac.bd')) {
+                      return 'Please use your official KUET email';
+                    }
                     return null;
                   },
                 ),
@@ -210,7 +288,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'A verification code will be sent to your email',
+                          'Your email must be pre-registered by admin',
                           style: TextStyle(
                             color: AppColors.textSecondary(isDarkMode),
                             fontSize: 13,

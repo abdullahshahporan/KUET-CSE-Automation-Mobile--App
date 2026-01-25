@@ -37,6 +37,15 @@ dependencies:
   intl: ^0.20.2
   provider: ^6.1.5+1
   flutter_riverpod: ^3.1.0
+  
+  # Supabase for backend (PostgreSQL + Auth)
+  supabase_flutter: ^2.12.0
+  
+  # HTTP client for API calls
+  http: ^1.2.0
+  
+  # Deep linking for email verification
+  app_links: ^6.4.0
 
 dev_dependencies:
   flutter_test:

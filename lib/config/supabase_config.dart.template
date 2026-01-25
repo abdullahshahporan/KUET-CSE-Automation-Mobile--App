@@ -1,0 +1,27 @@
+/// Supabase configuration template for KUET CSE Automation
+/// 
+/// INSTRUCTIONS:
+/// 1. Copy this file and rename it to 'supabase_config.dart'
+/// 2. Replace the placeholder values with your actual Supabase credentials
+/// 3. Get your credentials from: Supabase Dashboard → Settings → API
+/// 
+/// NOTE: The actual 'supabase_config.dart' file is git-ignored for security.
+/// Never commit your real API keys to version control!
+
+class SupabaseConfig {
+  /// Your Supabase Project URL
+  /// 
+  /// Example: 'https://abcdefghijklmnop.supabase.co'
+  /// 
+  /// Find it at: Supabase Dashboard → Settings → API → Project URL
+  static const String supabaseUrl = 'YOUR_SUPABASE_PROJECT_URL';
+
+  /// Your Supabase Anon/Public Key
+  /// 
+  /// Example: 'eyJh...........................'
+  /// 
+  /// Find it at: Supabase Dashboard → Settings → API → Project API keys → anon public
+  /// 
+  /// ⚠️ IMPORTANT: Use the 'anon' key, NOT the 'service_role' key!
+  static const String supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
+}

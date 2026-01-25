@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:kuet_cse_automation/Auth/OTP_screen.dart';
+import 'package:kuet_cse_automation/Auth/Email_Verification_Screen.dart';
 import '../theme/app_colors.dart';
+import '../services/supabase_service.dart';
 
 class FirstPasswordScreen extends StatefulWidget {
   final String email;
+  final String userId;
+  final String userRole;
 
-  const FirstPasswordScreen({super.key, required this.email});
+  const FirstPasswordScreen({
+    super.key,
+    required this.email,
+    required this.userId,
+    required this.userRole,
+  });
 
   @override
   State<FirstPasswordScreen> createState() => _FirstPasswordScreenState();
@@ -65,19 +73,61 @@ class _FirstPasswordScreenState extends State<FirstPasswordScreen> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 1));
-
-      if (mounted) {
-        setState(() => _isLoading = false);
-
-        // Navigate to OTP screen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => OTPScreen(email: widget.email),
-          ),
+      try {
+        // Sign up with Supabase Auth - this sends a confirmation email automatically
+        final response = await SupabaseService.auth.signUp(
+          email: widget.email,
+          password: _passwordController.text,
+          emailRedirectTo: 'io.supabase.kuetcseautomation://login-callback',
+          data: {
+            'role': widget.userRole,
+            'user_id': widget.userId,
+          },
         );
+
+        if (response.user == null) {
+          if (mounted) {
+            setState(() => _isLoading = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Failed to create account. Please try again.'),
+                backgroundColor: AppColors.danger,
+              ),
+            );
+          }
+          return;
+        }
+
+        // Update our custom users table with role
+        await SupabaseService.from('users')
+            .update({
+              'role': widget.userRole,
+            })
+            .eq('id', widget.userId);
+
+        if (mounted) {
+          setState(() => _isLoading = false);
+
+          // Navigate to Email Verification screen
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => EmailVerificationScreen(
+                email: widget.email,
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${e.toString()}'),
+              backgroundColor: AppColors.danger,
+            ),
+          );
+        }
       }
     }
   }

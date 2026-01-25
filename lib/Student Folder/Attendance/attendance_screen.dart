@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/attendance_model.dart';
+//import '../models/attendance_model.dart';
 import '../data/static_data.dart';
 import 'widgets/course_attendance_card.dart';
 import '../../theme/app_colors.dart';

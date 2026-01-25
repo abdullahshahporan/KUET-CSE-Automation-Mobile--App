@@ -4,6 +4,7 @@ import 'package:kuet_cse_automation/Auth/Reset_Password_Screen.dart';
 import 'package:kuet_cse_automation/Student Folder/Common Screen/main_bottom_navbar_screen.dart';
 import 'package:kuet_cse_automation/Teacher/teacher_navbar/teacher_navbar_screen.dart';
 import '../theme/app_colors.dart';
+import '../services/supabase_service.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -19,11 +20,6 @@ class _SignInScreenState extends State<SignInScreen> {
   bool _obscurePassword = true;
   bool _isLoading = false;
 
-  // Test credentials
-  static const String _studentEmail = 'student@stud.kuet.ac.bd';
-  static const String _teacherEmail = 'teacher@kuet.ac.bd';
-  static const String _testPassword = '123456@';
-
   @override
   void dispose() {
     _emailController.dispose();
@@ -35,55 +31,127 @@ class _SignInScreenState extends State<SignInScreen> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 1));
+      try {
+        final email = _emailController.text.trim().toLowerCase();
+        final password = _passwordController.text;
 
-      final email = _emailController.text.trim();
-      final password = _passwordController.text;
+        // Sign in with Supabase Auth
+        final authResponse = await SupabaseService.auth.signInWithPassword(
+          email: email,
+          password: password,
+        );
 
-      if (password == _testPassword) {
-        if (email == _studentEmail) {
-          // Navigate to Student Dashboard
+        if (authResponse.user == null) {
           if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const MainBottomNavBarScreen(),
-              ),
-            );
-          }
-        } else if (email == _teacherEmail) {
-          // Navigate to Teacher Dashboard
-          if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const TeacherMainScreen(),
-              ),
-            );
-          }
-        } else {
-          if (mounted) {
+            setState(() => _isLoading = false);
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Invalid email address'),
-                backgroundColor: Colors.red,
+              SnackBar(
+                content: const Text('Sign in failed. Please try again.'),
+                backgroundColor: AppColors.danger,
               ),
             );
+          }
+          return;
+        }
+
+        // Check if email is verified
+        if (authResponse.user!.emailConfirmedAt == null) {
+          if (mounted) {
+            setState(() => _isLoading = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text(
+                  'Please verify your email first. Check your inbox.',
+                ),
+                backgroundColor: AppColors.warning,
+              ),
+            );
+          }
+          return;
+        }
+
+        // Get user role from custom users table
+        final userResponse = await SupabaseService.from('users')
+            .select('id, role, status')
+            .eq('email', email)
+            .maybeSingle();
+
+        if (mounted) {
+          setState(() => _isLoading = false);
+
+          if (userResponse == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text(
+                  'User profile not found. Please contact admin.',
+                ),
+                backgroundColor: AppColors.danger,
+              ),
+            );
+            return;
+          }
+
+          // Check if account is disabled
+          if (userResponse['status'] == 'DISABLED') {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text(
+                  'Your account has been disabled. Contact admin.',
+                ),
+                backgroundColor: AppColors.danger,
+              ),
+            );
+            return;
+          }
+
+          // Sign in successful - Navigate based on role
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Sign in successful!'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+
+          await Future.delayed(const Duration(milliseconds: 300));
+
+          if (mounted) {
+            final role = userResponse['role'];
+            if (role == 'TEACHER') {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const TeacherMainScreen(),
+                ),
+              );
+            } else if (role == 'STUDENT') {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MainBottomNavBarScreen(),
+                ),
+              );
+            } else {
+              // OFFICER_STAFF or ADMIN - default to student screen for now
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MainBottomNavBarScreen(),
+                ),
+              );
+            }
           }
         }
-      } else {
+      } catch (e) {
         if (mounted) {
+          setState(() => _isLoading = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Invalid password'),
-              backgroundColor: Colors.red,
+            SnackBar(
+              content: Text('Error: ${e.toString()}'),
+              backgroundColor: AppColors.danger,
             ),
           );
         }
       }
-
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -393,60 +461,25 @@ class _SignInScreenState extends State<SignInScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Test Credentials Info - Teacher
+                // Database Info
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.info.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppColors.primary.withOpacity(0.3),
-                    ),
+                    border: Border.all(color: AppColors.info.withOpacity(0.3)),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: AppColors.warning,
-                            size: 20,
+                      Icon(Icons.info_outline, color: AppColors.info, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Use your registered email and password to sign in',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary(isDarkMode),
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Test Credentials',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary(isDarkMode),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Student: $_studentEmail',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary(isDarkMode),
-                        ),
-                      ),
-                      Text(
-                        'Teacher: $_teacherEmail',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary(isDarkMode),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Password: $_testPassword',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary(isDarkMode),
                         ),
                       ),
                     ],
