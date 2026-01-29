@@ -1,12 +1,36 @@
 import 'package:flutter/material.dart';
-import '../Attendance/attendance_screen.dart';
-import '../Curriculum/curriculum_screen.dart';
-import 'package:kuet_cse_automation/Student%20Folder/Home/Features/Schedule/unified_schedule_screen.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Home/Features/Notice/Notice_Screen.dart';
+import 'package:kuet_cse_automation/Student%20Folder/Home/Features/Schedule/unified_schedule_screen.dart';
 import 'package:kuet_cse_automation/theme/app_colors.dart';
 
-class HomeScreen extends StatelessWidget {
+import '../../services/supabase_service.dart';
+import '../Attendance/attendance_screen.dart';
+import '../Curriculum/curriculum_screen.dart';
+
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  String _firstName = 'Student';
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadUserName();
+  }
+  
+  Future<void> _loadUserName() async {
+    final profile = await SupabaseService.getStudentProfile();
+    if (mounted && profile != null) {
+      setState(() {
+        _firstName = SupabaseService.getFirstName(profile['full_name']);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +49,7 @@ class HomeScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Welcome Section
-                  _buildWelcomeSection(isDarkMode),
+                  _buildWelcomeSection(isDarkMode, _firstName),
                   const SizedBox(height: 28),
 
                   // Features Section Header
@@ -273,7 +297,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildWelcomeSection(bool isDarkMode) {
+  Widget _buildWelcomeSection(bool isDarkMode, String firstName) {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
@@ -306,9 +330,9 @@ class HomeScreen extends StatelessWidget {
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text(
-                    '👋 Welcome back!',
-                    style: TextStyle(
+                  child: Text(
+                    '👋 Welcome, $firstName!',
+                    style: const TextStyle(
                       fontSize: 12,
                       color: Colors.white,
                       fontWeight: FontWeight.w600,

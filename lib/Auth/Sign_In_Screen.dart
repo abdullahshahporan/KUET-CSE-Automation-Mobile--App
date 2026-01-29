@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:kuet_cse_automation/Auth/Sign_Up_Screen.dart';
 import 'package:kuet_cse_automation/Auth/Reset_Password_Screen.dart';
+import 'package:kuet_cse_automation/Auth/Sign_Up_Screen.dart';
 import 'package:kuet_cse_automation/Student Folder/Common Screen/main_bottom_navbar_screen.dart';
 import 'package:kuet_cse_automation/Teacher/teacher_navbar/teacher_navbar_screen.dart';
-import '../theme/app_colors.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../services/supabase_service.dart';
+import '../theme/app_colors.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -140,6 +142,29 @@ class _SignInScreenState extends State<SignInScreen> {
               );
             }
           }
+        }
+      } on AuthException catch (e) {
+        // Handle specific auth errors
+        if (mounted) {
+          setState(() => _isLoading = false);
+          String errorMessage;
+          
+          if (e.message.contains('Invalid login credentials')) {
+            errorMessage = 'Wrong email or password. Please try again.';
+          } else if (e.message.contains('Email not confirmed')) {
+            errorMessage = 'Please verify your email first. Check your inbox.';
+          } else if (e.message.contains('User not found')) {
+            errorMessage = 'No account found with this email.';
+          } else {
+            errorMessage = e.message;
+          }
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: AppColors.danger,
+            ),
+          );
         }
       } catch (e) {
         if (mounted) {

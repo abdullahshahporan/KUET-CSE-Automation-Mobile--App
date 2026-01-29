@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart' as provider;
-import '../app_theme.dart';
-import 'data/teacher_static_data.dart';
+
 import '../Student Folder/models/course_model.dart';
+import '../app_theme.dart';
+import '../services/supabase_service.dart';
 import '../theme/app_colors.dart';
 import 'course_detail_screen.dart';
+import 'data/teacher_static_data.dart';
 
 /// Teacher Home Content - Shows courses and upcoming schedule
 class TeacherHomeContent extends StatefulWidget {
@@ -16,6 +18,22 @@ class TeacherHomeContent extends StatefulWidget {
 
 class _TeacherHomeContentState extends State<TeacherHomeContent> {
   bool _showAllCourses = false;
+  String _teacherName = 'Teacher';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTeacherName();
+  }
+
+  Future<void> _loadTeacherName() async {
+    final profile = await SupabaseService.getTeacherProfile();
+    if (mounted && profile != null) {
+      setState(() {
+        _teacherName = profile['full_name'] ?? 'Teacher';
+      });
+    }
+  }
 
   // Get today's schedule
   List<Map<String, String>> _getTodaySchedule() {
@@ -221,7 +239,7 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  currentTeacher.name,
+                  _teacherName,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
