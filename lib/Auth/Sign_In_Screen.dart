@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:kuet_cse_automation/Auth/Reset_Password_Screen.dart';
-import 'package:kuet_cse_automation/Auth/Sign_Up_Screen.dart';
 import 'package:kuet_cse_automation/Student Folder/Common Screen/main_bottom_navbar_screen.dart';
 import 'package:kuet_cse_automation/Teacher/teacher_navbar/teacher_navbar_screen.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/supabase_service.dart';
 import '../theme/app_colors.dart';
@@ -37,134 +34,50 @@ class _SignInScreenState extends State<SignInScreen> {
         final email = _emailController.text.trim().toLowerCase();
         final password = _passwordController.text;
 
-        // Sign in with Supabase Auth
-        final authResponse = await SupabaseService.auth.signInWithPassword(
+        final result = await SupabaseService.signIn(
           email: email,
           password: password,
         );
 
-        if (authResponse.user == null) {
-          if (mounted) {
-            setState(() => _isLoading = false);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Sign in failed. Please try again.'),
-                backgroundColor: AppColors.danger,
-              ),
-            );
-          }
-          return;
-        }
-
-        // Check if email is verified
-        if (authResponse.user!.emailConfirmedAt == null) {
-          if (mounted) {
-            setState(() => _isLoading = false);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text(
-                  'Please verify your email first. Check your inbox.',
-                ),
-                backgroundColor: AppColors.warning,
-              ),
-            );
-          }
-          return;
-        }
-
-        // Get user role from custom users table
-        final userResponse = await SupabaseService.from('users')
-            .select('id, role, status')
-            .eq('email', email)
-            .maybeSingle();
-
         if (mounted) {
           setState(() => _isLoading = false);
 
-          if (userResponse == null) {
+          if (result['success'] == true) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: const Text(
-                  'User profile not found. Please contact admin.',
-                ),
-                backgroundColor: AppColors.danger,
+                content: const Text('Sign in successful!'),
+                backgroundColor: AppColors.success,
               ),
             );
-            return;
-          }
 
-          // Check if account is disabled
-          if (userResponse['status'] == 'DISABLED') {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text(
-                  'Your account has been disabled. Contact admin.',
-                ),
-                backgroundColor: AppColors.danger,
-              ),
-            );
-            return;
-          }
+            await Future.delayed(const Duration(milliseconds: 300));
 
-          // Sign in successful - Navigate based on role
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Sign in successful!'),
-              backgroundColor: AppColors.success,
-            ),
-          );
-
-          await Future.delayed(const Duration(milliseconds: 300));
-
-          if (mounted) {
-            final role = userResponse['role'];
-            if (role == 'TEACHER') {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const TeacherMainScreen(),
-                ),
-              );
-            } else if (role == 'STUDENT') {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainBottomNavBarScreen(),
-                ),
-              );
-            } else {
-              // OFFICER_STAFF or ADMIN - default to student screen for now
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainBottomNavBarScreen(),
-                ),
-              );
+            if (mounted) {
+              final role = result['role'];
+              if (role == 'TEACHER') {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const TeacherMainScreen(),
+                  ),
+                );
+              } else {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainBottomNavBarScreen(),
+                  ),
+                );
+              }
             }
-          }
-        }
-      } on AuthException catch (e) {
-        // Handle specific auth errors
-        if (mounted) {
-          setState(() => _isLoading = false);
-          String errorMessage;
-          
-          if (e.message.contains('Invalid login credentials')) {
-            errorMessage = 'Wrong email or password. Please try again.';
-          } else if (e.message.contains('Email not confirmed')) {
-            errorMessage = 'Please verify your email first. Check your inbox.';
-          } else if (e.message.contains('User not found')) {
-            errorMessage = 'No account found with this email.';
           } else {
-            errorMessage = e.message;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['message'] ?? 'Sign in failed'),
+                backgroundColor: AppColors.danger,
+              ),
+            );
           }
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorMessage),
-              backgroundColor: AppColors.danger,
-            ),
-          );
         }
       } catch (e) {
         if (mounted) {
@@ -370,27 +283,6 @@ class _SignInScreenState extends State<SignInScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Forgot Password
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ResetPasswordScreen(),
-                        ),
-                      );
-                    },
-                    child: Text(
-                      'Forgot Password?',
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
                 const SizedBox(height: 32),
 
                 // Sign In Button
@@ -429,62 +321,6 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // Divider
-                Row(
-                  children: [
-                    Expanded(
-                      child: Divider(color: AppColors.border(isDarkMode)),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'OR',
-                        style: TextStyle(
-                          color: AppColors.textSecondary(isDarkMode),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Divider(color: AppColors.border(isDarkMode)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // Sign Up Link
-                Center(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Don't have an account? ",
-                        style: TextStyle(
-                          color: AppColors.textSecondary(isDarkMode),
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SignUpScreen(),
-                            ),
-                          );
-                        },
-                        child: Text(
-                          'Sign Up',
-                          style: TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
 
                 // Database Info
                 Container(

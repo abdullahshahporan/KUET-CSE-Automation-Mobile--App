@@ -1,14 +1,21 @@
+import 'package:bcrypt/bcrypt.dart';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Centralized Supabase service for the KUET CSE Automation app
 ///
-/// Usage:
-/// ```dart
-/// final supabase = SupabaseService.client;
-/// ```
+/// Authentication queries the `profiles` table directly and verifies
+/// the bcrypt-hashed password on the client side using the `bcrypt` package.
 class SupabaseService {
   static SupabaseClient? _client;
-  static bool _isInitialized = false;
+  static SharedPreferences? _prefs;
+
+  // SharedPreferences keys
+  static const _keyUserId = 'user_id';
+  static const _keyEmail = 'user_email';
+  static const _keyRole = 'user_role';
+  static const _keyIsLoggedIn = 'is_logged_in';
 
   /// Initialize Supabase with your project credentials
   ///
@@ -17,28 +24,20 @@ class SupabaseService {
     required String supabaseUrl,
     required String supabaseAnonKey,
   }) async {
-    if (_isInitialized) return; // Prevent double initialization
-    
     await Supabase.initialize(
       url: supabaseUrl,
       anonKey: supabaseAnonKey,
-      authOptions: const FlutterAuthClientOptions(
-        authFlowType: AuthFlowType.pkce,
-      ),
-      // Deep link configuration for email verification
-      debug: true,
+      debug: kDebugMode,
     );
     _client = Supabase.instance.client;
-    _isInitialized = true;
+    _prefs = await SharedPreferences.getInstance();
   }
 
   /// Get the Supabase client instance
   static SupabaseClient get client {
-    // Always try to get from Supabase.instance if our client is null
     if (_client == null) {
       try {
         _client = Supabase.instance.client;
-        _isInitialized = true;
       } catch (e) {
         throw Exception(
           'SupabaseService not initialized. Call SupabaseService.initialize() first.',
@@ -48,21 +47,114 @@ class SupabaseService {
     return _client!;
   }
 
-  /// Shorthand for accessing auth
-  static GoTrueClient get auth => client.auth;
-
   /// Shorthand for accessing database
   static SupabaseQueryBuilder from(String table) => client.from(table);
 
-  // =========================================
-  // PROFILE METHODS
-  // =========================================
+  // ---------------------------------------------------------------------------
+  // Authentication (direct Supabase query + client-side bcrypt verification)
+  // ---------------------------------------------------------------------------
 
-  /// Get current user's ID
-  static String? get currentUserId => auth.currentUser?.id;
+  /// Sign in by querying the `profiles` table and verifying the bcrypt hash.
+  ///
+  /// Returns a Map with keys: `success`, `user_id`, `role`, `email`, `message`
+  static Future<Map<String, dynamic>> signIn({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      // Query the profiles table for the user
+      final response = await client
+          .from('profiles')
+          .select('user_id, email, password_hash, role, is_active')
+          .eq('email', email.trim().toLowerCase())
+          .maybeSingle();
 
-  /// Get current user's email
-  static String? get currentUserEmail => auth.currentUser?.email;
+      if (response == null) {
+        return {
+          'success': false,
+          'message': 'Invalid email or password',
+        };
+      }
+
+      // Check if account is active
+      final isActive = response['is_active'] as bool? ?? false;
+      if (!isActive) {
+        return {
+          'success': false,
+          'message': 'Account is deactivated. Contact admin.',
+        };
+      }
+
+      // Verify password using bcrypt
+      final storedHash = response['password_hash'] as String? ?? '';
+      final passwordMatches = BCrypt.checkpw(password, storedHash);
+
+      if (!passwordMatches) {
+        return {
+          'success': false,
+          'message': 'Invalid email or password',
+        };
+      }
+
+      // Password verified – save session locally
+      final userId = (response['user_id'] ?? '').toString();
+      final role = (response['role'] ?? '').toString();
+      final userEmail = (response['email'] ?? email).toString();
+
+      await _prefs?.setBool(_keyIsLoggedIn, true);
+      await _prefs?.setString(_keyUserId, userId);
+      await _prefs?.setString(_keyEmail, userEmail);
+      await _prefs?.setString(_keyRole, role);
+
+      // Update last_login timestamp (non-critical)
+      try {
+        await client
+            .from('profiles')
+            .update({'last_login': DateTime.now().toUtc().toIso8601String()})
+            .eq('user_id', userId);
+      } catch (_) {}
+
+      return {
+        'success': true,
+        'user_id': userId,
+        'role': role,
+        'email': userEmail,
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Connection error: ${e.toString()}',
+      };
+    }
+  }
+
+  /// Sign out – clears saved session
+  static Future<void> signOut() async {
+    await _prefs?.remove(_keyIsLoggedIn);
+    await _prefs?.remove(_keyUserId);
+    await _prefs?.remove(_keyEmail);
+    await _prefs?.remove(_keyRole);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Session helpers
+  // ---------------------------------------------------------------------------
+
+  /// Whether a user session is saved locally
+  static bool get isLoggedIn => _prefs?.getBool(_keyIsLoggedIn) ?? false;
+
+  /// Current user's ID (from local session)
+  static String? get currentUserId => _prefs?.getString(_keyUserId);
+
+  /// Current user's email (from local session)
+  static String? get currentEmail => _prefs?.getString(_keyEmail);
+
+  /// Current user's role (from local session) – e.g. STUDENT, TEACHER, ADMIN
+  static String? get currentRole => _prefs?.getString(_keyRole);
+
+  // ---------------------------------------------------------------------------
+  // Profile methods
+  // ---------------------------------------------------------------------------
 
   /// Get student profile from database
   static Future<Map<String, dynamic>?> getStudentProfile() async {
@@ -70,7 +162,6 @@ class SupabaseService {
     if (userId == null) return null;
 
     try {
-      // First get user data
       final userData = await client
           .from('users')
           .select('id, email, full_name, phone, address, role, status')
@@ -79,7 +170,6 @@ class SupabaseService {
 
       if (userData == null) return null;
 
-      // Then get student specific data
       final studentData = await client
           .from('students')
           .select('roll_no, department, batch, section, admission_year, current_year, current_semester, session')
@@ -88,7 +178,6 @@ class SupabaseService {
 
       if (studentData == null) return userData;
 
-      // Merge data
       return {
         ...userData,
         ...studentData,
@@ -96,7 +185,7 @@ class SupabaseService {
         'semester_display': _getSemesterDisplay(studentData['current_semester']),
       };
     } catch (e) {
-      print('Error fetching student profile: $e');
+      debugPrint('Error fetching student profile: $e');
       return null;
     }
   }
@@ -107,7 +196,6 @@ class SupabaseService {
     if (userId == null) return null;
 
     try {
-      // First get user data
       final userData = await client
           .from('users')
           .select('id, email, full_name, phone, address, role, status')
@@ -116,7 +204,6 @@ class SupabaseService {
 
       if (userData == null) return null;
 
-      // Then get teacher specific data
       final teacherData = await client
           .from('teachers')
           .select('employee_id, department, designation, experience_years, office_room')
@@ -125,14 +212,13 @@ class SupabaseService {
 
       if (teacherData == null) return userData;
 
-      // Merge data
       return {
         ...userData,
         ...teacherData,
         'designation_display': _getDesignationDisplay(teacherData['designation']),
       };
     } catch (e) {
-      print('Error fetching teacher profile: $e');
+      debugPrint('Error fetching teacher profile: $e');
       return null;
     }
   }
@@ -155,7 +241,7 @@ class SupabaseService {
           .eq('id', userId);
       return true;
     } catch (e) {
-      print('Error updating contact info: $e');
+      debugPrint('Error updating contact info: $e');
       return false;
     }
   }
@@ -194,13 +280,4 @@ class SupabaseService {
       default: return designation ?? 'Faculty';
     }
   }
-}
-
-/// Extension methods for common auth operations
-extension SupabaseAuthExtension on GoTrueClient {
-  /// Get current user's ID (uuid)
-  String? get userId => currentUser?.id;
-
-  /// Check if user is signed in
-  bool get isSignedIn => currentUser != null;
 }

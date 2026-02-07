@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:kuet_cse_automation/Auth/Sign_In_Screen.dart';
+import 'package:kuet_cse_automation/Teacher/teacher_navbar/teacher_navbar_screen.dart';
 import 'package:kuet_cse_automation/theme/app_colors.dart';
+import '../../services/supabase_service.dart';
+import 'main_bottom_navbar_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -31,10 +34,28 @@ class _SplashScreenState extends State<SplashScreen>
     _animationController.forward();
 
     Timer(const Duration(seconds: 4), () {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const SignInScreen()),
-      );
+      _navigateBasedOnSession();
     });
+  }
+
+  void _navigateBasedOnSession() {
+    if (!mounted) return;
+
+    Widget destination;
+    if (SupabaseService.isLoggedIn) {
+      final role = SupabaseService.currentRole;
+      if (role == 'TEACHER') {
+        destination = const TeacherMainScreen();
+      } else {
+        destination = const MainBottomNavBarScreen();
+      }
+    } else {
+      destination = const SignInScreen();
+    }
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => destination),
+    );
   }
 
   @override

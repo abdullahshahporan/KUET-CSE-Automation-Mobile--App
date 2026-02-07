@@ -186,7 +186,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
             ElevatedButton(
               onPressed: () async {
                 Navigator.pop(context);
-                await SupabaseService.auth.signOut();
+                await SupabaseService.signOut();
                 if (context.mounted) {
                   Navigator.pushAndRemoveUntil(
                     context,
