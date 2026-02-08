@@ -156,33 +156,41 @@ class SupabaseService {
   // Profile methods
   // ---------------------------------------------------------------------------
 
-  /// Get student profile from database
+  /// Get student profile from database (profiles + students tables)
   static Future<Map<String, dynamic>?> getStudentProfile() async {
     final userId = currentUserId;
     if (userId == null) return null;
 
     try {
-      final userData = await client
-          .from('users')
-          .select('id, email, full_name, phone, address, role, status')
-          .eq('id', userId)
-          .maybeSingle();
-
-      if (userData == null) return null;
-
-      final studentData = await client
-          .from('students')
-          .select('roll_no, department, batch, section, admission_year, current_year, current_semester, session')
+      final profileData = await client
+          .from('profiles')
+          .select('user_id, email, role, is_active, last_login, created_at')
           .eq('user_id', userId)
           .maybeSingle();
 
-      if (studentData == null) return userData;
+      if (profileData == null) return null;
+
+      final studentData = await client
+          .from('students')
+          .select('roll_no, full_name, phone, term, session, batch, section, cgpa')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      if (studentData == null) return profileData;
+
+      // Parse term '1-2' → year=1, semester=2
+      final term = (studentData['term'] ?? '1-1') as String;
+      final termParts = term.split('-');
+      final year = int.tryParse(termParts[0]) ?? 1;
+      final semester = int.tryParse(termParts.length > 1 ? termParts[1] : '1') ?? 1;
 
       return {
-        ...userData,
+        ...profileData,
         ...studentData,
-        'year_display': _getYearDisplay(studentData['current_year']),
-        'semester_display': _getSemesterDisplay(studentData['current_semester']),
+        'current_year': year,
+        'current_semester': semester,
+        'year_display': _getYearDisplay(year),
+        'semester_display': _getSemesterDisplay(semester),
       };
     } catch (e) {
       debugPrint('Error fetching student profile: $e');
@@ -190,30 +198,30 @@ class SupabaseService {
     }
   }
 
-  /// Get teacher profile from database
+  /// Get teacher profile from database (profiles + teachers tables)
   static Future<Map<String, dynamic>?> getTeacherProfile() async {
     final userId = currentUserId;
     if (userId == null) return null;
 
     try {
-      final userData = await client
-          .from('users')
-          .select('id, email, full_name, phone, address, role, status')
-          .eq('id', userId)
-          .maybeSingle();
-
-      if (userData == null) return null;
-
-      final teacherData = await client
-          .from('teachers')
-          .select('employee_id, department, designation, experience_years, office_room')
+      final profileData = await client
+          .from('profiles')
+          .select('user_id, email, role, is_active, last_login, created_at')
           .eq('user_id', userId)
           .maybeSingle();
 
-      if (teacherData == null) return userData;
+      if (profileData == null) return null;
+
+      final teacherData = await client
+          .from('teachers')
+          .select('teacher_uid, full_name, phone, designation, department, office_room, room_no, date_of_join, created_at')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      if (teacherData == null) return profileData;
 
       return {
-        ...userData,
+        ...profileData,
         ...teacherData,
         'designation_display': _getDesignationDisplay(teacherData['designation']),
       };
@@ -223,26 +231,86 @@ class SupabaseService {
     }
   }
 
-  /// Update user contact info (phone and address)
-  static Future<bool> updateContactInfo({
-    String? phone,
-    String? address,
-  }) async {
+  /// Update student phone number
+  static Future<bool> updateStudentPhone(String phone) async {
     final userId = currentUserId;
     if (userId == null) return false;
 
     try {
       await client
-          .from('users')
-          .update({
-            if (phone != null) 'phone': phone,
-            if (address != null) 'address': address,
-          })
-          .eq('id', userId);
+          .from('students')
+          .update({'phone': phone})
+          .eq('user_id', userId);
       return true;
     } catch (e) {
-      debugPrint('Error updating contact info: $e');
+      debugPrint('Error updating student phone: $e');
       return false;
+    }
+  }
+
+  /// Update teacher phone number
+  static Future<bool> updateTeacherPhone(String phone) async {
+    final userId = currentUserId;
+    if (userId == null) return false;
+
+    try {
+      await client
+          .from('teachers')
+          .update({'phone': phone})
+          .eq('user_id', userId);
+      return true;
+    } catch (e) {
+      debugPrint('Error updating teacher phone: $e');
+      return false;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Password change
+  // ---------------------------------------------------------------------------
+
+  /// Change password: verify current password then update hash
+  static Future<Map<String, dynamic>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final userId = currentUserId;
+    if (userId == null) {
+      return {'success': false, 'message': 'Not logged in'};
+    }
+
+    try {
+      // Fetch current hash
+      final profile = await client
+          .from('profiles')
+          .select('password_hash')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      if (profile == null) {
+        return {'success': false, 'message': 'Profile not found'};
+      }
+
+      final storedHash = profile['password_hash'] as String? ?? '';
+
+      // Verify current password
+      if (!BCrypt.checkpw(currentPassword, storedHash)) {
+        return {'success': false, 'message': 'Current password is incorrect'};
+      }
+
+      // Hash new password and update
+      final newHash = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+      await client
+          .from('profiles')
+          .update({
+            'password_hash': newHash,
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('user_id', userId);
+
+      return {'success': true, 'message': 'Password changed successfully'};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: ${e.toString()}'};
     }
   }
 
