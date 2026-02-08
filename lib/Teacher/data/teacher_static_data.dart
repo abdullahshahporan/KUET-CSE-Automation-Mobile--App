@@ -1,7 +1,6 @@
 /// Static data for teacher features - Multi-Semester Support
 /// This will be replaced with dynamic data from database later
 
-import '../models/teacher_user_model.dart';
 import '../../Student Folder/models/user_model.dart';
 import '../../Student Folder/models/course_model.dart';
 

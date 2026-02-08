@@ -119,42 +119,36 @@ final attendanceProvider = Provider<List<AttendanceRecord>>((ref) {
       courseName: 'Data Structures',
       totalClasses: 30,
       attendedClasses: 28,
-      percentage: 93.33,
     ),
     AttendanceRecord(
       courseCode: 'CSE 2103',
       courseName: 'Algorithm Analysis',
       totalClasses: 28,
       attendedClasses: 26,
-      percentage: 92.86,
     ),
     AttendanceRecord(
       courseCode: 'CSE 2105',
       courseName: 'Database Management',
       totalClasses: 32,
       attendedClasses: 25,
-      percentage: 78.13,
     ),
     AttendanceRecord(
       courseCode: 'CSE 2107',
       courseName: 'Software Engineering',
       totalClasses: 30,
       attendedClasses: 29,
-      percentage: 96.67,
     ),
     AttendanceRecord(
       courseCode: 'CSE 2109',
       courseName: 'Computer Networks',
       totalClasses: 26,
       attendedClasses: 20,
-      percentage: 76.92,
     ),
     AttendanceRecord(
       courseCode: 'CSE 2102',
       courseName: 'Operating Systems',
       totalClasses: 28,
       attendedClasses: 24,
-      percentage: 85.71,
     ),
   ];
 });

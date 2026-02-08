@@ -1,5 +1,7 @@
-// Notice, Assignment, and Attendance models
+// Notice, Assignment models
 // Schedule models are in Home/Features/Schedule folder
+// AttendanceRecord is in attendance_model.dart — re-exported here for convenience
+export 'attendance_model.dart' show AttendanceRecord;
 
 class Notice {
   final String id;
@@ -36,21 +38,5 @@ class Assignment {
     required this.deadline,
     required this.status,
     required this.marks,
-  });
-}
-
-class AttendanceRecord {
-  final String courseCode;
-  final String courseName;
-  final int totalClasses;
-  final int attendedClasses;
-  final double percentage;
-
-  AttendanceRecord({
-    required this.courseCode,
-    required this.courseName,
-    required this.totalClasses,
-    required this.attendedClasses,
-    required this.percentage,
   });
 }

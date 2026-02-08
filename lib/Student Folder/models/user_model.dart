@@ -95,3 +95,27 @@ class StudentUser extends AppUser {
     return '$currentYear$yearSuffix Year $currentTerm$termSuffix Term';
   }
 }
+
+/// Teacher user with additional properties
+class TeacherUser extends AppUser {
+  final String designation;
+  final String? officeRoom;
+  final List<String> assignedCourses;
+  final String? phone;
+  final String? employeeId;
+  final int experience;
+
+  const TeacherUser({
+    required super.id,
+    required super.name,
+    required super.email,
+    required this.designation,
+    this.officeRoom,
+    this.assignedCourses = const [],
+    this.phone,
+    this.employeeId,
+    this.experience = 0,
+    super.department,
+    super.photoUrl,
+  }) : super(role: UserRole.teacher);
+}

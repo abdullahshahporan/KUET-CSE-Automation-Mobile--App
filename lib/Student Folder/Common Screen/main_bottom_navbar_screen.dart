@@ -9,6 +9,8 @@ import 'package:kuet_cse_automation/app_theme.dart';
 import 'package:kuet_cse_automation/theme/app_colors.dart';
 import 'package:provider/provider.dart';
 
+import '../../services/supabase_service.dart';
+
 class MainBottomNavBarScreen extends StatefulWidget {
   const MainBottomNavBarScreen({super.key});
 
@@ -18,6 +20,22 @@ class MainBottomNavBarScreen extends StatefulWidget {
 
 class _MainBottomNavBarScreenState extends State<MainBottomNavBarScreen> {
   int _currentIndex = 0;
+  String _userName = 'Student';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserName();
+  }
+
+  Future<void> _loadUserName() async {
+    final profile = await SupabaseService.getStudentProfile();
+    if (mounted && profile != null) {
+      setState(() {
+        _userName = profile['full_name'] ?? 'Student';
+      });
+    }
+  }
 
   // Screens for each tab
   final List<Widget> _screens = const [
@@ -37,7 +55,7 @@ class _MainBottomNavBarScreenState extends State<MainBottomNavBarScreen> {
           ? AppColors.darkBackground
           : AppColors.lightBackground,
       appBar: CustomAppBar(
-        userName: 'Student Name',
+        userName: _userName,
         isDarkMode: isDarkMode,
         onThemeToggle: (bool isDark) {
           themeProvider.setTheme(isDark);
@@ -48,7 +66,7 @@ class _MainBottomNavBarScreenState extends State<MainBottomNavBarScreen> {
         onThemeToggle: (bool isDark) {
           themeProvider.setTheme(isDark);
         },
-        userName: 'Student Name',
+        userName: _userName,
       ),
       body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: Container(
