@@ -33,6 +33,12 @@ class SupabaseService {
     _prefs = await SharedPreferences.getInstance();
   }
 
+  /// Ensure SharedPreferences is initialized (safety net)
+  static Future<SharedPreferences> _ensurePrefs() async {
+    _prefs ??= await SharedPreferences.getInstance();
+    return _prefs!;
+  }
+
   /// Get the Supabase client instance
   static SupabaseClient get client {
     if (_client == null) {
@@ -101,10 +107,12 @@ class SupabaseService {
       final role = (response['role'] ?? '').toString();
       final userEmail = (response['email'] ?? email).toString();
 
-      await _prefs?.setBool(_keyIsLoggedIn, true);
-      await _prefs?.setString(_keyUserId, userId);
-      await _prefs?.setString(_keyEmail, userEmail);
-      await _prefs?.setString(_keyRole, role);
+      // Ensure SharedPreferences is initialized before writing
+      final prefs = await _ensurePrefs();
+      await prefs.setBool(_keyIsLoggedIn, true);
+      await prefs.setString(_keyUserId, userId);
+      await prefs.setString(_keyEmail, userEmail);
+      await prefs.setString(_keyRole, role);
 
       // Update last_login timestamp (non-critical)
       try {
@@ -130,10 +138,11 @@ class SupabaseService {
 
   /// Sign out – clears saved session
   static Future<void> signOut() async {
-    await _prefs?.remove(_keyIsLoggedIn);
-    await _prefs?.remove(_keyUserId);
-    await _prefs?.remove(_keyEmail);
-    await _prefs?.remove(_keyRole);
+    final prefs = await _ensurePrefs();
+    await prefs.remove(_keyIsLoggedIn);
+    await prefs.remove(_keyUserId);
+    await prefs.remove(_keyEmail);
+    await prefs.remove(_keyRole);
   }
 
   // ---------------------------------------------------------------------------
@@ -200,6 +209,7 @@ class SupabaseService {
 
   /// Get teacher profile from database (profiles + teachers tables)
   static Future<Map<String, dynamic>?> getTeacherProfile() async {
+    await _ensurePrefs();
     final userId = currentUserId;
     if (userId == null) return null;
 
@@ -262,6 +272,79 @@ class SupabaseService {
     } catch (e) {
       debugPrint('Error updating teacher phone: $e');
       return false;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Teacher Assigned Courses (from course_offerings)
+  // ---------------------------------------------------------------------------
+
+  /// Fetch courses assigned to the currently logged-in teacher
+  /// Joins course_offerings → courses to get full course info
+  static Future<List<Map<String, dynamic>>> getTeacherAssignedCourses() async {
+    await _ensurePrefs();
+    final userId = currentUserId;
+    if (userId == null) return [];
+
+    try {
+      final response = await client
+          .from('course_offerings')
+          .select('''
+            id,
+            course_id,
+            term,
+            session,
+            batch,
+            is_active,
+            courses (
+              id,
+              code,
+              title,
+              credit,
+              course_type,
+              description
+            )
+          ''')
+          .eq('teacher_user_id', userId)
+          .order('created_at', ascending: false);
+
+      return List<Map<String, dynamic>>.from(response as List);
+    } catch (e) {
+      debugPrint('[TeacherCourses] ERROR: $e');
+      return [];
+    }
+  }
+
+  /// Subscribe to real-time changes on course_offerings for this teacher
+  static dynamic subscribeToTeacherCourses({
+    required Function() onChanged,
+  }) {
+    final userId = currentUserId;
+    if (userId == null) return null;
+
+    return client
+        .channel('teacher-courses-$userId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'course_offerings',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'teacher_user_id',
+            value: userId,
+          ),
+          callback: (payload) {
+            debugPrint('[Realtime] Teacher courses changed: ${payload.eventType}');
+            onChanged();
+          },
+        )
+        .subscribe();
+  }
+
+  /// Remove a real-time channel subscription
+  static Future<void> removeChannel(dynamic channel) async {
+    if (channel != null) {
+      await client.removeChannel(channel as RealtimeChannel);
     }
   }
 
