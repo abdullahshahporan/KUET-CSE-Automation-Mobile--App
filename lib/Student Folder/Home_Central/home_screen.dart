@@ -119,14 +119,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildFeatureCard(
                   context: context,
                   icon: Icons.menu_book_rounded,
-                  title: 'Curriculum',
+                  title: 'Course Info',
                   subtitle: 'Course syllabus',
                   gradient: const [Color(0xFF14B8A6), Color(0xFF0D9488)],
                   isDarkMode: isDarkMode,
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const CurriculumScreen(),
+                      builder: (context) => const CourseInfoScreen(),
                     ),
                   ),
                 ),

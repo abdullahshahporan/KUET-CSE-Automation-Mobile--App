@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:intl/intl.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Hamburger%20Menu/Faculty_Info_screen.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Result/result_screen.dart';
+import 'package:kuet_cse_automation/Student%20Folder/Curriculum/curriculum_screen.dart';
 import '../../theme/app_colors.dart';
 
 class HamburgerDrawer extends StatefulWidget {
@@ -185,10 +186,15 @@ class _HamburgerDrawerState extends State<HamburgerDrawer> {
                   ),
                   _buildMenuItem(
                     icon: Icons.library_books,
-                    title: 'Curriculum',
+                    title: 'Course Info',
                     onTap: () {
                       Navigator.pop(context);
-                      // Curriculum screen can be added later
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CourseInfoScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildMenuItem(
