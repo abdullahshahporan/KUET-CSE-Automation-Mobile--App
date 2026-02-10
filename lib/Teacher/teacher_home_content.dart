@@ -19,11 +19,25 @@ class TeacherHomeContent extends StatefulWidget {
 class _TeacherHomeContentState extends State<TeacherHomeContent> {
   bool _showAllCourses = false;
   String _teacherName = 'Teacher';
+  List<TeacherCourse> _assignedCourses = [];
+  bool _loadingCourses = true;
+  dynamic _realtimeChannel;
 
   @override
   void initState() {
     super.initState();
     _loadTeacherName();
+    _loadAssignedCourses();
+    _subscribeToChanges();
+  }
+
+  @override
+  void dispose() {
+    // Clean up real-time subscription
+    if (_realtimeChannel != null) {
+      SupabaseService.removeChannel(_realtimeChannel);
+    }
+    super.dispose();
   }
 
   Future<void> _loadTeacherName() async {
@@ -33,6 +47,58 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
         _teacherName = profile['full_name'] ?? 'Teacher';
       });
     }
+  }
+
+  Future<void> _loadAssignedCourses() async {
+    try {
+      final offerings = await SupabaseService.getTeacherAssignedCourses();
+      if (!mounted) return;
+
+      final courses = offerings.map((offering) {
+        final course = offering['courses'] as Map<String, dynamic>? ?? {};
+        final term = offering['term'] as String? ?? '1-1';
+        final parts = term.split('-');
+        final year = int.tryParse(parts[0]) ?? 1;
+        final termNum = int.tryParse(parts.length > 1 ? parts[1] : '1') ?? 1;
+
+        final typeStr = (course['course_type'] as String? ?? 'Theory').toLowerCase();
+        final courseType = typeStr == 'lab' ? CourseType.lab : CourseType.theory;
+        final credit = (course['credit'] as num?)?.toDouble() ?? 3.0;
+
+        return TeacherCourse(
+          code: course['code'] as String? ?? '',
+          title: course['title'] as String? ?? '',
+          credits: credit,
+          type: courseType,
+          year: year,
+          term: termNum,
+          expectedClasses: courseType == CourseType.lab
+              ? (credit * 6.67).round() // ~10 for 1.5 credit lab
+              : (credit * 6).round(),   // ~18 for 3 credit theory
+          sections: courseType == CourseType.theory ? ['A'] : [],
+          groups: courseType == CourseType.lab ? ['A1'] : [],
+          teachers: [_teacherName],
+        );
+      }).toList();
+
+      setState(() {
+        _assignedCourses = courses;
+        _loadingCourses = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loadingCourses = false);
+      }
+    }
+  }
+
+  void _subscribeToChanges() {
+    _realtimeChannel = SupabaseService.subscribeToTeacherCourses(
+      onChanged: () {
+        // Refetch courses when real-time event received
+        _loadAssignedCourses();
+      },
+    );
   }
 
   // Get today's schedule
@@ -146,9 +212,9 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
 
     // Determine courses to display
     final displayedCourses = _showAllCourses
-        ? teacherCourses
-        : teacherCourses.take(3).toList();
-    final hasMoreCourses = teacherCourses.length > 3;
+        ? _assignedCourses
+        : _assignedCourses.take(3).toList();
+    final hasMoreCourses = _assignedCourses.length > 3;
 
     return SafeArea(
       child: Column(
@@ -167,15 +233,22 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
                   // My Courses Section
                   _buildSectionHeader(
                     'My Courses',
-                    '${teacherCourses.length} courses',
+                    _loadingCourses
+                        ? 'Loading...'
+                        : '${_assignedCourses.length} courses',
                     isDarkMode,
                   ),
                   const SizedBox(height: 12),
 
                   // Course Cards
-                  ...displayedCourses.map(
-                    (course) => _buildCourseCard(course, isDarkMode),
-                  ),
+                  if (_loadingCourses)
+                    _buildLoadingCoursesCard(isDarkMode)
+                  else if (_assignedCourses.isEmpty)
+                    _buildNoCoursesCard(isDarkMode)
+                  else
+                    ...displayedCourses.map(
+                      (course) => _buildCourseCard(course, isDarkMode),
+                    ),
 
                   // See More Button
                   if (hasMoreCourses && !_showAllCourses)
@@ -330,7 +403,7 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
               Icon(Icons.expand_more, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
               Text(
-                'See ${teacherCourses.length - 3} More Courses',
+                'See ${_assignedCourses.length - 3} More Courses',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -417,13 +490,15 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
   }
 
   Widget _buildScheduleCard(Map<String, String> classInfo, bool isDarkMode) {
-    final course = teacherCourses.firstWhere(
-      (c) => c.code == classInfo['course'],
-      orElse: () => teacherCourses.first,
-    );
-    final color = course.type == CourseType.theory
-        ? AppColors.primary
-        : AppColors.accent;
+    TeacherCourse? matchedCourse;
+    if (_assignedCourses.isNotEmpty) {
+      matchedCourse = _assignedCourses.cast<TeacherCourse?>().firstWhere(
+        (c) => c?.code == classInfo['course'],
+        orElse: () => null,
+      );
+    }
+    final isTheory = matchedCourse?.type == CourseType.theory;
+    final color = isTheory ? AppColors.primary : AppColors.accent;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -526,10 +601,77 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
-              course.type == CourseType.theory ? Icons.book : Icons.science,
+              isTheory ? Icons.book : Icons.science,
               color: color,
               size: 20,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingCoursesCard(bool isDarkMode) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.surface(isDarkMode),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border(isDarkMode)),
+      ),
+      child: Column(
+        children: [
+          SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Loading your courses...',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary(isDarkMode),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoCoursesCard(bool isDarkMode) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.surface(isDarkMode),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border(isDarkMode)),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.school_outlined, size: 48, color: AppColors.textMuted),
+          const SizedBox(height: 12),
+          Text(
+            'No Courses Assigned',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary(isDarkMode),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Courses will appear here once assigned by admin',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary(isDarkMode),
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -541,8 +683,8 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
         ? AppColors.primary
         : AppColors.accent;
     final attendanceCount = course.type == CourseType.theory
-        ? getAttendanceCount(course.code, course.sections.first)
-        : getAttendanceCount(course.code, course.groups.first);
+        ? getAttendanceCount(course.code, course.sections.isNotEmpty ? course.sections.first : 'A')
+        : getAttendanceCount(course.code, course.groups.isNotEmpty ? course.groups.first : 'A1');
     final progress = attendanceCount / course.expectedClasses;
 
     return GestureDetector(
