@@ -343,6 +343,24 @@ class SupabaseService {
     }
   }
 
+  /// Update teacher profile fields (any combination).
+  /// Pass only the fields you want to update.
+  static Future<bool> updateTeacherProfile(Map<String, dynamic> fields) async {
+    final userId = currentUserId;
+    if (userId == null || fields.isEmpty) return false;
+
+    try {
+      await client
+          .from('teachers')
+          .update(fields)
+          .eq('user_id', userId);
+      return true;
+    } catch (e) {
+      debugPrint('Error updating teacher profile: $e');
+      return false;
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Teacher Assigned Courses (from course_offerings)
   // ---------------------------------------------------------------------------

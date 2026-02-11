@@ -158,6 +158,30 @@ CREATE TABLE public.routine_slots (
   CONSTRAINT routine_slots_offering_id_fkey FOREIGN KEY (offering_id) REFERENCES public.course_offerings(id),
   CONSTRAINT routine_slots_room_number_fkey FOREIGN KEY (room_number) REFERENCES public.rooms(room_number)
 );
+CREATE TABLE public.room_booking_requests (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  teacher_user_id uuid NOT NULL,
+  offering_id uuid NOT NULL,
+  room_number text NOT NULL,
+  day_of_week integer NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
+  start_period text NOT NULL,
+  end_period text NOT NULL,
+  start_time time without time zone NOT NULL,
+  end_time time without time zone NOT NULL,
+  section text,
+  purpose text,
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text])),
+  admin_user_id uuid,
+  admin_remarks text,
+  requested_at timestamp with time zone DEFAULT now(),
+  reviewed_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT room_booking_requests_pkey PRIMARY KEY (id),
+  CONSTRAINT rbr_teacher_fkey FOREIGN KEY (teacher_user_id) REFERENCES public.teachers(user_id),
+  CONSTRAINT rbr_offering_fkey FOREIGN KEY (offering_id) REFERENCES public.course_offerings(id),
+  CONSTRAINT rbr_room_fkey FOREIGN KEY (room_number) REFERENCES public.rooms(room_number),
+  CONSTRAINT rbr_admin_fkey FOREIGN KEY (admin_user_id) REFERENCES public.admins(user_id)
+);
 CREATE TABLE public.students (
   user_id uuid NOT NULL,
   roll_no text NOT NULL UNIQUE,

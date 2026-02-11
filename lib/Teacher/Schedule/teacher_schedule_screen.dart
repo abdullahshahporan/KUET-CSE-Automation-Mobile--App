@@ -1,73 +1,50 @@
 import 'package:flutter/material.dart';
-import '../data/teacher_static_data.dart';
+import 'teacher_schedule_model.dart';
+import 'teacher_schedule_service.dart';
 
-/// Teacher Schedule screen - view and manage class schedule
-class TeacherScheduleScreen extends StatelessWidget {
+/// Teacher Schedule screen — fetches from Supabase, supports edit/add/delete.
+class TeacherScheduleScreen extends StatefulWidget {
   const TeacherScheduleScreen({super.key});
+
+  @override
+  State<TeacherScheduleScreen> createState() => _TeacherScheduleScreenState();
+}
+
+class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
+  Map<int, List<TeacherSlot>> _schedule = {};
+  bool _isLoading = true;
+
+  /// Days to show (Sun–Thu typical for KUET)
+  static const _displayDays = [0, 1, 2, 3, 4]; // Sun–Thu
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _isLoading = true);
+    final data = await TeacherScheduleService.fetchSchedule();
+    if (mounted) setState(() { _schedule = data; _isLoading = false; });
+  }
+
+  int get _totalClasses =>
+      _schedule.values.fold(0, (s, list) => s + list.length);
+
+  int get _courseCount {
+    final codes = <String>{};
+    for (final list in _schedule.values) {
+      for (final slot in list) {
+        codes.add(slot.courseCode);
+      }
+    }
+    return codes.length;
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    final schedule = [
-      {
-        'day': 'Sunday',
-        'classes': [
-          {
-            'time': '09:00 - 10:00',
-            'course': 'CSE 3201',
-            'room': 'Room 301',
-            'section': 'A',
-          },
-          {
-            'time': '11:00 - 12:00',
-            'course': 'CSE 3201',
-            'room': 'Room 301',
-            'section': 'B',
-          },
-        ],
-      },
-      {
-        'day': 'Monday',
-        'classes': [
-          {
-            'time': '10:00 - 01:00',
-            'course': 'CSE 3202',
-            'room': 'Lab 201',
-            'section': 'A1',
-          },
-        ],
-      },
-      {
-        'day': 'Tuesday',
-        'classes': [
-          {
-            'time': '09:00 - 10:00',
-            'course': 'CSE 3201',
-            'room': 'Room 301',
-            'section': 'A',
-          },
-          {
-            'time': '10:00 - 11:00',
-            'course': 'CSE 3201',
-            'room': 'Room 301',
-            'section': 'B',
-          },
-        ],
-      },
-      {
-        'day': 'Wednesday',
-        'classes': [
-          {
-            'time': '10:00 - 01:00',
-            'course': 'CSE 3202',
-            'room': 'Lab 201',
-            'section': 'A2',
-          },
-        ],
-      },
-      {'day': 'Thursday', 'classes': []},
-    ];
 
     return Scaffold(
       backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.grey[100],
@@ -75,102 +52,74 @@ class TeacherScheduleScreen extends StatelessWidget {
         title: const Text('My Schedule'),
         backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_calendar),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Schedule modification coming soon!'),
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header card
+                    _buildHeaderCard(isDarkMode),
+                    const SizedBox(height: 24),
+                    // Day cards
+                    ..._displayDays.map((d) => _buildDayCard(d, isDarkMode)),
+                  ],
                 ),
-              );
-            },
+              ),
+            ),
+    );
+  }
+
+  Widget _buildHeaderCard(bool isDarkMode) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.purple[600]!, Colors.indigo[500]!],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.purple.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.purple[600]!, Colors.indigo[500]!],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.purple.withOpacity(0.3),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
+      child: Row(
+        children: [
+          const Icon(Icons.schedule, color: Colors.white, size: 28),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Weekly Schedule',
+                style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.schedule, color: Colors.white, size: 28),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Weekly Schedule',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '${teacherCourses.length} Courses | ${_countTotalClasses(schedule)} Classes/Week',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+              Text(
+                '$_courseCount Courses | $_totalClasses Classes/Week',
+                style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14),
               ),
-            ),
-            const SizedBox(height: 24),
-
-            // Schedule by Day
-            ...schedule.map(
-              (day) => _buildDayCard(
-                day['day'] as String,
-                (day['classes'] as List)
-                    .cast<Map<String, dynamic>>()
-                    .map((e) => Map<String, String>.from(e))
-                    .toList(),
-                isDarkMode,
-              ),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  int _countTotalClasses(List<Map<String, dynamic>> schedule) {
-    return schedule.fold(
-      0,
-      (sum, day) => sum + (day['classes'] as List).length,
-    );
-  }
-
-  Widget _buildDayCard(
-    String day,
-    List<Map<String, String>> classes,
-    bool isDarkMode,
-  ) {
-    final isToday = _isToday(day);
+  Widget _buildDayCard(int day, bool isDarkMode) {
+    final slots = _schedule[day] ?? [];
+    final isToday = _isTodayDay(day);
+    final dayName = TeacherSlot.dayNames[day];
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -182,7 +131,7 @@ class TeacherScheduleScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Day Header
+          // Day header
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -197,7 +146,7 @@ class TeacherScheduleScreen extends StatelessWidget {
             child: Row(
               children: [
                 Text(
-                  day,
+                  dayName,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -209,33 +158,29 @@ class TeacherScheduleScreen extends StatelessWidget {
                 if (isToday) ...[
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.purple,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Text(
-                      'Today',
-                      style: TextStyle(color: Colors.white, fontSize: 11),
-                    ),
+                    child: const Text('Today',
+                        style: TextStyle(color: Colors.white, fontSize: 11)),
                   ),
                 ],
                 const Spacer(),
                 Text(
-                  '${classes.length} ${classes.length == 1 ? 'class' : 'classes'}',
+                  '${slots.length} ${slots.length == 1 ? 'class' : 'classes'}',
                   style: TextStyle(
                     color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                     fontSize: 13,
                   ),
                 ),
+
               ],
             ),
           ),
-          // Classes
-          if (classes.isEmpty)
+          // Slots
+          if (slots.isEmpty)
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
@@ -247,100 +192,101 @@ class TeacherScheduleScreen extends StatelessWidget {
               ),
             )
           else
-            ...classes.map((cls) => _buildClassItem(cls, isDarkMode)),
+            ...slots.map((s) => _buildSlotItem(s, isDarkMode)),
         ],
       ),
     );
   }
 
-  Widget _buildClassItem(Map<String, String> cls, bool isDarkMode) {
-    final isLab = cls['course']!.contains('02');
+  Widget _buildSlotItem(TeacherSlot slot, bool isDarkMode) {
+    final isLab = slot.courseType.toLowerCase().contains('lab') ||
+        slot.courseType.toLowerCase().contains('sessional');
     final color = isLab ? Colors.purple : Colors.blue;
 
     return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            height: 50,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            Container(
+              width: 4,
+              height: 50,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      cls['course']!,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: isDarkMode ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        cls['section']!,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: color,
-                          fontWeight: FontWeight.w600,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          slot.courseCode,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isDarkMode ? Colors.white : Colors.black87,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      if (slot.section != null && slot.section!.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: color.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            slot.section!,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: color,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    slot.courseTitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
-                    const SizedBox(width: 4),
-                    Text(
-                      cls['time']!,
-                      style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-                    ),
-                    const SizedBox(width: 12),
-                    Icon(Icons.room, size: 14, color: Colors.grey[500]),
-                    const SizedBox(width: 4),
-                    Text(
-                      cls['room']!,
-                      style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-                    ),
-                  ],
-                ),
-              ],
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
+                      const SizedBox(width: 4),
+                      Text(slot.timeRange,
+                          style: TextStyle(fontSize: 13, color: Colors.grey[500])),
+                      const SizedBox(width: 12),
+                      Icon(Icons.room, size: 14, color: Colors.grey[500]),
+                      const SizedBox(width: 4),
+                      Text(slot.roomNumber,
+                          style: TextStyle(fontSize: 13, color: Colors.grey[500])),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
     );
   }
 
-  bool _isToday(String day) {
-    final weekdays = [
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday',
-    ];
-    final today = DateTime.now().weekday - 1;
-    return weekdays[today] == day;
+  bool _isTodayDay(int dayOfWeek) {
+    // DateTime.now().weekday: 1=Mon…7=Sun → convert to 0=Sun…6=Sat
+    final now = DateTime.now().weekday; // 1-7
+    final todayIndex = now == 7 ? 0 : now; // Sun=0
+    return todayIndex == dayOfWeek;
   }
 }

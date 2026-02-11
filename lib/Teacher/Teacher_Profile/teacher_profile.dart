@@ -6,6 +6,7 @@ import '../../app_theme.dart';
 import '../../services/supabase_service.dart';
 import '../../shared/profile_widgets.dart';
 import '../../theme/app_colors.dart';
+import 'edit_teacher_profile.dart';
 
 class TeacherProfileScreen extends StatefulWidget {
   const TeacherProfileScreen({super.key});
@@ -17,19 +18,11 @@ class TeacherProfileScreen extends StatefulWidget {
 class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
   Map<String, dynamic>? _profileData;
   bool _isLoading = true;
-  bool _isUpdating = false;
-  final _phoneController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
-  }
-
-  @override
-  void dispose() {
-    _phoneController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadProfile() async {
@@ -39,25 +32,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
       setState(() {
         _profileData = profile;
         _isLoading = false;
-        _phoneController.text = profile?['phone'] ?? '';
       });
-    }
-  }
-
-  Future<void> _updatePhone() async {
-    final phone = _phoneController.text.trim();
-    if (phone.isEmpty) return;
-
-    setState(() => _isUpdating = true);
-    final success = await SupabaseService.updateTeacherPhone(phone);
-    if (mounted) {
-      setState(() => _isUpdating = false);
-      if (success) setState(() => _profileData?['phone'] = phone);
-      showResultSnackBar(
-        context,
-        success: success,
-        message: success ? 'Phone number updated!' : 'Failed to update. Try again.',
-      );
     }
   }
 
@@ -125,26 +100,26 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
               // Contact
               buildProfileSection(isDarkMode, 'Contact Information', Icons.contact_mail_outlined, [
                 buildInfoTile(Icons.email_outlined, 'Email', email, isDarkMode),
-                buildInfoTile(Icons.phone_outlined, 'Phone', phone, isDarkMode,
-                  editable: true,
-                  onEdit: () => showEditPhoneDialog(
-                    context: context,
-                    isDarkMode: isDarkMode,
-                    controller: _phoneController,
-                    isUpdating: _isUpdating,
-                    onSave: _updatePhone,
-                  ),
-                ),
+                buildInfoTile(Icons.phone_outlined, 'Phone', phone, isDarkMode),
               ]),
               const SizedBox(height: 12),
 
               // Settings
               buildProfileSection(isDarkMode, 'Settings', Icons.settings_outlined, [
-                buildDarkModeToggle(isDarkMode, themeProvider.toggleTheme),
+                buildActionTile(Icons.edit_outlined, 'Edit Profile', isDarkMode, () async {
+                  if (_profileData == null) return;
+                  final changed = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(builder: (_) => EditTeacherProfileScreen(profileData: _profileData!)),
+                  );
+                  if (changed == true) _loadProfile();
+                }),
                 const Divider(height: 1),
                 buildActionTile(Icons.lock_outline, 'Change Password', isDarkMode, () {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen()));
                 }),
+                const Divider(height: 1),
+                buildDarkModeToggle(isDarkMode, themeProvider.toggleTheme),
               ]),
               const SizedBox(height: 16),
 
