@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/course_model.dart';
+import '../../services/supabase_service.dart';
 import 'course_info_service.dart';
 import 'widgets/course_card.dart';
 import '../../theme/app_colors.dart';
@@ -23,6 +24,32 @@ class _CourseInfoScreenState extends State<CourseInfoScreen> {
   @override
   void initState() {
     super.initState();
+    _loadStudentTermAndFetch();
+  }
+
+  /// Load the student's current term from their profile, then fetch courses.
+  Future<void> _loadStudentTermAndFetch() async {
+    try {
+      final userId = SupabaseService.currentUserId;
+      if (userId != null) {
+        final studentData = await SupabaseService.client
+            .from('students')
+            .select('term')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+        if (studentData != null && mounted) {
+          final term = studentData['term'] as String? ?? '1-1';
+          final parts = term.split('-');
+          setState(() {
+            _selectedYear = int.tryParse(parts[0]) ?? 1;
+            _selectedTerm = int.tryParse(parts.length > 1 ? parts[1] : '1') ?? 1;
+          });
+        }
+      }
+    } catch (_) {
+      // Fallback to defaults
+    }
     _fetchCourses();
   }
 

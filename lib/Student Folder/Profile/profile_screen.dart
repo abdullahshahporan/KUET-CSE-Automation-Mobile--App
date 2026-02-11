@@ -117,7 +117,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 buildInfoTile(Icons.calendar_month, 'Session', session, isDarkMode),
                 buildInfoTile(Icons.group_outlined, 'Batch', batch, isDarkMode),
                 buildInfoTile(Icons.category_outlined, 'Section', section, isDarkMode),
-                buildInfoTile(Icons.timeline, 'Term', '${_profileData?['term'] ?? 'N/A'}', isDarkMode),
+                buildInfoTile(Icons.timeline, 'Current Term', '$yearDisplay Year, $semesterDisplay Term', isDarkMode),
               ]),
               const SizedBox(height: 12),
 

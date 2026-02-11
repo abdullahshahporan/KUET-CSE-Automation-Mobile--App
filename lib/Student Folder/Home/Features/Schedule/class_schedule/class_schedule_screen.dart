@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Home/Features/Schedule/class_schedule/class_schedule_providers.dart';
+import 'package:kuet_cse_automation/Student%20Folder/Home/Features/Schedule/class_schedule/class_schedule_models.dart';
 import 'package:intl/intl.dart';
 
 class ClassScheduleScreen extends ConsumerWidget {
@@ -11,7 +12,7 @@ class ClassScheduleScreen extends ConsumerWidget {
     return DateFormat('EEEE').format(now);
   }
 
-  Map<String, List<dynamic>> _groupClassesByDay(List<dynamic> classes) {
+  Map<String, List<ClassSchedule>> _groupClassesByDay(List<ClassSchedule> classes) {
     final currentDay = _getCurrentDay();
     final weekDays = [
       'Sunday',
@@ -29,7 +30,7 @@ class ClassScheduleScreen extends ConsumerWidget {
       ...weekDays.sublist(0, currentDayIndex),
     ];
 
-    final Map<String, List<dynamic>> grouped = {};
+    final Map<String, List<ClassSchedule>> grouped = {};
 
     for (final day in orderedDays) {
       final dayClasses = classes.where((c) => c.day == day).toList();
@@ -44,10 +45,213 @@ class ClassScheduleScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final allClasses = ref.watch(classScheduleProvider);
-    final groupedClasses = _groupClassesByDay(allClasses);
-    final currentDay = _getCurrentDay();
+    final asyncResult = ref.watch(classScheduleProvider);
 
+    return asyncResult.when(
+      loading: () => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              'Loading schedule...',
+              style: TextStyle(
+                fontSize: 14,
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+      error: (error, stack) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.cloud_off_rounded,
+              size: 64,
+              color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Unable to load schedule',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Pull down to retry',
+              style: TextStyle(
+                fontSize: 14,
+                color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => ref.invalidate(classScheduleProvider),
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue[600],
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      data: (result) {
+        final allClasses = result['schedules'] as List<ClassSchedule>;
+        final activeSection = result['section'] as String? ?? 'A';
+
+        return Column(
+          children: [
+            // Section toggle bar
+            _buildSectionToggle(
+              ref: ref,
+              isDarkMode: isDarkMode,
+              activeSection: activeSection,
+            ),
+            // Schedule content
+            Expanded(
+              child: allClasses.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.event_busy_rounded,
+                            size: 64,
+                            color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No classes scheduled',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Section $activeSection routine will appear here.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : _buildScheduleBody(
+                      _groupClassesByDay(allClasses),
+                      _getCurrentDay(),
+                      isDarkMode,
+                    ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSectionToggle({
+    required WidgetRef ref,
+    required bool isDarkMode,
+    required String activeSection,
+  }) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey[100],
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
+        ),
+      ),
+      child: Row(
+        children: [
+          _buildSectionChip(
+            ref: ref,
+            label: 'Sec A',
+            value: 'A',
+            selected: activeSection == 'A',
+            isDarkMode: isDarkMode,
+          ),
+          _buildSectionChip(
+            ref: ref,
+            label: 'Sec B',
+            value: 'B',
+            selected: activeSection == 'B',
+            isDarkMode: isDarkMode,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionChip({
+    required WidgetRef ref,
+    required String label,
+    required String value,
+    required bool selected,
+    required bool isDarkMode,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          ref.read(selectedSectionProvider.notifier).state = value;
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            gradient: selected
+                ? LinearGradient(
+                    colors: [Colors.blue[600]!, Colors.cyan[500]!],
+                  )
+                : null,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: Colors.blue.withOpacity(0.3),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              color: selected
+                  ? Colors.white
+                  : isDarkMode
+                      ? Colors.grey[400]
+                      : Colors.grey[600],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScheduleBody(
+    Map<String, List<ClassSchedule>> groupedClasses,
+    String currentDay,
+    bool isDarkMode,
+  ) {
     return Container(
       color: isDarkMode ? const Color(0xFF121212) : Colors.grey[50],
       child: ListView(

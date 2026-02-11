@@ -9,12 +9,80 @@ class ExamScheduleScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final selectedCategory = ref.watch(selectedExamCategoryProvider);
-    final allExams = ref.watch(examScheduleProvider);
+    final asyncExams = ref.watch(examScheduleProvider);
 
-    final filteredExams = allExams
-        .where((exam) => exam.category == selectedCategory)
-        .toList();
+    return asyncExams.when(
+      loading: () => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              'Loading exams...',
+              style: TextStyle(
+                fontSize: 14,
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+      error: (error, stack) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.cloud_off_rounded,
+              size: 64,
+              color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Unable to load exams',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => ref.invalidate(examScheduleProvider),
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red[600],
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      data: (allExams) {
+        final filteredExams = allExams
+            .where((exam) => exam.category == selectedCategory)
+            .toList();
 
+        return _buildExamBody(
+          ref: ref,
+          isDarkMode: isDarkMode,
+          selectedCategory: selectedCategory,
+          filteredExams: filteredExams,
+        );
+      },
+    );
+  }
+
+  Widget _buildExamBody({
+    required WidgetRef ref,
+    required bool isDarkMode,
+    required String selectedCategory,
+    required List<dynamic> filteredExams,
+  }) {
     return Container(
       color: isDarkMode ? const Color(0xFF121212) : Colors.grey[50],
       child: Column(

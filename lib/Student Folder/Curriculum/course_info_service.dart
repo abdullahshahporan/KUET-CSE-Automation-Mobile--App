@@ -1,53 +1,45 @@
+import 'package:flutter/foundation.dart';
 import '../../services/supabase_service.dart';
 import '../models/course_model.dart';
 
-/// Service for fetching course/curriculum data from Supabase
+/// Service for fetching course/curriculum data from Supabase.
+///
+/// Uses the course code convention: code "32xx" → year 3, term 2 (i.e. 3-2).
+/// The first digit of the course number = year, second digit = term.
 class CourseInfoService {
-  /// Fetch courses for a given year-term from the curriculum table,
-  /// joining courses and course_offerings (with assigned teachers).
+  /// Fetch courses for a given year-term.
   ///
-  /// The query:
-  ///   curriculum -> courses (code, title, credit, course_type, description)
-  ///              -> course_offerings -> teachers (full_name)
+  /// 1. Fetches ALL courses from the `courses` table.
+  /// 2. Filters client-side by code prefix (e.g. "32" for year=3, term=2).
+  /// 3. Fetches active offerings + teachers for matched courses.
   static Future<List<Course>> fetchCourses({
     required int year,
     required int term,
   }) async {
     try {
-      final termStr = '$year-$term';
+      final termPrefix = '$year$term'; // e.g. "32" for 3-2
+      debugPrint('[CourseInfo] Fetching courses with code prefix: $termPrefix');
 
-      // Query curriculum with nested joins:
-      // curriculum -> courses -> course_offerings -> teachers
-      final response = await SupabaseService.from('curriculum')
-          .select('''
-            id,
-            term,
-            is_elective,
-            syllabus_year,
-            course_id,
-            courses (
-              id,
-              code,
-              title,
-              credit,
-              course_type,
-              description
-            )
-          ''')
-          .eq('term', termStr)
-          .order('created_at', ascending: true);
+      // Step 1: Fetch all courses
+      final coursesResponse = await SupabaseService.from('courses')
+          .select('id, code, title, credit, course_type, description');
 
-      final List<dynamic> data = response as List<dynamic>;
+      final List<dynamic> allCourses = coursesResponse as List<dynamic>;
+      debugPrint('[CourseInfo] Total courses in DB: ${allCourses.length}');
 
-      if (data.isEmpty) return [];
-
-      // Collect all course_ids to fetch offerings in one query
-      final courseIds = data
-          .map((item) => (item as Map<String, dynamic>)['course_id'] as String)
-          .toSet()
+      // Step 2: Filter by code prefix  (e.g. "CSE 3201" → digits "3201" starts with "32")
+      final matchedCourses = allCourses
+          .map((c) => c as Map<String, dynamic>)
+          .where((c) => _codeMatchesTerm(c['code'] as String?, year, term))
           .toList();
 
-      // Fetch all offerings for these courses with teacher info
+      debugPrint('[CourseInfo] Matched ${matchedCourses.length} courses for prefix $termPrefix');
+
+      if (matchedCourses.isEmpty) return [];
+
+      // Step 3: Fetch active offerings with teachers for these courses
+      final courseIds = matchedCourses.map((c) => c['id'].toString()).toList();
+
       final offeringsResponse = await SupabaseService.from('course_offerings')
           .select('''
             id,
@@ -64,33 +56,33 @@ class CourseInfoService {
             )
           ''')
           .inFilter('course_id', courseIds)
-          .eq('term', termStr)
           .eq('is_active', true);
 
       final List<dynamic> offerings = offeringsResponse as List<dynamic>;
+      debugPrint('[CourseInfo] Got ${offerings.length} active offerings');
 
       // Group offerings by course_id
       final Map<String, List<Map<String, dynamic>>> offeringsByCourse = {};
-      for (final offering in offerings) {
-        final map = offering as Map<String, dynamic>;
-        final courseId = map['course_id'] as String;
-        offeringsByCourse.putIfAbsent(courseId, () => []).add(map);
+      for (final o in offerings) {
+        final map = o as Map<String, dynamic>;
+        final cid = map['course_id'].toString();
+        offeringsByCourse.putIfAbsent(cid, () => []).add(map);
       }
 
-      // Build Course objects
+      // Step 4: Build Course objects
       final courses = <Course>[];
-      for (final item in data) {
-        final map = item as Map<String, dynamic>;
-        final courseId = map['course_id'] as String;
-
-        // Attach offerings to the curriculum item for parsing
-        final enrichedMap = Map<String, dynamic>.from(map);
-        enrichedMap['course_offerings'] = offeringsByCourse[courseId] ?? [];
-
+      for (final courseData in matchedCourses) {
+        final cid = courseData['id'].toString();
+        final enrichedMap = <String, dynamic>{
+          'term': '$year-$term',
+          'courses': courseData,
+          'course_offerings': offeringsByCourse[cid] ?? [],
+          'is_elective': false,
+        };
         courses.add(Course.fromSupabase(enrichedMap));
       }
 
-      // Sort: theory first, then lab; within each group sort by code
+      // Sort: theory first, then lab; within each sort by code
       courses.sort((a, b) {
         if (a.type != b.type) {
           return a.type == CourseType.theory ? -1 : 1;
@@ -98,26 +90,46 @@ class CourseInfoService {
         return a.code.compareTo(b.code);
       });
 
+      debugPrint('[CourseInfo] Returning ${courses.length} courses');
       return courses;
     } catch (e) {
+      debugPrint('[CourseInfo] ERROR: $e');
       throw CourseInfoException('Failed to fetch courses: $e');
     }
   }
 
-  /// Fetch all available terms from the curriculum table
+  /// Check if a course code matches the given year-term.
+  ///
+  /// Convention: the numeric part of the code encodes year+term as the
+  /// first two digits.  e.g. "CSE 3201" → digits "3201" → starts with "32"
+  /// which means year=3, term=2.
+  static bool _codeMatchesTerm(String? code, int year, int term) {
+    if (code == null || code.isEmpty) return false;
+    final prefix = '$year$term';
+    final digits = code.replaceAll(RegExp(r'[^0-9]'), '');
+    return digits.startsWith(prefix);
+  }
+
+  /// Fetch all available terms by scanning course codes
   static Future<List<String>> fetchAvailableTerms() async {
     try {
-      final response = await SupabaseService.from('curriculum')
-          .select('term')
-          .order('term', ascending: true);
+      final response = await SupabaseService.from('courses')
+          .select('code');
 
       final List<dynamic> data = response as List<dynamic>;
-      final terms = data
-          .map((item) => (item as Map<String, dynamic>)['term'] as String)
-          .toSet()
-          .toList();
-      terms.sort();
-      return terms;
+      final terms = <String>{};
+      for (final item in data) {
+        final code = (item as Map<String, dynamic>)['code'] as String?;
+        if (code == null) continue;
+        final digits = code.replaceAll(RegExp(r'[^0-9]'), '');
+        if (digits.length >= 2) {
+          final y = digits[0];
+          final t = digits[1];
+          terms.add('$y-$t');
+        }
+      }
+      final sorted = terms.toList()..sort();
+      return sorted;
     } catch (e) {
       throw CourseInfoException('Failed to fetch available terms: $e');
     }
