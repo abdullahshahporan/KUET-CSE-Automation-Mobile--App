@@ -241,6 +241,24 @@ class SupabaseService {
     }
   }
 
+  /// Update student term (one-way upgrade only).
+  /// Returns true on success.
+  static Future<bool> updateStudentTerm(String newTerm) async {
+    final userId = currentUserId;
+    if (userId == null) return false;
+
+    try {
+      await client
+          .from('students')
+          .update({'term': newTerm})
+          .eq('user_id', userId);
+      return true;
+    } catch (e) {
+      debugPrint('Error updating student term: $e');
+      return false;
+    }
+  }
+
   /// Update student phone number
   static Future<bool> updateStudentPhone(String phone) async {
     final userId = currentUserId;

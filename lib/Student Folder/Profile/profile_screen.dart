@@ -6,6 +6,7 @@ import '../../app_theme.dart';
 import '../../services/supabase_service.dart';
 import '../../shared/profile_widgets.dart';
 import '../../theme/app_colors.dart';
+import 'term_upgrade_widget.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -118,6 +119,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 buildInfoTile(Icons.group_outlined, 'Batch', batch, isDarkMode),
                 buildInfoTile(Icons.category_outlined, 'Section', section, isDarkMode),
                 buildInfoTile(Icons.timeline, 'Current Term', '$yearDisplay Year, $semesterDisplay Term', isDarkMode),
+                UpgradeTermTile(
+                  currentTerm: _profileData?['term'] ?? '1-1',
+                  isDarkMode: isDarkMode,
+                  onUpgraded: _loadProfile,
+                ),
               ]),
               const SizedBox(height: 12),
 
