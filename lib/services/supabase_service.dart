@@ -259,6 +259,56 @@ class SupabaseService {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Term Upgrade Requests
+  // ---------------------------------------------------------------------------
+
+  /// Get the latest term upgrade request for the current student.
+  /// Returns null if no request exists.
+  static Future<Map<String, dynamic>?> getLatestTermUpgradeRequest() async {
+    final userId = currentUserId;
+    if (userId == null) return null;
+
+    try {
+      final response = await client
+          .from('term_upgrade_requests')
+          .select()
+          .eq('student_user_id', userId)
+          .order('requested_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      return response;
+    } catch (e) {
+      debugPrint('Error fetching term upgrade request: $e');
+      return null;
+    }
+  }
+
+  /// Submit a term upgrade request.
+  /// Returns `true` on success.
+  static Future<bool> submitTermUpgradeRequest({
+    required String currentTerm,
+    required String requestedTerm,
+    String? reason,
+  }) async {
+    final userId = currentUserId;
+    if (userId == null) return false;
+
+    try {
+      await client.from('term_upgrade_requests').insert({
+        'student_user_id': userId,
+        'current_term': currentTerm,
+        'requested_term': requestedTerm,
+        'reason': reason,
+        'status': 'pending',
+      });
+      return true;
+    } catch (e) {
+      debugPrint('Error submitting term upgrade request: $e');
+      return false;
+    }
+  }
+
   /// Update student phone number
   static Future<bool> updateStudentPhone(String phone) async {
     final userId = currentUserId;

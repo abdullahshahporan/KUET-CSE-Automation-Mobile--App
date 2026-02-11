@@ -190,3 +190,20 @@ CREATE TABLE public.teachers (
   CONSTRAINT teachers_pkey PRIMARY KEY (user_id),
   CONSTRAINT teachers_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(user_id)
 );
+CREATE TABLE public.term_upgrade_requests (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  student_user_id uuid NOT NULL,
+  current_term text NOT NULL CHECK (current_term ~ '^[1-4]-[1-2]$'::text),
+  requested_term text NOT NULL CHECK (requested_term ~ '^[1-4]-[1-2]$'::text),
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text])),
+  reason text,
+  admin_user_id uuid,
+  admin_remarks text,
+  requested_at timestamp with time zone DEFAULT now(),
+  reviewed_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT term_upgrade_requests_pkey PRIMARY KEY (id),
+  CONSTRAINT term_upgrade_requests_student_user_id_fkey FOREIGN KEY (student_user_id) REFERENCES public.students(user_id),
+  CONSTRAINT term_upgrade_requests_admin_user_id_fkey FOREIGN KEY (admin_user_id) REFERENCES public.admins(user_id)
+);
