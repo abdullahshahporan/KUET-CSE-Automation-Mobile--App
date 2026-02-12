@@ -168,44 +168,81 @@ class TeacherCourseService {
     }
   }
 
-  /// Save attendance for a class session (create session + records)
-  static Future<bool> saveAttendance({
+  /// Save attendance for a class session.
+  ///
+  /// [attendance] maps **student_user_id** → status string.
+  /// Auto-creates enrollment records when they don't exist.
+  /// Throws on failure so the caller can show the real error.
+  static Future<void> saveAttendance({
     required String offeringId,
     required DateTime date,
     required String? roomNumber,
-    required Map<String, String> attendance, // enrollmentId -> status
+    required Map<String, String> attendance, // studentUserId -> status
   }) async {
-    try {
       final teacherId = SupabaseService.currentUserId;
-      if (teacherId == null) return false;
+      if (teacherId == null) throw Exception('Not logged in');
 
-      // Create class session
+      // 1. Create class session
+      final sessionInsert = <String, dynamic>{
+        'offering_id': offeringId,
+        'starts_at': date.toIso8601String(),
+        'ends_at': date.add(const Duration(hours: 1)).toIso8601String(),
+      };
+      // Only set room_number if valid (FK constraint)
+      if (roomNumber != null && roomNumber.isNotEmpty) {
+        sessionInsert['room_number'] = roomNumber;
+      }
+
       final sessionData = await SupabaseService.from('class_sessions')
-          .insert({
-            'offering_id': offeringId,
-            'starts_at': date.toIso8601String(),
-            'ends_at': date.add(const Duration(hours: 1)).toIso8601String(),
-            'room_number': roomNumber,
-          })
+          .insert(sessionInsert)
           .select('id')
           .single();
-
       final sessionId = sessionData['id'] as String;
 
-      // Insert attendance records
-      final records = attendance.entries.map((e) => {
-        'session_id': sessionId,
-        'enrollment_id': e.key,
-        'status': e.value,
-        'marked_by_teacher_user_id': teacherId,
-      }).toList();
+      // 2. Ensure enrollment records exist (upsert)
+      final studentIds = attendance.keys.toList();
+      final existingEnrollments = await SupabaseService.from('enrollments')
+          .select('id, student_user_id')
+          .eq('offering_id', offeringId)
+          .inFilter('student_user_id', studentIds);
+
+      final enrollmentMap = <String, String>{}; // studentUserId -> enrollmentId
+      for (final e in (existingEnrollments as List)) {
+        enrollmentMap[e['student_user_id'] as String] = e['id'] as String;
+      }
+
+      // Create missing enrollments
+      final missing = studentIds.where((id) => !enrollmentMap.containsKey(id)).toList();
+      if (missing.isNotEmpty) {
+        final toInsert = missing
+            .map((sid) => {
+                  'offering_id': offeringId,
+                  'student_user_id': sid,
+                  'enrollment_status': 'ENROLLED',
+                })
+            .toList();
+
+        final inserted = await SupabaseService.from('enrollments')
+            .insert(toInsert)
+            .select('id, student_user_id');
+
+        for (final e in (inserted as List)) {
+          enrollmentMap[e['student_user_id'] as String] = e['id'] as String;
+        }
+      }
+
+      // 3. Insert attendance records
+      final records = attendance.entries
+          .where((e) => enrollmentMap.containsKey(e.key))
+          .map((e) => {
+                'session_id': sessionId,
+                'enrollment_id': enrollmentMap[e.key],
+                'status': e.value,
+                'marked_by_teacher_user_id': teacherId,
+              })
+          .toList();
 
       await SupabaseService.from('attendance_records').insert(records);
-      return true;
-    } catch (e) {
-      debugPrint('Error saving attendance: $e');
-      return false;
-    }
   }
 
   /// Save announcement to Supabase notices table

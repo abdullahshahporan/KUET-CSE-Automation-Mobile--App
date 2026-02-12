@@ -199,7 +199,9 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const TeacherScheduleScreen(),
+                          builder: (context) => TeacherScheduleScreen(
+                            courseCode: widget.course.code,
+                          ),
                         ),
                       ),
                     ),

@@ -4,7 +4,10 @@ import 'teacher_schedule_service.dart';
 
 /// Teacher Schedule screen — fetches from Supabase, supports edit/add/delete.
 class TeacherScheduleScreen extends StatefulWidget {
-  const TeacherScheduleScreen({super.key});
+  /// If provided, only show slots for this course code.
+  final String? courseCode;
+
+  const TeacherScheduleScreen({super.key, this.courseCode});
 
   @override
   State<TeacherScheduleScreen> createState() => _TeacherScheduleScreenState();
@@ -25,7 +28,20 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
 
   Future<void> _load() async {
     setState(() => _isLoading = true);
-    final data = await TeacherScheduleService.fetchSchedule();
+    var data = await TeacherScheduleService.fetchSchedule();
+
+    // Filter by course code if provided
+    if (widget.courseCode != null) {
+      final filtered = <int, List<TeacherSlot>>{};
+      for (final entry in data.entries) {
+        final slots = entry.value
+            .where((s) => s.courseCode == widget.courseCode)
+            .toList();
+        if (slots.isNotEmpty) filtered[entry.key] = slots;
+      }
+      data = filtered;
+    }
+
     if (mounted) setState(() { _schedule = data; _isLoading = false; });
   }
 
@@ -49,7 +65,9 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
     return Scaffold(
       backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.grey[100],
       appBar: AppBar(
-        title: const Text('My Schedule'),
+        title: Text(widget.courseCode != null
+            ? '${widget.courseCode} Schedule'
+            : 'My Schedule'),
         backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
         elevation: 0,
       ),
@@ -106,7 +124,9 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
                 style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
               ),
               Text(
-                '$_courseCount Courses | $_totalClasses Classes/Week',
+                widget.courseCode != null
+                    ? '$_totalClasses Classes/Week'
+                    : '$_courseCount Courses | $_totalClasses Classes/Week',
                 style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14),
               ),
             ],
