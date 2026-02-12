@@ -16,6 +16,8 @@ class TeacherCourse {
   final List<String> sections; // For theory: ['A', 'B']
   final List<String> groups; // For sessional: ['A1', 'A2', 'B1', 'B2']
   final List<String> teachers;
+  final String? offeringId; // Supabase course_offerings.id
+  final String? session; // Supabase course_offerings.session
 
   const TeacherCourse({
     required this.code,
@@ -28,6 +30,8 @@ class TeacherCourse {
     this.sections = const [],
     this.groups = const [],
     this.teachers = const [],
+    this.offeringId,
+    this.session,
   });
 
   String get semesterName {

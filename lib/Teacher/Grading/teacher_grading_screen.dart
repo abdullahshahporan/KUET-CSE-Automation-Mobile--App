@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../data/teacher_static_data.dart';
+import '../models/enrolled_student.dart';
+import '../services/teacher_course_service.dart';
 import '../../Student Folder/models/course_model.dart';
-import '../../Student Folder/models/user_model.dart';
 import '../../theme/app_colors.dart';
 
 /// Teacher Grading screen - Course-specific
@@ -18,8 +19,38 @@ class TeacherGradingScreen extends StatefulWidget {
 class _TeacherGradingScreenState extends State<TeacherGradingScreen> {
   String? _selectedComponent;
   String _selectedSection = 'A';
+  List<EnrolledStudent> _allStudents = [];
+  bool _isLoading = true;
 
   TeacherCourse get course => widget.preSelectedCourse!;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStudents();
+  }
+
+  Future<void> _loadStudents() async {
+    final offeringId = course.offeringId;
+    if (offeringId == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+    try {
+      final students = await TeacherCourseService.getEnrolledStudents(courseCode: course.code, offeringId: offeringId);
+      students.sort((a, b) => a.rollNo.compareTo(b.rollNo));
+      setState(() {
+        _allStudents = students;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  List<EnrolledStudent> get _filteredStudents {
+    return _allStudents.where((s) => s.derivedSection == _selectedSection).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,9 +69,11 @@ class _TeacherGradingScreenState extends State<TeacherGradingScreen> {
         backgroundColor: AppColors.surface(isDarkMode),
         elevation: 0,
       ),
-      body: _selectedComponent == null
-          ? _buildComponentList(isDarkMode, color)
-          : _buildMarksEntry(isDarkMode),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _selectedComponent == null
+              ? _buildComponentList(isDarkMode, color)
+              : _buildMarksEntry(isDarkMode),
     );
   }
 
@@ -192,12 +225,7 @@ class _TeacherGradingScreenState extends State<TeacherGradingScreen> {
   }
 
   Widget _buildMarksEntry(bool isDarkMode) {
-    final students = getStudentsForCourse(
-      course,
-      course.type == CourseType.theory
-          ? _selectedSection
-          : '${_selectedSection}1',
-    );
+    final students = _filteredStudents;
     final componentInfo = _getComponentInfo();
 
     return Column(
@@ -331,7 +359,7 @@ class _TeacherGradingScreenState extends State<TeacherGradingScreen> {
     );
   }
 
-  Widget _buildStudentRow(StudentUser student, int maxMarks, bool isDarkMode) {
+  Widget _buildStudentRow(EnrolledStudent student, int maxMarks, bool isDarkMode) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -350,7 +378,9 @@ class _TeacherGradingScreenState extends State<TeacherGradingScreen> {
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
-              student.roll.substring(student.roll.length - 3),
+              student.rollNo.length >= 3
+                  ? student.rollNo.substring(student.rollNo.length - 3)
+                  : student.rollNo,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontWeight: FontWeight.w600,
@@ -362,7 +392,7 @@ class _TeacherGradingScreenState extends State<TeacherGradingScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              student.name,
+              student.fullName,
               style: TextStyle(
                 fontSize: 14,
                 color: AppColors.textPrimary(isDarkMode),

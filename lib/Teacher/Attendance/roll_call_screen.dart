@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import '../data/teacher_static_data.dart';
-import '../../Student Folder/models/user_model.dart';
+import '../models/enrolled_student.dart';
+import '../services/teacher_course_service.dart';
+import '../../Student Folder/models/course_model.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/animated_components.dart';
+
+/// Attendance status for roll call
+enum AttendanceStatus { present, late, absent }
 
 /// Roll Call screen with 3D animated status buttons
 class RollCallScreen extends StatefulWidget {
@@ -23,9 +28,10 @@ class RollCallScreen extends StatefulWidget {
 
 class _RollCallScreenState extends State<RollCallScreen>
     with TickerProviderStateMixin {
-  late List<StudentUser> _students;
+  List<EnrolledStudent> _students = [];
   final Map<String, AttendanceStatus> _attendance = {};
   bool _isSaving = false;
+  bool _isLoading = true;
   late AnimationController _fadeController;
   late AnimationController _saveController;
   late Animation<double> _fadeAnimation;
@@ -33,7 +39,6 @@ class _RollCallScreenState extends State<RollCallScreen>
   @override
   void initState() {
     super.initState();
-    _loadStudents();
     _fadeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -46,14 +51,49 @@ class _RollCallScreenState extends State<RollCallScreen>
       parent: _fadeController,
       curve: Curves.easeOut,
     );
-    _fadeController.forward();
+    _loadStudents();
   }
 
-  void _loadStudents() {
-    _students = getStudentsForCourse(widget.course, widget.sectionOrGroup);
-    for (var student in _students) {
-      _attendance[student.roll] = AttendanceStatus.absent;
+  Future<void> _loadStudents() async {
+    final offeringId = widget.course.offeringId;
+    if (offeringId == null) {
+      setState(() => _isLoading = false);
+      return;
     }
+    try {
+      final students = await TeacherCourseService.getEnrolledStudents(courseCode: widget.course.code, offeringId: offeringId);
+      // Filter by section/group if applicable
+      final filtered = students.where((s) {
+        if (widget.course.type == CourseType.theory) {
+          return s.derivedSection == widget.sectionOrGroup;
+        }
+        // For sessional: sectionOrGroup might be A1, A2, B1, B2
+        return _getSessionalGroup(s) == widget.sectionOrGroup;
+      }).toList();
+
+      // Sort by roll number
+      filtered.sort((a, b) => a.rollNo.compareTo(b.rollNo));
+
+      setState(() {
+        _students = filtered;
+        for (var student in _students) {
+          _attendance[student.rollNo] = AttendanceStatus.absent;
+        }
+        _isLoading = false;
+      });
+      _fadeController.forward();
+    } catch (e) {
+      debugPrint('Error loading students: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  String _getSessionalGroup(EnrolledStudent s) {
+    final rollNum = int.tryParse(s.rollNo.length >= 3 ? s.rollNo.substring(s.rollNo.length - 3) : s.rollNo) ?? 0;
+    if (rollNum <= 30) return 'A1';
+    if (rollNum <= 60) return 'A2';
+    if (rollNum <= 90) return 'B1';
+    return 'B2';
   }
 
   @override
@@ -112,7 +152,20 @@ class _RollCallScreenState extends State<RollCallScreen>
           ),
         ],
       ),
-      body: FadeTransition(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _students.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.people_outline, size: 48, color: AppColors.textMuted),
+                      const SizedBox(height: 8),
+                      Text('No students found', style: TextStyle(color: AppColors.textSecondary(isDarkMode))),
+                    ],
+                  ),
+                )
+              : FadeTransition(
         opacity: _fadeAnimation,
         child: Column(
           children: [
@@ -128,7 +181,7 @@ class _RollCallScreenState extends State<RollCallScreen>
                 itemCount: _students.length,
                 itemBuilder: (context, index) {
                   final student = _students[index];
-                  final status = _attendance[student.roll]!;
+                  final status = _attendance[student.rollNo]!;
                   return _buildStudentCard(student, status, index, isDarkMode);
                 },
               ),
@@ -297,7 +350,7 @@ class _RollCallScreenState extends State<RollCallScreen>
   }
 
   Widget _buildStudentCard(
-    StudentUser student,
+    EnrolledStudent student,
     AttendanceStatus status,
     int index,
     bool isDarkMode,
@@ -345,7 +398,7 @@ class _RollCallScreenState extends State<RollCallScreen>
                 border: Border.all(color: statusColor.withOpacity(0.3)),
               ),
               child: Text(
-                student.roll.substring(student.roll.length - 3),
+                student.rollNo.substring(student.rollNo.length - 3),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
@@ -362,7 +415,7 @@ class _RollCallScreenState extends State<RollCallScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    student.name,
+                    student.fullName,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 15,
@@ -371,7 +424,7 @@ class _RollCallScreenState extends State<RollCallScreen>
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Roll: ${student.roll}',
+                    'Roll: ${student.rollNo}',
                     style: TextStyle(fontSize: 11, color: AppColors.textMuted),
                   ),
                 ],
@@ -386,14 +439,14 @@ class _RollCallScreenState extends State<RollCallScreen>
                   color: AppColors.present,
                   isSelected: status == AttendanceStatus.present,
                   onTap: () =>
-                      _setStatus(student.roll, AttendanceStatus.present),
+                      _setStatus(student.rollNo, AttendanceStatus.present),
                 ),
                 const SizedBox(width: 8),
                 AnimatedStatusButton(
                   label: 'L',
                   color: AppColors.late,
                   isSelected: status == AttendanceStatus.late,
-                  onTap: () => _setStatus(student.roll, AttendanceStatus.late),
+                  onTap: () => _setStatus(student.rollNo, AttendanceStatus.late),
                 ),
                 const SizedBox(width: 8),
                 AnimatedStatusButton(
@@ -401,7 +454,7 @@ class _RollCallScreenState extends State<RollCallScreen>
                   color: AppColors.absent,
                   isSelected: status == AttendanceStatus.absent,
                   onTap: () =>
-                      _setStatus(student.roll, AttendanceStatus.absent),
+                      _setStatus(student.rollNo, AttendanceStatus.absent),
                 ),
               ],
             ),
@@ -491,7 +544,7 @@ class _RollCallScreenState extends State<RollCallScreen>
   void _markAllPresent() {
     setState(() {
       for (var student in _students) {
-        _attendance[student.roll] = AttendanceStatus.present;
+        _attendance[student.rollNo] = AttendanceStatus.present;
       }
     });
   }
@@ -499,54 +552,82 @@ class _RollCallScreenState extends State<RollCallScreen>
   Future<void> _saveAttendance() async {
     setState(() => _isSaving = true);
 
-    // Simulate saving
-    await Future.delayed(const Duration(milliseconds: 1200));
+    try {
+      final offeringId = widget.course.offeringId;
+      if (offeringId == null) throw Exception('No offering ID');
 
-    if (mounted) {
-      setState(() => _isSaving = false);
+      // Build attendance map: enrollmentId -> status string
+      final attendanceMap = <String, String>{};
+      for (var student in _students) {
+        final status = _attendance[student.rollNo];
+        final statusStr = status == AttendanceStatus.present
+            ? 'present'
+            : status == AttendanceStatus.late
+                ? 'late'
+                : 'absent';
+        attendanceMap[student.enrollmentId] = statusStr;
+      }
 
-      // Show success animation
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.check, color: Colors.white, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Attendance Saved!',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      'Present: $presentCount | Late: $lateCount | Absent: $absentCount',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          margin: const EdgeInsets.all(16),
-          duration: const Duration(seconds: 3),
-        ),
+      await TeacherCourseService.saveAttendance(
+        offeringId: offeringId,
+        date: widget.date,
+        roomNumber: '',
+        attendance: attendanceMap,
       );
-      Navigator.pop(context);
+
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.check, color: Colors.white, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Attendance Saved!',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'Present: $presentCount | Late: $lateCount | Absent: $absentCount',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save attendance: $e'),
+            backgroundColor: AppColors.danger,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../data/teacher_static_data.dart';
+import '../models/enrolled_student.dart';
 import '../../Student Folder/models/course_model.dart';
 import '../../theme/app_colors.dart';
+import '../services/teacher_course_service.dart';
 import 'roll_call_screen.dart';
 
 /// Teacher Attendance screen - Course-specific with date picker
@@ -17,8 +19,47 @@ class TeacherAttendanceScreen extends StatefulWidget {
 
 class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
   DateTime _selectedDate = DateTime.now();
+  int _classesHeld = 0;
+  List<EnrolledStudent> _allStudents = [];
+  List<Map<String, dynamic>> _recentSessions = [];
+  bool _isLoading = true;
 
   TeacherCourse get course => widget.preSelectedCourse!;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+
+    final offeringId = course.offeringId;
+    if (offeringId == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    try {
+      final results = await Future.wait([
+        TeacherCourseService.getAttendanceCount(offeringId: offeringId),
+        TeacherCourseService.getEnrolledStudents(courseCode: course.code),
+        TeacherCourseService.getClassSessions(offeringId: offeringId, limit: 5),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _classesHeld = results[0] as int;
+          _allStudents = results[1] as List<EnrolledStudent>;
+          _recentSessions = results[2] as List<Map<String, dynamic>>;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,30 +85,36 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Date Selector
-            _buildDateCard(isDarkMode),
-            const SizedBox(height: 20),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _loadData,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Date Selector
+                    _buildDateCard(isDarkMode),
+                    const SizedBox(height: 20),
 
-            // Progress info
-            _buildProgressCard(isDarkMode, color),
-            const SizedBox(height: 20),
+                    // Progress info
+                    _buildProgressCard(isDarkMode, color),
+                    const SizedBox(height: 20),
 
-            // Select Section/Group
-            Text(
-              course.type == CourseType.theory
-                  ? 'Select Section'
-                  : 'Select Group',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary(isDarkMode),
-              ),
+                    // Select Section/Group
+                    Text(
+                      course.type == CourseType.theory
+                          ? 'Select Section'
+                          : 'Select Group',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary(isDarkMode),
+                      ),
             ),
             const SizedBox(height: 12),
 
@@ -92,6 +139,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -156,10 +204,9 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
   }
 
   Widget _buildProgressCard(bool isDarkMode, Color color) {
-    final attendanceCount = course.type == CourseType.theory
-        ? getAttendanceCount(course.code, course.sections.first)
-        : getAttendanceCount(course.code, course.groups.first);
-    final progress = attendanceCount / course.expectedClasses;
+    final progress = course.expectedClasses > 0
+        ? _classesHeld / course.expectedClasses
+        : 0.0;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -182,7 +229,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                 ),
               ),
               Text(
-                '$attendanceCount of ${course.expectedClasses}',
+                '$_classesHeld of ${course.expectedClasses}',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -218,7 +265,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
             child: _buildSelectorCard(
               title: 'Section $section',
               subtitle: section == 'A' ? 'Roll 001-060' : 'Roll 061-120',
-              count: '60 students',
+              count: '${_allStudents.where((s) => s.derivedSection == section).length} enrolled',
               color: color,
               isDarkMode: isDarkMode,
               onTap: () => _navigateToRollCall(section),
@@ -253,9 +300,9 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
       children: course.groups.map((group) {
         return _buildSelectorCard(
           title: 'Group $group',
-          subtitle: 'Roll ${rollRanges[group]}',
-          count: '30 students',
-          color: colors[group]!,
+          subtitle: 'Roll ${rollRanges[group] ?? ''}',
+          count: '${_countForGroup(group)} enrolled',
+          color: colors[group] ?? AppColors.primary,
           isDarkMode: isDarkMode,
           onTap: () => _navigateToRollCall(group),
         );
@@ -318,12 +365,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
   }
 
   Widget _buildRecentRecords(bool isDarkMode) {
-    final courseRecords = attendanceSessions
-        .where((s) => s.courseCode == course.code)
-        .take(5)
-        .toList();
-
-    if (courseRecords.isEmpty) {
+    if (_recentSessions.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -347,7 +389,11 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
     }
 
     return Column(
-      children: courseRecords.map((session) {
+      children: _recentSessions.map((session) {
+        final startsAt = DateTime.tryParse(session['starts_at'] as String? ?? '');
+        final topic = session['topic'] as String? ?? '';
+        final room = session['room_number'] as String? ?? '';
+
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.all(14),
@@ -376,31 +422,20 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${course.type == CourseType.theory ? "Section" : "Group"} ${session.sectionOrGroup}',
+                      topic.isNotEmpty ? topic : 'Class Session',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: AppColors.textPrimary(isDarkMode),
                       ),
                     ),
                     Text(
-                      _formatDate(session.date),
+                      '${startsAt != null ? _formatDate(startsAt) : "Unknown"}${room.isNotEmpty ? " • $room" : ""}',
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary(isDarkMode),
                       ),
                     ),
                   ],
-                ),
-              ),
-              Text(
-                '${session.attendanceRate.toStringAsFixed(0)}%',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: session.attendanceRate >= 80
-                      ? AppColors.success
-                      : session.attendanceRate >= 60
-                      ? AppColors.warning
-                      : AppColors.danger,
                 ),
               ),
             ],
@@ -441,6 +476,20 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
     }
   }
 
+  /// Count students for a sessional group (A1=001-030, A2=031-060, B1=061-090, B2=091-120)
+  int _countForGroup(String group) {
+    return _allStudents.where((s) {
+      final roll = int.tryParse(s.rollNo.length >= 3 ? s.rollNo.substring(s.rollNo.length - 3) : s.rollNo) ?? 0;
+      switch (group) {
+        case 'A1': return roll >= 1 && roll <= 30;
+        case 'A2': return roll >= 31 && roll <= 60;
+        case 'B1': return roll >= 61 && roll <= 90;
+        case 'B2': return roll >= 91 && roll <= 120;
+        default: return false;
+      }
+    }).length;
+  }
+
   void _navigateToRollCall(String sectionOrGroup) {
     Navigator.push(
       context,
@@ -455,10 +504,6 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
   }
 
   void _showAttendanceHistory(BuildContext context, bool isDarkMode) {
-    final courseRecords = attendanceSessions
-        .where((s) => s.courseCode == course.code)
-        .toList();
-
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surface(isDarkMode),
@@ -466,113 +511,144 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       isScrollControlled: true,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        maxChildSize: 0.9,
-        minChildSize: 0.4,
-        expand: false,
-        builder: (context, scrollController) => SingleChildScrollView(
-          controller: scrollController,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.border(isDarkMode),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Attendance History',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary(isDarkMode),
-                ),
-              ),
-              const SizedBox(height: 16),
-              if (courseRecords.isEmpty)
-                Center(
-                  child: Text(
-                    'No records yet',
-                    style: TextStyle(
-                      color: AppColors.textSecondary(isDarkMode),
-                    ),
-                  ),
-                )
-              else
-                ...courseRecords.map((session) {
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceElevated(isDarkMode),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border(isDarkMode)),
-                    ),
-                    child: Row(
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${session.sectionOrGroup} - ${_formatDate(session.date)}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.textPrimary(isDarkMode),
-                              ),
-                            ),
-                            Text(
-                              'P: ${session.presentCount} | L: ${session.lateCount} | A: ${session.absentCount}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textSecondary(isDarkMode),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
-                          ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          maxChildSize: 0.9,
+          minChildSize: 0.4,
+          expand: false,
+          builder: (context, scrollController) {
+            final offeringId = course.offeringId;
+            if (offeringId == null) {
+              return Center(
+                child: Text('No offering ID', style: TextStyle(color: AppColors.textSecondary(isDarkMode))),
+              );
+            }
+            return FutureBuilder<List<Map<String, dynamic>>>(
+              future: TeacherCourseService.getClassSessions(offeringId: offeringId, limit: 50),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final sessions = snapshot.data ?? [];
+                return SingleChildScrollView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
                           decoration: BoxDecoration(
-                            color:
-                                (session.attendanceRate >= 80
-                                        ? AppColors.success
-                                        : session.attendanceRate >= 60
-                                        ? AppColors.warning
-                                        : AppColors.danger)
-                                    .withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '${session.attendanceRate.toStringAsFixed(0)}%',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: session.attendanceRate >= 80
-                                  ? AppColors.success
-                                  : session.attendanceRate >= 60
-                                  ? AppColors.warning
-                                  : AppColors.danger,
-                            ),
+                            color: AppColors.border(isDarkMode),
+                            borderRadius: BorderRadius.circular(2),
                           ),
                         ),
-                      ],
-                    ),
-                  );
-                }),
-            ],
-          ),
-        ),
-      ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Attendance History',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary(isDarkMode),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      if (sessions.isEmpty)
+                        Center(
+                          child: Text(
+                            'No records yet',
+                            style: TextStyle(color: AppColors.textSecondary(isDarkMode)),
+                          ),
+                        )
+                      else
+                        ...sessions.map((session) {
+                          final startsAt = DateTime.tryParse(session['starts_at'] as String? ?? '');
+                          final topic = session['topic'] as String? ?? 'Class Session';
+                          final room = session['room_number'] as String? ?? '';
+                          final sessionId = session['id'] as String;
+
+                          return FutureBuilder<Map<String, int>>(
+                            future: TeacherCourseService.getSessionAttendanceStats(sessionId: sessionId),
+                            builder: (context, statsSnap) {
+                              final stats = statsSnap.data ?? {'present': 0, 'late': 0, 'absent': 0, 'total': 0};
+                              final total = stats['total'] ?? 0;
+                              final present = stats['present'] ?? 0;
+                              final late = stats['late'] ?? 0;
+                              final absent = stats['absent'] ?? 0;
+                              final rate = total > 0 ? ((present + late) / total * 100) : 0.0;
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceElevated(isDarkMode),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: AppColors.border(isDarkMode)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '${topic.isNotEmpty ? topic : "Class Session"}${room.isNotEmpty ? " • $room" : ""}',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w500,
+                                              color: AppColors.textPrimary(isDarkMode),
+                                            ),
+                                          ),
+                                          Text(
+                                            '${startsAt != null ? _formatDate(startsAt) : ""} · P: $present | L: $late | A: $absent',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: AppColors.textSecondary(isDarkMode),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                      decoration: BoxDecoration(
+                                        color: (rate >= 80
+                                                ? AppColors.success
+                                                : rate >= 60
+                                                    ? AppColors.warning
+                                                    : AppColors.danger)
+                                            .withOpacity(0.15),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        '${rate.toStringAsFixed(0)}%',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: rate >= 80
+                                              ? AppColors.success
+                                              : rate >= 60
+                                                  ? AppColors.warning
+                                                  : AppColors.danger,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          );
+                        }),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }

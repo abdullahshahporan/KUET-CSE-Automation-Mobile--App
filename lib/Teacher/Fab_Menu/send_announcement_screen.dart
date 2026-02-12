@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
-import '../data/teacher_static_data.dart';
+import '../services/teacher_course_service.dart';
+import '../../services/supabase_service.dart';
+
+/// Announcement type options
+enum AnnouncementType { classTest, assignment, notice, labTest, quiz, other }
 
 /// Send Announcement Screen - Create and send announcements to students
 class SendAnnouncementScreen extends StatefulWidget {
@@ -19,6 +23,31 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
   AnnouncementType _selectedType = AnnouncementType.notice;
   DateTime? _scheduledDate;
   bool _isLoading = false;
+  List<Map<String, dynamic>> _courses = [];
+  bool _isLoadingCourses = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCourses();
+  }
+
+  Future<void> _loadCourses() async {
+    try {
+      final teacherId = SupabaseService.currentUserId;
+      if (teacherId == null) return;
+      final data = await SupabaseService.from('course_offerings')
+          .select('id, courses(code, title)')
+          .eq('teacher_user_id', teacherId)
+          .eq('is_active', true);
+      setState(() {
+        _courses = List<Map<String, dynamic>>.from(data as List);
+        _isLoadingCourses = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingCourses = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -97,6 +126,23 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
               // Course Selection
               _buildLabel('Select Course', isDarkMode),
               const SizedBox(height: 8),
+              if (_isLoadingCourses)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface(isDarkMode),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border(isDarkMode)),
+                  ),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                      const SizedBox(width: 12),
+                      Text('Loading courses...', style: TextStyle(color: AppColors.textSecondary(isDarkMode))),
+                    ],
+                  ),
+                )
+              else
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
@@ -115,11 +161,14 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
                       ),
                     ),
                     dropdownColor: AppColors.surface(isDarkMode),
-                    items: teacherCourses.map((course) {
+                    items: _courses.map((offering) {
+                      final course = offering['courses'] as Map<String, dynamic>?;
+                      final code = course?['code'] as String? ?? '';
+                      final title = course?['title'] as String? ?? '';
                       return DropdownMenuItem(
-                        value: course.code,
+                        value: code,
                         child: Text(
-                          '${course.code} - ${course.title}',
+                          '$code - $title',
                           style: TextStyle(
                             color: AppColors.textPrimary(isDarkMode),
                           ),
@@ -351,7 +400,7 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
     }
   }
 
-  void _sendAnnouncement() {
+  Future<void> _sendAnnouncement() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedCourse == null) {
@@ -366,18 +415,57 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
 
     setState(() => _isLoading = true);
 
-    // Simulate sending
-    Future.delayed(const Duration(seconds: 2), () {
-      setState(() => _isLoading = false);
+    try {
+      // Determine priority from type
+      final priority = _selectedType == AnnouncementType.classTest ||
+              _selectedType == AnnouncementType.labTest
+          ? 'high'
+          : _selectedType == AnnouncementType.assignment ||
+                  _selectedType == AnnouncementType.quiz
+              ? 'medium'
+              : 'normal';
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Announcement sent successfully!'),
-          backgroundColor: AppColors.success,
-        ),
+      final typeName = _getTypeName(_selectedType);
+      final title = '[$typeName] ${_titleController.text}';
+
+      final success = await TeacherCourseService.saveAnnouncement(
+        title: title,
+        body: _contentController.text,
+        targetTerm: null,
+        targetSession: null,
+        priority: priority,
       );
 
-      Navigator.pop(context);
-    });
+      if (mounted) {
+        setState(() => _isLoading = false);
+
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Announcement sent successfully!'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          Navigator.pop(context);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Failed to send announcement'),
+              backgroundColor: AppColors.danger,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    }
   }
 }

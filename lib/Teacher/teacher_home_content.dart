@@ -7,6 +7,8 @@ import '../services/supabase_service.dart';
 import '../theme/app_colors.dart';
 import 'course_detail_screen.dart';
 import 'data/teacher_static_data.dart';
+import 'Schedule/teacher_schedule_service.dart';
+import 'Schedule/teacher_schedule_model.dart';
 
 /// Teacher Home Content - Shows courses and upcoming schedule
 class TeacherHomeContent extends StatefulWidget {
@@ -22,12 +24,15 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
   List<TeacherCourse> _assignedCourses = [];
   bool _loadingCourses = true;
   dynamic _realtimeChannel;
+  List<TeacherSlot> _todaySlots = [];
+  bool _loadingSchedule = true;
 
   @override
   void initState() {
     super.initState();
     _loadTeacherName();
     _loadAssignedCourses();
+    _loadTodaySchedule();
     _subscribeToChanges();
   }
 
@@ -56,10 +61,16 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
 
       final courses = offerings.map((offering) {
         final course = offering['courses'] as Map<String, dynamic>? ?? {};
-        final term = offering['term'] as String? ?? '1-1';
-        final parts = term.split('-');
-        final year = int.tryParse(parts[0]) ?? 1;
-        final termNum = int.tryParse(parts.length > 1 ? parts[1] : '1') ?? 1;
+        final courseCode = course['code'] as String? ?? '';
+
+        // Derive year & term from course code (CSE XYZZ → X=year, Y=term)
+        final codeDigits = courseCode.replaceAll(RegExp(r'[^0-9]'), '');
+        int year = 1;
+        int termNum = 1;
+        if (codeDigits.length >= 2) {
+          year = int.tryParse(codeDigits[0]) ?? 1;
+          termNum = int.tryParse(codeDigits[1]) ?? 1;
+        }
 
         final typeStr = (course['course_type'] as String? ?? 'Theory').toLowerCase();
         final courseType = typeStr == 'lab' ? CourseType.lab : CourseType.theory;
@@ -75,9 +86,11 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
           expectedClasses: courseType == CourseType.lab
               ? (credit * 6.67).round() // ~10 for 1.5 credit lab
               : (credit * 6).round(),   // ~18 for 3 credit theory
-          sections: courseType == CourseType.theory ? ['A'] : [],
-          groups: courseType == CourseType.lab ? ['A1'] : [],
+          sections: courseType == CourseType.theory ? ['A', 'B'] : [],
+          groups: courseType == CourseType.lab ? ['A1', 'A2', 'B1', 'B2'] : [],
           teachers: [_teacherName],
+          offeringId: offering['id'] as String?,
+          session: offering['session'] as String?,
         );
       }).toList();
 
@@ -101,114 +114,33 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
     );
   }
 
-  // Get today's schedule
-  List<Map<String, String>> _getTodaySchedule() {
-    final weekday = DateTime.now().weekday;
-    final dayNames = [
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday',
-    ];
-    final today = dayNames[weekday - 1];
+  // Load today's schedule from Supabase
+  Future<void> _loadTodaySchedule() async {
+    try {
+      final schedule = await TeacherScheduleService.fetchSchedule();
+      // DateTime.now().weekday: 1=Mon..7=Sun
+      // TeacherSlot.dayOfWeek: 0=Sun..6=Sat
+      final dartWeekday = DateTime.now().weekday; // 1=Mon..7=Sun
+      final dbDay = dartWeekday == 7 ? 0 : dartWeekday; // Convert to 0=Sun..6=Sat
 
-    final schedule = [
-      {
-        'day': 'Sunday',
-        'classes': [
-          {
-            'time': '09:00 - 10:00',
-            'course': 'CSE 3201',
-            'room': 'Room 301',
-            'section': 'A',
-          },
-          {
-            'time': '11:00 - 12:00',
-            'course': 'CSE 3201',
-            'room': 'Room 301',
-            'section': 'B',
-          },
-        ],
-      },
-      {
-        'day': 'Monday',
-        'classes': [
-          {
-            'time': '10:00 - 01:00',
-            'course': 'CSE 3202',
-            'room': 'Lab 201',
-            'section': 'A1',
-          },
-        ],
-      },
-      {
-        'day': 'Tuesday',
-        'classes': [
-          {
-            'time': '09:00 - 10:00',
-            'course': 'CSE 3201',
-            'room': 'Room 301',
-            'section': 'A',
-          },
-          {
-            'time': '10:00 - 11:00',
-            'course': 'CSE 3201',
-            'room': 'Room 301',
-            'section': 'B',
-          },
-        ],
-      },
-      {
-        'day': 'Wednesday',
-        'classes': [
-          {
-            'time': '10:00 - 01:00',
-            'course': 'CSE 3202',
-            'room': 'Lab 201',
-            'section': 'A2',
-          },
-        ],
-      },
-      {
-        'day': 'Thursday',
-        'classes': [
-          {
-            'time': '02:00 - 03:00',
-            'course': 'CSE 2101',
-            'room': 'Room 401',
-            'section': 'A',
-          },
-          {
-            'time': '03:00 - 04:00',
-            'course': 'CSE 2101',
-            'room': 'Room 401',
-            'section': 'B',
-          },
-        ],
-      },
-      {'day': 'Friday', 'classes': []},
-      {'day': 'Saturday', 'classes': []},
-    ];
-
-    final todaySchedule = schedule.firstWhere(
-      (s) => s['day'] == today,
-      orElse: () => {'day': today, 'classes': []},
-    );
-
-    return (todaySchedule['classes'] as List)
-        .cast<Map<String, dynamic>>()
-        .map((e) => Map<String, String>.from(e))
-        .toList();
+      if (mounted) {
+        setState(() {
+          _todaySlots = schedule[dbDay] ?? [];
+          _loadingSchedule = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loadingSchedule = false);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final themeProvider = provider.Provider.of<ThemeProvider>(context);
-    final todayClasses = _getTodaySchedule();
+    final todayClasses = _todaySlots;
 
     // Determine courses to display
     final displayedCourses = _showAllCourses
@@ -263,7 +195,9 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
                   // Upcoming Schedule Section
                   _buildSectionHeader(
                     'Today\'s Schedule',
-                    '${todayClasses.length} classes',
+                    _loadingSchedule
+                        ? 'Loading...'
+                        : '${todayClasses.length} classes',
                     isDarkMode,
                   ),
                   const SizedBox(height: 12),
@@ -489,15 +423,8 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
     );
   }
 
-  Widget _buildScheduleCard(Map<String, String> classInfo, bool isDarkMode) {
-    TeacherCourse? matchedCourse;
-    if (_assignedCourses.isNotEmpty) {
-      matchedCourse = _assignedCourses.cast<TeacherCourse?>().firstWhere(
-        (c) => c?.code == classInfo['course'],
-        orElse: () => null,
-      );
-    }
-    final isTheory = matchedCourse?.type == CourseType.theory;
+  Widget _buildScheduleCard(TeacherSlot slot, bool isDarkMode) {
+    final isTheory = slot.courseType.toLowerCase() == 'theory';
     final color = isTheory ? AppColors.primary : AppColors.accent;
 
     return Container(
@@ -529,32 +456,34 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
                 Row(
                   children: [
                     Text(
-                      classInfo['course'] ?? '',
+                      slot.courseCode,
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary(isDarkMode),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        'Section ${classInfo['section']}',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: color,
+                    if (slot.section != null && slot.section!.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'Section ${slot.section}',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: color,
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -567,26 +496,28 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      classInfo['time'] ?? '',
+                      slot.timeRange,
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary(isDarkMode),
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Icon(
-                      Icons.room,
-                      size: 14,
-                      color: AppColors.textSecondary(isDarkMode),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      classInfo['room'] ?? '',
-                      style: TextStyle(
-                        fontSize: 12,
+                    if (slot.roomNumber.isNotEmpty) ...[
+                      const SizedBox(width: 16),
+                      Icon(
+                        Icons.room,
+                        size: 14,
                         color: AppColors.textSecondary(isDarkMode),
                       ),
-                    ),
+                      const SizedBox(width: 4),
+                      Text(
+                        slot.roomNumber,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary(isDarkMode),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ],
@@ -682,10 +613,6 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
     final color = course.type == CourseType.theory
         ? AppColors.primary
         : AppColors.accent;
-    final attendanceCount = course.type == CourseType.theory
-        ? getAttendanceCount(course.code, course.sections.isNotEmpty ? course.sections.first : 'A')
-        : getAttendanceCount(course.code, course.groups.isNotEmpty ? course.groups.first : 'A1');
-    final progress = attendanceCount / course.expectedClasses;
 
     return GestureDetector(
       onTap: () {
@@ -780,51 +707,6 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
                   Icons.arrow_forward_ios,
                   size: 16,
                   color: AppColors.textMuted,
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 14),
-
-            // Progress Bar
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Classes Taken',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: AppColors.textSecondary(isDarkMode),
-                            ),
-                          ),
-                          Text(
-                            '$attendanceCount / ${course.expectedClasses}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: color,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          minHeight: 6,
-                          backgroundColor: AppColors.border(isDarkMode),
-                          valueColor: AlwaysStoppedAnimation<Color>(color),
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ],
             ),
