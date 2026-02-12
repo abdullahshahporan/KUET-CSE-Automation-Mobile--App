@@ -1,10 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kuet_cse_automation/Student%20Folder/models/app_models.dart';
 
-// Providers for Notice, Assignment, and Attendance features
-// Schedule providers are in Home/Features/Schedule folder
-
-// Notices Provider
+// Notices Provider — sample static data (to be migrated to Supabase later)
 final noticesProvider = Provider<List<Notice>>((ref) {
   return [
     Notice(
@@ -51,104 +48,6 @@ final noticesProvider = Provider<List<Notice>>((ref) {
       date: 'January 3, 2026',
       category: 'Project',
       isImportant: true,
-    ),
-  ];
-});
-
-// Assignments Provider
-final assignmentsProvider = Provider<List<Assignment>>((ref) {
-  return [
-    Assignment(
-      id: '1',
-      title: 'Binary Search Tree Implementation',
-      courseName: 'Data Structures (CSE 2101)',
-      description:
-          'Implement a complete BST with insert, delete, search, and traversal operations.',
-      deadline: 'January 20, 2026',
-      status: 'pending',
-      marks: 20,
-    ),
-    Assignment(
-      id: '2',
-      title: 'Dijkstra\'s Algorithm Analysis',
-      courseName: 'Algorithm Analysis (CSE 2103)',
-      description:
-          'Analyze the time complexity of Dijkstra\'s algorithm and implement it in C++.',
-      deadline: 'January 18, 2026',
-      status: 'pending',
-      marks: 15,
-    ),
-    Assignment(
-      id: '3',
-      title: 'Database Normalization',
-      courseName: 'Database Management (CSE 2105)',
-      description:
-          'Normalize the given database schema up to 3NF and create ER diagram.',
-      deadline: 'January 25, 2026',
-      status: 'pending',
-      marks: 25,
-    ),
-    Assignment(
-      id: '4',
-      title: 'UML Diagrams for Library System',
-      courseName: 'Software Engineering (CSE 2107)',
-      description:
-          'Create complete UML diagrams (Use Case, Class, Sequence) for a library management system.',
-      deadline: 'January 15, 2026',
-      status: 'submitted',
-      marks: 20,
-    ),
-    Assignment(
-      id: '5',
-      title: 'Socket Programming',
-      courseName: 'Computer Networks (CSE 2109)',
-      description:
-          'Implement a simple client-server chat application using socket programming.',
-      deadline: 'January 10, 2026',
-      status: 'overdue',
-      marks: 15,
-    ),
-  ];
-});
-
-// Attendance Provider
-final attendanceProvider = Provider<List<AttendanceRecord>>((ref) {
-  return [
-    AttendanceRecord(
-      courseCode: 'CSE 2101',
-      courseName: 'Data Structures',
-      totalClasses: 30,
-      attendedClasses: 28,
-    ),
-    AttendanceRecord(
-      courseCode: 'CSE 2103',
-      courseName: 'Algorithm Analysis',
-      totalClasses: 28,
-      attendedClasses: 26,
-    ),
-    AttendanceRecord(
-      courseCode: 'CSE 2105',
-      courseName: 'Database Management',
-      totalClasses: 32,
-      attendedClasses: 25,
-    ),
-    AttendanceRecord(
-      courseCode: 'CSE 2107',
-      courseName: 'Software Engineering',
-      totalClasses: 30,
-      attendedClasses: 29,
-    ),
-    AttendanceRecord(
-      courseCode: 'CSE 2109',
-      courseName: 'Computer Networks',
-      totalClasses: 26,
-      attendedClasses: 20,
-    ),
-    AttendanceRecord(
-      courseCode: 'CSE 2102',
-      courseName: 'Operating Systems',
-      totalClasses: 28,
-      attendedClasses: 24,
     ),
   ];
 });

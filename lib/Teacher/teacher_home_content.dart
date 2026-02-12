@@ -6,7 +6,7 @@ import '../app_theme.dart';
 import '../services/supabase_service.dart';
 import '../theme/app_colors.dart';
 import 'course_detail_screen.dart';
-import 'data/teacher_static_data.dart';
+import 'models/teacher_course.dart';
 import 'Schedule/teacher_schedule_service.dart';
 import 'Schedule/teacher_schedule_model.dart';
 

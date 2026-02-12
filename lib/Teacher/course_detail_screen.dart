@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'data/teacher_static_data.dart';
+import 'models/teacher_course.dart';
 import '../Student Folder/models/course_model.dart';
 import '../theme/app_colors.dart';
 import 'Attendance/teacher_attendance_screen.dart';

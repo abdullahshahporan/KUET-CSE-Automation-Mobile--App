@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../data/teacher_static_data.dart';
+import '../models/teacher_course.dart';
 import '../../theme/app_colors.dart';
 
 /// Course-specific Announcements Screen

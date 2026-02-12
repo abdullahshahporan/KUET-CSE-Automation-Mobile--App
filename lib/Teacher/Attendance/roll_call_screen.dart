@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../data/teacher_static_data.dart' hide AttendanceStatus;
+import '../models/teacher_course.dart';
 import '../models/enrolled_student.dart';
 import '../services/teacher_course_service.dart';
 import '../../Student Folder/models/course_model.dart';
