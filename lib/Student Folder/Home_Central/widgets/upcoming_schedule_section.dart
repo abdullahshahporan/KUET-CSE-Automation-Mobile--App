@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../theme/app_colors.dart';
+import '../../../utils/course_utils.dart';
 import '../services/upcoming_schedule_service.dart';
 
 /// Widget that displays today's remaining classes and the next class day's
@@ -41,7 +42,6 @@ class _UpcomingScheduleSectionState extends State<UpcomingScheduleSection> {
           return _buildShimmer(isDark);
         }
 
-        final data = snap.data ?? UpcomingScheduleService.getUpcoming;
         final today = (snap.data?['today'] as List<UpcomingClass>?) ?? [];
         final tomorrow =
             (snap.data?['tomorrow'] as List<UpcomingClass>?) ?? [];
@@ -396,7 +396,7 @@ class _ClassCard extends StatelessWidget {
   }
 
   bool _isLab(String code) {
-    final digits = code.replaceAll(RegExp(r'[^0-9]'), '');
+    final digits = CourseUtils.extractDigits(code);
     if (digits.isEmpty) return false;
     return int.parse(digits[digits.length - 1]).isEven;
   }

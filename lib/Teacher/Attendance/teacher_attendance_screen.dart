@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/time_utils.dart';
 import '../models/teacher_course.dart';
 import '../models/enrolled_student.dart';
 import '../../Student Folder/models/course_model.dart';
@@ -445,24 +446,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
     );
   }
 
-  String _formatDate(DateTime date) {
-    final months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    final weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return '${weekdays[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}, ${date.year}';
-  }
+  String _formatDate(DateTime date) => TimeUtils.formatDateTimeWithWeekday(date);
 
   Future<void> _selectDate(BuildContext context) async {
     final picked = await showDatePicker(

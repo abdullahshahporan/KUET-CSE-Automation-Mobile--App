@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../shared/ui_helpers.dart';
+import '../../utils/time_utils.dart';
 import '../models/teacher_course.dart';
 import '../models/enrolled_student.dart';
 import '../services/teacher_course_service.dart';
@@ -272,55 +274,17 @@ class _RollCallScreenState extends State<RollCallScreen>
       if (!mounted) return;
       setState(() => _isSaving = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8)),
-                child: const Icon(Icons.check, color: Colors.white, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('Attendance Saved!',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text('Present: $_presentCount | Late: $_lateCount | Absent: $_absentCount',
-                        style: const TextStyle(fontSize: 12)),
-                  ],
-                ),
-              ),
-            ]),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(16),
-            duration: const Duration(seconds: 3),
-          ),
-        );
+      showAppSnackBar(context, message: 'Attendance Saved! Present: $_presentCount | Late: $_lateCount | Absent: $_absentCount');
         Navigator.pop(context, true); // return true so caller can refresh
     } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to save: $e'),
-            backgroundColor: AppColors.danger,
-            behavior: SnackBarBehavior.floating),
-        );
+        showAppSnackBar(context, message: 'Failed to save: $e', isSuccess: false);
       }
     }
   }
 
   // ── Helpers ────────────────────────────────────────────────
 
-  static String _formatDate(DateTime d) {
-    const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return '${m[d.month - 1]} ${d.day}, ${d.year}';
-  }
+  static String _formatDate(DateTime d) => TimeUtils.formatDateTimeUS(d);
 }

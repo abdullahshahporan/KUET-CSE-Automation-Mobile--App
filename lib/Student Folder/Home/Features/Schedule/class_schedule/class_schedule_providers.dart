@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:kuet_cse_automation/services/supabase_service.dart';
+import 'package:kuet_cse_automation/utils/course_utils.dart';
 import 'class_schedule_models.dart';
 
 /// Provider for selected section filter (A / B)
@@ -10,11 +11,6 @@ final selectedSectionProvider =
     StateProvider<String>((ref) => '');
 
 /// Async provider that fetches class schedule from Supabase.
-///
-/// Queries routine_slots directly with forward join to
-/// course_offerings → courses + teachers.
-/// Filters client-side by course code prefix matching the student's term,
-/// and by section derived from the student's roll number.
 final classScheduleProvider =
     FutureProvider<Map<String, dynamic>>((ref) async {
   final sectionOverride = ref.watch(selectedSectionProvider);
@@ -22,28 +18,11 @@ final classScheduleProvider =
 });
 
 class ScheduleService {
-  /// Derive section from roll number.
-  /// Last 3 digits: 001-060 → A, 061+ → B
-  static String sectionFromRoll(String? rollNo) {
-    if (rollNo == null || rollNo.isEmpty) return 'A';
-    // Extract last 3 digits (or fewer if roll is short)
-    final digits = rollNo.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digits.isEmpty) return 'A';
-    final last3 = digits.length >= 3
-        ? digits.substring(digits.length - 3)
-        : digits;
-    final num = int.tryParse(last3) ?? 1;
-    return num <= 60 ? 'A' : 'B';
-  }
+  /// Derive section from roll number — delegates to [CourseUtils].
+  static String sectionFromRoll(String? rollNo) =>
+      CourseUtils.sectionFromRoll(rollNo);
 
   /// Fetch class schedule for the current student from Supabase.
-  ///
-  /// 1. Gets the student's roll_no and term.
-  /// 2. Derives section from roll number (or uses override).
-  /// 3. Queries routine_slots directly (forward join to course_offerings → courses + teachers).
-  /// 4. Filters by course code prefix and section.
-  ///
-  /// Returns a Map with 'schedules', 'section', and 'rollNo'.
   static Future<Map<String, dynamic>> fetchClassSchedule({
     String sectionOverride = '',
   }) async {
@@ -68,18 +47,14 @@ class ScheduleService {
       final studentTerm = studentData['term'] as String? ?? '1-1';
       final rollNo = studentData['roll_no'] as String? ?? '';
 
-      // Derive section from roll number
-      final autoSection = sectionFromRoll(rollNo);
+      final autoSection = CourseUtils.sectionFromRoll(rollNo);
       final activeSection = sectionOverride.isEmpty ? autoSection : sectionOverride;
 
-      // Parse year & term from "3-2" → year=3, term=2
-      final parts = studentTerm.split('-');
-      final year = int.tryParse(parts[0]) ?? 1;
-      final term = int.tryParse(parts.length > 1 ? parts[1] : '1') ?? 1;
-      final termPrefix = '$year$term';
-      debugPrint('[ClassSchedule] roll=$rollNo, autoSection=$autoSection, activeSection=$activeSection, prefix=$termPrefix');
+      final parsed = CourseUtils.parseTerm(studentTerm);
+      final year = parsed.year;
+      final term = parsed.term;
+      debugPrint('[ClassSchedule] roll=$rollNo, activeSection=$activeSection, prefix=$year$term');
 
-      // Query FROM routine_slots with forward join to course_offerings → courses + teachers
       final response = await SupabaseService.client
           .from('routine_slots')
           .select('''
@@ -112,22 +87,17 @@ class ScheduleService {
       final List<dynamic> data = response as List<dynamic>;
       debugPrint('[ClassSchedule] Got ${data.length} total routine_slots');
 
-      // Filter client-side
       final schedules = <ClassSchedule>[];
       for (final item in data) {
         final map = item as Map<String, dynamic>;
         final offering = map['course_offerings'] as Map<String, dynamic>?;
         if (offering == null) continue;
-
-        // Must be active
         if (offering['is_active'] != true) continue;
 
-        // Course code must match term prefix
         final courseData = offering['courses'] as Map<String, dynamic>?;
         final courseCode = courseData?['code'] as String?;
-        if (!_codeMatchesTerm(courseCode, year, term)) continue;
+        if (!CourseUtils.codeMatchesTerm(courseCode, year, term)) continue;
 
-        // Section filter: if the slot has a section, must match
         final slotSection = map['section'] as String?;
         if (slotSection != null && slotSection.isNotEmpty) {
           if (slotSection.toUpperCase() != activeSection.toUpperCase()) {
@@ -138,7 +108,6 @@ class ScheduleService {
         schedules.add(ClassSchedule.fromSupabase(map));
       }
 
-      // Sort by day then by start_time
       schedules.sort((a, b) {
         if (a.dayOfWeek != b.dayOfWeek) return a.dayOfWeek.compareTo(b.dayOfWeek);
         return a.startTime.compareTo(b.startTime);
@@ -155,14 +124,5 @@ class ScheduleService {
       debugPrint('[ClassSchedule] ERROR: $e');
       return {'schedules': <ClassSchedule>[], 'section': 'A', 'rollNo': ''};
     }
-  }
-
-  /// Check if course code matches year-term.
-  /// "CSE 3201" → digits "3201" → starts with "32" → matches year=3, term=2.
-  static bool _codeMatchesTerm(String? code, int year, int term) {
-    if (code == null || code.isEmpty) return false;
-    final prefix = '$year$term';
-    final digits = code.replaceAll(RegExp(r'[^0-9]'), '');
-    return digits.startsWith(prefix);
   }
 }

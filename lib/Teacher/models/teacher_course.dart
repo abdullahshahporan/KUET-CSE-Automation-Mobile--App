@@ -1,4 +1,5 @@
 import '../../Student Folder/models/course_model.dart';
+import '../../utils/display_utils.dart';
 
 /// Extended course model for teacher with semester info.
 ///
@@ -32,22 +33,11 @@ class TeacherCourse {
     this.session,
   });
 
-  String get semesterName {
-    final yearSuffix = year == 1
-        ? 'st'
-        : year == 2
-            ? 'nd'
-            : year == 3
-                ? 'rd'
-                : 'th';
-    final termSuffix = term == 1 ? 'st' : 'nd';
-    return '$year-$term ($year$yearSuffix Year $term$termSuffix Term)';
-  }
+  String get semesterName => DisplayUtils.semesterName(year, term);
 
   String get shortSemester => '$year-$term';
 
-  String get creditsString =>
-      '${credits.toStringAsFixed(credits == credits.roundToDouble() ? 0 : 1)} Credits';
+  String get creditsString => DisplayUtils.creditsString(credits);
 
   /// Get batch roll prefix based on year (assuming current year is 2026)
   String get batchRollPrefix {

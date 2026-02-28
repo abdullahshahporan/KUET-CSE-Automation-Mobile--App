@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../utils/time_utils.dart';
 import '../../models/student_attendance_data.dart';
 import '../../../theme/app_colors.dart';
 
@@ -137,11 +138,5 @@ class SessionHistoryList extends StatelessWidget {
     }
   }
 
-  static String _formatDate(DateTime d) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ];
-    return '${months[d.month - 1]} ${d.day}, ${d.year}';
-  }
+  static String _formatDate(DateTime d) => TimeUtils.formatDateTimeUS(d);
 }

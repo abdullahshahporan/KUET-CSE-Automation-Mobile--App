@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../../services/supabase_service.dart';
+import '../../utils/course_utils.dart';
 import '../models/course_model.dart';
 
 /// Service for fetching course/curriculum data from Supabase.
@@ -30,7 +31,7 @@ class CourseInfoService {
       // Step 2: Filter by code prefix  (e.g. "CSE 3201" → digits "3201" starts with "32")
       final matchedCourses = allCourses
           .map((c) => c as Map<String, dynamic>)
-          .where((c) => _codeMatchesTerm(c['code'] as String?, year, term))
+          .where((c) => CourseUtils.codeMatchesTerm(c['code'] as String?, year, term))
           .toList();
 
       debugPrint('[CourseInfo] Matched ${matchedCourses.length} courses for prefix $termPrefix');
@@ -98,18 +99,6 @@ class CourseInfoService {
     }
   }
 
-  /// Check if a course code matches the given year-term.
-  ///
-  /// Convention: the numeric part of the code encodes year+term as the
-  /// first two digits.  e.g. "CSE 3201" → digits "3201" → starts with "32"
-  /// which means year=3, term=2.
-  static bool _codeMatchesTerm(String? code, int year, int term) {
-    if (code == null || code.isEmpty) return false;
-    final prefix = '$year$term';
-    final digits = code.replaceAll(RegExp(r'[^0-9]'), '');
-    return digits.startsWith(prefix);
-  }
-
   /// Fetch all available terms by scanning course codes
   static Future<List<String>> fetchAvailableTerms() async {
     try {
@@ -121,11 +110,9 @@ class CourseInfoService {
       for (final item in data) {
         final code = (item as Map<String, dynamic>)['code'] as String?;
         if (code == null) continue;
-        final digits = code.replaceAll(RegExp(r'[^0-9]'), '');
-        if (digits.length >= 2) {
-          final y = digits[0];
-          final t = digits[1];
-          terms.add('$y-$t');
+        final derived = CourseUtils.termFromCourseCode(code);
+        if (derived != '1-1' || code.contains('1')) {
+          terms.add(derived);
         }
       }
       final sorted = terms.toList()..sort();

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../shared/ui_helpers.dart';
 import '../../theme/app_colors.dart';
 
 /// Room Request Screen - Request a room for class or meeting
@@ -325,37 +326,19 @@ class _RoomRequestScreenState extends State<RoomRequestScreen> {
     );
   }
 
-  Widget _buildLabel(String text, bool isDarkMode) {
-    return Text(
-      text,
-      style: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: AppColors.textPrimary(isDarkMode),
-      ),
-    );
-  }
+  Widget _buildLabel(String text, bool isDarkMode) =>
+      FormSectionLabel(text: text, isDarkMode: isDarkMode);
 
   void _submitRequest() {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedRoom == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please select a room'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
+      showAppSnackBar(context, message: 'Please select a room', isSuccess: false);
       return;
     }
 
     if (_selectedTimeSlot == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please select a time slot'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
+      showAppSnackBar(context, message: 'Please select a time slot', isSuccess: false);
       return;
     }
 
@@ -365,12 +348,7 @@ class _RoomRequestScreenState extends State<RoomRequestScreen> {
     Future.delayed(const Duration(seconds: 2), () {
       setState(() => _isLoading = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Room request for $_selectedRoom submitted!'),
-          backgroundColor: AppColors.success,
-        ),
-      );
+      showAppSnackBar(context, message: 'Room request for $_selectedRoom submitted!');
 
       Navigator.pop(context);
     });

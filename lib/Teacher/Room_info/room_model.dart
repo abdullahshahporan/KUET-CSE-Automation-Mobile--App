@@ -1,3 +1,5 @@
+import '../../utils/time_utils.dart';
+
 /// Data model for a room from the `rooms` table.
 class Room {
   final String roomNumber;
@@ -87,25 +89,13 @@ class RoomSlot {
   }
 
   /// e.g. "09:00 - 10:00"
-  String get timeRange {
-    String fmt(String t) => t.length >= 5 ? t.substring(0, 5) : t;
-    return '${fmt(startTime)} - ${fmt(endTime)}';
-  }
+  String get timeRange => TimeUtils.timeRange(startTime, endTime);
 
-  static const dayNames = [
-    'Sunday',
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-  ];
+  String get dayName => TimeUtils.dayName(dayOfWeek);
 
-  String get dayName => dayNames[dayOfWeek];
+  /// Backward-compatible static accessor for day names list.
+  static List<String> get dayNames => TimeUtils.dayNames;
 }
-
-/// A standard university period with label and time range.
 class Period {
   final String label; // e.g. "P1"
   final String start; // e.g. "08:00"
@@ -114,21 +104,14 @@ class Period {
 
   const Period(this.label, this.start, this.end, {this.isCustom = false});
 
-  /// Convert 24h "HH:mm" to 12h short form: "8:00", "1:10", "5:00"
-  static String to12h(String time24) {
-    final parts = time24.split(':');
-    var h = int.parse(parts[0]);
-    final m = parts.length > 1 ? parts[1] : '00';
-    if (h == 0) h = 12;
-    if (h > 12) h -= 12;
-    return '$h:$m';
-  }
-
   /// Full display: e.g. "P1  8:00-8:50"
-  String get display => '$label  ${to12h(start)}-${to12h(end)}';
+  String get display => '$label  ${TimeUtils.formatTime12h(start)}-${TimeUtils.formatTime12h(end)}';
 
   /// Short form for dropdowns: e.g. "P1  8:00"
-  String get shortDisplay => '$label  ${to12h(start)}';
+  String get shortDisplay => '$label  ${TimeUtils.formatTime12h(start)}';
+
+  /// Backward-compatible static method for 12h time format.
+  static String to12h(String time24) => TimeUtils.formatTime12h(time24);
 
   /// KUET standard 9-period timetable.
   static const all = [

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
 import '../../shared/profile_widgets.dart';
+import '../../shared/ui_helpers.dart';
 import '../../theme/app_colors.dart';
 
 /// Full-screen editor for all teacher profile fields.
@@ -60,7 +61,7 @@ class _EditTeacherProfileScreenState extends State<EditTeacherProfileScreen> {
   Future<void> _save() async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
-      _showSnack('Name cannot be empty', isError: true);
+      showAppSnackBar(context, message: 'Name cannot be empty', isSuccess: false);
       return;
     }
 
@@ -87,20 +88,9 @@ class _EditTeacherProfileScreenState extends State<EditTeacherProfileScreen> {
         showResultSnackBar(context, success: true, message: 'Profile updated successfully!');
         Navigator.pop(context, true); // true = changed
       } else {
-        _showSnack('Failed to update profile. Try again.', isError: true);
+        showAppSnackBar(context, message: 'Failed to update profile. Try again.', isSuccess: false);
       }
     }
-  }
-
-  void _showSnack(String msg, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: isError ? Colors.red[600] : Colors.green[600],
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
   }
 
   @override

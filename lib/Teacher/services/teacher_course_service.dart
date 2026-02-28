@@ -1,18 +1,9 @@
 import 'package:flutter/foundation.dart';
 import '../../services/supabase_service.dart';
+import '../../utils/course_utils.dart';
 import '../models/enrolled_student.dart';
 
 class TeacherCourseService {
-  /// Derive term string from a course code.
-  /// CSE 3209 → digits "3209" → year=3, term=2 → "3-2"
-  /// CSE 2201 → digits "2201" → year=2, term=2 → "2-2"
-  static String _termFromCourseCode(String courseCode) {
-    // Extract the numeric part (e.g. "3209" from "CSE 3209")
-    final digits = courseCode.replaceAll(RegExp(r'[^0-9]'), '');
-    final year = digits[0]; // first digit = year
-    final term = digits[1]; // second digit = term
-    return '$year-$term';
-  }
 
   /// Fetch students for a course by deriving the term from courseCode
   /// and querying the students table directly.
@@ -22,7 +13,7 @@ class TeacherCourseService {
     String? section,
   }) async {
     try {
-      final term = _termFromCourseCode(courseCode);
+      final term = CourseUtils.termFromCourseCode(courseCode);
       debugPrint('Fetching students for courseCode=$courseCode → term=$term');
 
       final studentData = await SupabaseService.from('students')
@@ -59,7 +50,7 @@ class TeacherCourseService {
     String? offeringId, // kept for compatibility
   }) async {
     try {
-      final term = _termFromCourseCode(courseCode);
+      final term = CourseUtils.termFromCourseCode(courseCode);
       final data = await SupabaseService.from('students')
           .select('user_id')
           .eq('term', term);

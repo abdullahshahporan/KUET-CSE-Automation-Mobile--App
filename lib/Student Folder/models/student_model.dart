@@ -1,3 +1,5 @@
+import '../../utils/display_utils.dart';
+
 /// Student model for KUET CSE Automation App
 class Student {
   final String roll;
@@ -25,15 +27,6 @@ class Student {
   String get formattedBatch => '2k$batch';
 
   /// Returns full semester name like "3rd Year 2nd Term"
-  String get semesterName {
-    final yearSuffix = currentYear == 1
-        ? 'st'
-        : currentYear == 2
-        ? 'nd'
-        : currentYear == 3
-        ? 'rd'
-        : 'th';
-    final termSuffix = currentTerm == 1 ? 'st' : 'nd';
-    return '$currentYear$yearSuffix Year $currentTerm$termSuffix Term';
-  }
+  String get semesterName =>
+      '${DisplayUtils.ordinal(currentYear)} Year ${DisplayUtils.ordinal(currentTerm)} Term';
 }

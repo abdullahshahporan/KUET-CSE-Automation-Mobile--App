@@ -3,6 +3,7 @@ import 'package:kuet_cse_automation/Student Folder/Common Screen/main_bottom_nav
 import 'package:kuet_cse_automation/Teacher/teacher_navbar/teacher_navbar_screen.dart';
 
 import '../services/supabase_service.dart';
+import '../shared/ui_helpers.dart';
 import '../theme/app_colors.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -43,12 +44,7 @@ class _SignInScreenState extends State<SignInScreen> {
           setState(() => _isLoading = false);
 
           if (result['success'] == true) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Sign in successful!'),
-                backgroundColor: AppColors.success,
-              ),
-            );
+            showAppSnackBar(context, message: 'Sign in successful!');
 
             await Future.delayed(const Duration(milliseconds: 300));
 
@@ -71,23 +67,13 @@ class _SignInScreenState extends State<SignInScreen> {
               }
             }
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(result['message'] ?? 'Sign in failed'),
-                backgroundColor: AppColors.danger,
-              ),
-            );
+            showAppSnackBar(context, message: result['message'] ?? 'Sign in failed', isSuccess: false);
           }
         }
       } catch (e) {
         if (mounted) {
           setState(() => _isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: ${e.toString()}'),
-              backgroundColor: AppColors.danger,
-            ),
-          );
+          showAppSnackBar(context, message: 'Error: ${e.toString()}', isSuccess: false);
         }
       }
     }

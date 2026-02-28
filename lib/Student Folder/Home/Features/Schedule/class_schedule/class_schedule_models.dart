@@ -1,3 +1,5 @@
+import '../../../../../utils/time_utils.dart';
+
 /// Model for a class schedule slot fetched from Supabase routine_slots
 class ClassSchedule {
   final String id;
@@ -45,38 +47,10 @@ class ClassSchedule {
       room: roomNumber,
       startTime: startTime,
       endTime: endTime,
-      time: '${_formatTime(startTime)} - ${_formatTime(endTime)}',
-      day: _dayName(dayOfWeek),
+      time: TimeUtils.timeRange12h(startTime, endTime),
+      day: TimeUtils.dayName(dayOfWeek),
       dayOfWeek: dayOfWeek,
       section: json['section'] as String?,
     );
-  }
-
-  static String _dayName(int dayOfWeek) {
-    const days = [
-      'Sunday',
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-    ];
-    if (dayOfWeek >= 0 && dayOfWeek < days.length) return days[dayOfWeek];
-    return 'Unknown';
-  }
-
-  static String _formatTime(String time24) {
-    try {
-      final parts = time24.split(':');
-      int hour = int.parse(parts[0]);
-      final min = parts.length > 1 ? parts[1] : '00';
-      final amPm = hour >= 12 ? 'PM' : 'AM';
-      if (hour > 12) hour -= 12;
-      if (hour == 0) hour = 12;
-      return '$hour:$min $amPm';
-    } catch (_) {
-      return time24;
-    }
   }
 }

@@ -5,6 +5,7 @@ import '../Student Folder/models/course_model.dart';
 import '../app_theme.dart';
 import '../services/supabase_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/course_utils.dart';
 import 'course_detail_screen.dart';
 import 'models/teacher_course.dart';
 import 'Schedule/teacher_schedule_service.dart';
@@ -63,14 +64,9 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
         final course = offering['courses'] as Map<String, dynamic>? ?? {};
         final courseCode = course['code'] as String? ?? '';
 
-        // Derive year & term from course code (CSE XYZZ → X=year, Y=term)
-        final codeDigits = courseCode.replaceAll(RegExp(r'[^0-9]'), '');
-        int year = 1;
-        int termNum = 1;
-        if (codeDigits.length >= 2) {
-          year = int.tryParse(codeDigits[0]) ?? 1;
-          termNum = int.tryParse(codeDigits[1]) ?? 1;
-        }
+        // Derive year & term from course code using shared utility
+        final year = CourseUtils.yearFromCode(courseCode);
+        final termNum = CourseUtils.termFromCode(courseCode);
 
         final typeStr = (course['course_type'] as String? ?? 'Theory').toLowerCase();
         final courseType = typeStr == 'lab' ? CourseType.lab : CourseType.theory;

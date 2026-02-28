@@ -1,3 +1,6 @@
+import '../../utils/course_utils.dart';
+import '../../utils/display_utils.dart';
+
 class EnrolledStudent {
   final String enrollmentId;
   final String userId;
@@ -66,18 +69,10 @@ class EnrolledStudent {
     );
   }
 
-  String get initial => fullName.isNotEmpty ? fullName[0].toUpperCase() : '?';
+  String get initial => DisplayUtils.initial(fullName);
 
-  /// Derive section from roll number: last 3 digits 001-060 = A, 061-120 = B
-  String get derivedSection {
-    if (rollNo.length < 3) return section ?? 'A';
-    try {
-      final lastDigits = int.parse(rollNo.substring(rollNo.length - 3));
-      return lastDigits <= 60 ? 'A' : 'B';
-    } catch (_) {
-      return section ?? 'A';
-    }
-  }
+  /// Derive section from roll number using shared utility.
+  String get derivedSection => CourseUtils.sectionFromRoll(rollNo);
 
   String get termDisplay {
     final parts = term.split('-');

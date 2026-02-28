@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/teacher_course.dart';
+import '../../shared/ui_helpers.dart';
 import '../../theme/app_colors.dart';
 import '../services/teacher_course_service.dart';
 import '../models/enrolled_student.dart';
@@ -36,9 +37,7 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
     if (offeringId == null || offeringId.isEmpty) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No offering ID available for this course')),
-        );
+        showAppSnackBar(context, message: 'No offering ID available for this course', isSuccess: false);
       }
       return;
     }
@@ -58,9 +57,7 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load students: $e')),
-        );
+        showAppSnackBar(context, message: 'Failed to load students: $e', isSuccess: false);
       }
     }
   }

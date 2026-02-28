@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'package:kuet_cse_automation/utils/time_utils.dart';
 
 /// Model for exam schedule fetched from Supabase exams table
 class ExamSchedule {
@@ -77,7 +78,7 @@ class ExamSchedule {
     // Format time
     String formattedTime = 'TBA';
     if (examTime != null) {
-      formattedTime = _formatTime(examTime);
+      formattedTime = TimeUtils.formatTime12h(examTime);
       if (durationMinutes != null) {
         try {
           final parts = examTime.split(':');
@@ -88,7 +89,7 @@ class ExamSchedule {
           final endMin = endMinutes % 60;
           final endTimeStr =
               '${endHour.toString().padLeft(2, '0')}:${endMin.toString().padLeft(2, '0')}';
-          formattedTime = '${_formatTime(examTime)} - ${_formatTime(endTimeStr)}';
+          formattedTime = TimeUtils.timeRange12h(examTime, endTimeStr);
         } catch (_) {}
       }
     }
@@ -112,19 +113,5 @@ class ExamSchedule {
       maxMarks: maxMarks,
       durationMinutes: durationMinutes,
     );
-  }
-
-  static String _formatTime(String time24) {
-    try {
-      final parts = time24.split(':');
-      int hour = int.parse(parts[0]);
-      final min = parts.length > 1 ? parts[1] : '00';
-      final amPm = hour >= 12 ? 'PM' : 'AM';
-      if (hour > 12) hour -= 12;
-      if (hour == 0) hour = 12;
-      return '$hour:$min $amPm';
-    } catch (_) {
-      return time24;
-    }
   }
 }

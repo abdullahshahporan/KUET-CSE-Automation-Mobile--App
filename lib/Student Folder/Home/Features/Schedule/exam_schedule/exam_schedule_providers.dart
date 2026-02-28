@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:kuet_cse_automation/services/supabase_service.dart';
+import 'package:kuet_cse_automation/utils/course_utils.dart';
 import 'exam_schedule_models.dart';
 
 // Exam Category Provider (CT, Term Final, Quiz/Viva)
@@ -41,9 +42,7 @@ class ExamScheduleService {
       final studentTerm = studentData['term'] as String? ?? '1-1';
 
       // Parse year & term from "3-2"
-      final parts = studentTerm.split('-');
-      final year = int.tryParse(parts[0]) ?? 1;
-      final term = int.tryParse(parts.length > 1 ? parts[1] : '1') ?? 1;
+      final (:year, :term) = CourseUtils.parseTerm(studentTerm);
       final termPrefix = '$year$term';
       debugPrint('[ExamSchedule] Student term=$studentTerm, prefix=$termPrefix');
 
@@ -85,7 +84,7 @@ class ExamScheduleService {
         final courseCode = courseData?['code'] as String?;
 
         // Skip if course code doesn't match this term
-        if (!_codeMatchesTerm(courseCode, year, term)) continue;
+        if (!CourseUtils.codeMatchesTerm(courseCode, year, term)) continue;
 
         final examList = offeringMap['exams'] as List<dynamic>? ?? [];
         for (final exam in examList) {
@@ -113,12 +112,4 @@ class ExamScheduleService {
     }
   }
 
-  /// Check if course code matches year-term.
-  /// "CSE 3201" → digits "3201" → starts with "32" → matches year=3, term=2.
-  static bool _codeMatchesTerm(String? code, int year, int term) {
-    if (code == null || code.isEmpty) return false;
-    final prefix = '$year$term';
-    final digits = code.replaceAll(RegExp(r'[^0-9]'), '');
-    return digits.startsWith(prefix);
-  }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/display_utils.dart';
 import '../data/static_data.dart';
 import 'widgets/theory_result_card.dart';
 import 'widgets/lab_result_card.dart';
@@ -216,18 +217,9 @@ class _ResultScreenState extends State<ResultScreen> {
               fontWeight: FontWeight.bold,
             ),
             items: items.map((item) {
-              final suffix = label == 'Year'
-                  ? (item == 1
-                        ? 'st'
-                        : item == 2
-                        ? 'nd'
-                        : item == 3
-                        ? 'rd'
-                        : 'th')
-                  : (item == 1 ? 'st' : 'nd');
               return DropdownMenuItem(
                 value: item,
-                child: Text('$item$suffix $label'),
+                child: Text('${DisplayUtils.ordinal(item)} $label'),
               );
             }).toList(),
             onChanged: onChanged,

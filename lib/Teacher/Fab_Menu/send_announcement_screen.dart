@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../shared/ui_helpers.dart';
 import '../../theme/app_colors.dart';
 import '../services/teacher_course_service.dart';
 import '../../services/supabase_service.dart';
@@ -351,16 +352,8 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
     );
   }
 
-  Widget _buildLabel(String text, bool isDarkMode) {
-    return Text(
-      text,
-      style: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: AppColors.textPrimary(isDarkMode),
-      ),
-    );
-  }
+  Widget _buildLabel(String text, bool isDarkMode) =>
+      FormSectionLabel(text: text, isDarkMode: isDarkMode);
 
   InputDecoration _inputDecoration(String hint, bool isDarkMode) {
     return InputDecoration(
@@ -404,12 +397,7 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedCourse == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please select a course'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
+      showAppSnackBar(context, message: 'Please select a course', isSuccess: false);
       return;
     }
 
@@ -440,31 +428,16 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
         setState(() => _isLoading = false);
 
         if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Announcement sent successfully!'),
-              backgroundColor: AppColors.success,
-            ),
-          );
+          showAppSnackBar(context, message: 'Announcement sent successfully!');
           Navigator.pop(context);
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Failed to send announcement'),
-              backgroundColor: AppColors.danger,
-            ),
-          );
+          showAppSnackBar(context, message: 'Failed to send announcement', isSuccess: false);
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        showAppSnackBar(context, message: 'Error: $e', isSuccess: false);
       }
     }
   }

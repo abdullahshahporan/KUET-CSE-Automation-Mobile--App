@@ -4,6 +4,7 @@ import '../models/teacher_course.dart';
 import '../models/enrolled_student.dart';
 import '../services/teacher_course_service.dart';
 import '../../Student Folder/models/course_model.dart';
+import '../../shared/ui_helpers.dart';
 import '../../theme/app_colors.dart';
 
 /// Teacher Grading screen - Course-specific
@@ -459,16 +460,7 @@ class _TeacherGradingScreenState extends State<TeacherGradingScreen> {
   }
 
   void _saveMarks() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '$_selectedComponent marks saved for Section $_selectedSection!',
-        ),
-        backgroundColor: AppColors.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    showAppSnackBar(context, message: '$_selectedComponent marks saved for Section $_selectedSection!');
     setState(() => _selectedComponent = null);
   }
 }

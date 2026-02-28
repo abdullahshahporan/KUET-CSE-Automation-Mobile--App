@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/display_utils.dart';
 import '../models/course_model.dart';
 import '../../services/supabase_service.dart';
 import 'course_info_service.dart';
@@ -451,18 +452,9 @@ class _CourseInfoScreenState extends State<CourseInfoScreen> {
               fontWeight: FontWeight.bold,
             ),
             items: items.map((item) {
-              final suffix = label == 'Year'
-                  ? (item == 1
-                        ? 'st'
-                        : item == 2
-                        ? 'nd'
-                        : item == 3
-                        ? 'rd'
-                        : 'th')
-                  : (item == 1 ? 'st' : 'nd');
               return DropdownMenuItem(
                 value: item,
-                child: Text('$item$suffix $label'),
+                child: Text('${DisplayUtils.ordinal(item)} $label'),
               );
             }).toList(),
             onChanged: onChanged,

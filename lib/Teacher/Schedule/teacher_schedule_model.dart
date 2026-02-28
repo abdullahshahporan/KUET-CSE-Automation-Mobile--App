@@ -1,3 +1,5 @@
+import '../../utils/time_utils.dart';
+
 /// Data model for a single teacher routine slot.
 class TeacherSlot {
   final String id;
@@ -43,20 +45,10 @@ class TeacherSlot {
   }
 
   /// e.g. "09:00 - 10:00"
-  String get timeRange {
-    String fmt(String t) => t.length >= 5 ? t.substring(0, 5) : t;
-    return '${fmt(startTime)} - ${fmt(endTime)}';
-  }
+  String get timeRange => TimeUtils.timeRange(startTime, endTime);
 
-  static const dayNames = [
-    'Sunday',
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-  ];
+  String get dayName => TimeUtils.dayName(dayOfWeek);
 
-  String get dayName => dayNames[dayOfWeek];
+  /// Backward-compatible static accessor for day names list.
+  static List<String> get dayNames => TimeUtils.dayNames;
 }

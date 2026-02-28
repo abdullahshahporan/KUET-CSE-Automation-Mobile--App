@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import '../../../services/supabase_service.dart';
+import '../../../utils/time_utils.dart';
 import '../../Home/Features/Schedule/class_schedule/class_schedule_models.dart';
 import '../../Home/Features/Schedule/class_schedule/class_schedule_providers.dart';
 
@@ -97,7 +97,7 @@ class UpcomingScheduleService {
               slots.map((s) => UpcomingClass.fromClassSchedule(s)).toList();
           dayLabel = offset == 1
               ? 'Tomorrow'
-              : _dayName(nextDow);
+              : TimeUtils.dayName(nextDow);
           break;
         }
       }
@@ -132,11 +132,4 @@ class UpcomingScheduleService {
     }
   }
 
-  static String _dayName(int dow) {
-    const days = [
-      'Sunday', 'Monday', 'Tuesday', 'Wednesday',
-      'Thursday', 'Friday', 'Saturday',
-    ];
-    return (dow >= 0 && dow < 7) ? days[dow] : 'Unknown';
-  }
 }

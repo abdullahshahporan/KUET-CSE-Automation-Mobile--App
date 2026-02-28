@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
 import '../../shared/profile_widgets.dart';
+import '../../utils/display_utils.dart';
 
 /// Utility helpers for term display and logic.
 class TermUtils {
@@ -20,9 +21,7 @@ class TermUtils {
     final parts = term.split('-');
     final y = int.tryParse(parts[0]) ?? 1;
     final s = int.tryParse(parts.length > 1 ? parts[1] : '1') ?? 1;
-    const yearSuffix = {1: 'st', 2: 'nd', 3: 'rd', 4: 'th'};
-    const semSuffix = {1: 'st', 2: 'nd'};
-    return '${y}${yearSuffix[y]} Year, ${s}${semSuffix[s]} Term';
+    return '${DisplayUtils.ordinal(y)} Year, ${DisplayUtils.ordinal(s)} Term';
   }
 }
 
@@ -196,7 +195,7 @@ class _UpgradeTermTileState extends State<UpgradeTermTile> {
                 ],
               ),
             ),
-            if (trailing != null) trailing!,
+            if (trailing != null) trailing,
           ],
         ),
       ),

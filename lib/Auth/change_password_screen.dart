@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../shared/ui_helpers.dart';
 import '../services/supabase_service.dart';
 import '../theme/app_colors.dart';
 
@@ -42,24 +43,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       setState(() => _isLoading = false);
 
       if (result['success'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Password changed successfully!'),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+        showAppSnackBar(context, message: 'Password changed successfully!');
         Navigator.pop(context);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Failed to change password'),
-            backgroundColor: AppColors.danger,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+        showAppSnackBar(context, message: result['message'] ?? 'Failed to change password', isSuccess: false);
       }
     }
   }
@@ -259,16 +246,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     );
   }
 
-  Widget _buildLabel(String text, bool isDarkMode) {
-    return Text(
-      text,
-      style: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: AppColors.textSecondary(isDarkMode),
-      ),
-    );
-  }
+  Widget _buildLabel(String text, bool isDarkMode) =>
+      FormSectionLabel(text: text, isDarkMode: isDarkMode);
 
   Widget _buildPasswordField({
     required TextEditingController controller,

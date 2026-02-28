@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../Auth/Sign_In_Screen.dart';
 import '../services/supabase_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/time_utils.dart';
+import 'ui_helpers.dart';
 
 /// Shared profile UI components used by both Student and Teacher profile screens.
 /// Eliminates code duplication across profile implementations.
@@ -382,26 +384,12 @@ Widget buildDarkModeToggle(bool isDarkMode, VoidCallback onToggle) {
 
 // ── SNACKBAR HELPER ───────────────────────────────────────────────────────────
 
+/// @deprecated Use [showAppSnackBar] from `ui_helpers.dart` instead.
 void showResultSnackBar(BuildContext context, {required bool success, required String message}) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(message),
-      backgroundColor: success ? AppColors.success : AppColors.danger,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    ),
-  );
+  showAppSnackBar(context, message: message, isSuccess: success);
 }
 
 // ── DATE FORMATTING ───────────────────────────────────────────────────────────
 
-String formatDate(String date) {
-  if (date == 'N/A' || date.isEmpty) return 'N/A';
-  try {
-    final d = DateTime.parse(date);
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return '${d.day} ${months[d.month - 1]} ${d.year}';
-  } catch (_) {
-    return date;
-  }
-}
+/// @deprecated Use [TimeUtils.formatDate] from `time_utils.dart` instead.
+String formatDate(String date) => TimeUtils.formatDate(date);

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/teacher_course.dart';
+import '../../shared/ui_helpers.dart';
 import '../../theme/app_colors.dart';
 
 /// Course-specific Announcements Screen
@@ -348,16 +349,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                           });
                         });
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('Announcement posted!'),
-                            backgroundColor: AppColors.success,
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        );
+                        showAppSnackBar(context, message: 'Announcement posted!');
                       }
                     },
                     style: ElevatedButton.styleFrom(
