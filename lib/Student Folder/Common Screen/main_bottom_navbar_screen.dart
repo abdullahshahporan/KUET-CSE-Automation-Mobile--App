@@ -10,6 +10,7 @@ import 'package:kuet_cse_automation/theme/app_colors.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/supabase_service.dart';
+import 'geo_attendance_floating_widget.dart';
 
 class MainBottomNavBarScreen extends StatefulWidget {
   const MainBottomNavBarScreen({super.key});
@@ -68,7 +69,17 @@ class _MainBottomNavBarScreenState extends State<MainBottomNavBarScreen> {
         },
         userName: _userName,
       ),
-      body: IndexedStack(index: _currentIndex, children: _screens),
+      body: Stack(
+        children: [
+          IndexedStack(index: _currentIndex, children: _screens),
+          const Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: GeoAttendanceFloatingWidget(),
+          ),
+        ],
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: isDarkMode ? AppColors.darkSurface : AppColors.lightSurface,

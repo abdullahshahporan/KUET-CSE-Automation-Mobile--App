@@ -12,6 +12,16 @@ CREATE TABLE public.admins (
   CONSTRAINT admins_pkey PRIMARY KEY (user_id),
   CONSTRAINT admins_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(user_id)
 );
+CREATE TABLE public.attendance (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  course_code text NOT NULL,
+  student_roll text NOT NULL,
+  date date NOT NULL,
+  status text NOT NULL CHECK (status = ANY (ARRAY['present'::text, 'absent'::text, 'late'::text])),
+  section_or_group text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT attendance_pkey PRIMARY KEY (id)
+);
 CREATE TABLE public.attendance_records (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   session_id uuid NOT NULL,
@@ -107,6 +117,36 @@ CREATE TABLE public.exams (
   CONSTRAINT exams_pkey PRIMARY KEY (id),
   CONSTRAINT exams_offering_id_fkey FOREIGN KEY (offering_id) REFERENCES public.course_offerings(id)
 );
+CREATE TABLE public.geo_attendance_logs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  geo_room_id uuid NOT NULL,
+  student_user_id uuid NOT NULL,
+  latitude double precision NOT NULL,
+  longitude double precision NOT NULL,
+  distance_meters double precision NOT NULL,
+  status text NOT NULL DEFAULT 'PRESENT'::text CHECK (status = ANY (ARRAY['PRESENT'::text, 'LATE'::text])),
+  submitted_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT geo_attendance_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT geo_attendance_logs_room_fkey FOREIGN KEY (geo_room_id) REFERENCES public.geo_attendance_rooms(id),
+  CONSTRAINT geo_attendance_logs_student_fkey FOREIGN KEY (student_user_id) REFERENCES public.students(user_id)
+);
+CREATE TABLE public.geo_attendance_rooms (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  offering_id uuid NOT NULL,
+  session_id uuid,
+  teacher_user_id uuid NOT NULL,
+  room_number text,
+  date date NOT NULL DEFAULT CURRENT_DATE,
+  start_time timestamp with time zone NOT NULL,
+  end_time timestamp with time zone NOT NULL,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  section text,
+  CONSTRAINT geo_attendance_rooms_pkey PRIMARY KEY (id),
+  CONSTRAINT geo_attendance_rooms_session_fkey FOREIGN KEY (session_id) REFERENCES public.class_sessions(id),
+  CONSTRAINT geo_attendance_rooms_teacher_fkey FOREIGN KEY (teacher_user_id) REFERENCES public.teachers(user_id),
+  CONSTRAINT geo_attendance_rooms_offering_fkey FOREIGN KEY (offering_id) REFERENCES public.course_offerings(id)
+);
 CREATE TABLE public.notices (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   title text NOT NULL,
@@ -135,6 +175,26 @@ CREATE TABLE public.profiles (
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT profiles_pkey PRIMARY KEY (user_id)
 );
+CREATE TABLE public.room_booking_requests (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  teacher_user_id uuid NOT NULL,
+  offering_id uuid NOT NULL,
+  room_number text NOT NULL,
+  day_of_week integer NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
+  start_period text NOT NULL,
+  end_period text NOT NULL,
+  start_time time without time zone NOT NULL,
+  end_time time without time zone NOT NULL,
+  section text,
+  purpose text,
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text])),
+  requested_at timestamp with time zone DEFAULT now(),
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT room_booking_requests_pkey PRIMARY KEY (id),
+  CONSTRAINT rbr_teacher_fkey FOREIGN KEY (teacher_user_id) REFERENCES public.teachers(user_id),
+  CONSTRAINT rbr_offering_fkey FOREIGN KEY (offering_id) REFERENCES public.course_offerings(id),
+  CONSTRAINT rbr_room_fkey FOREIGN KEY (room_number) REFERENCES public.rooms(room_number)
+);
 CREATE TABLE public.rooms (
   room_number text NOT NULL,
   building_name text,
@@ -157,30 +217,6 @@ CREATE TABLE public.routine_slots (
   CONSTRAINT routine_slots_pkey PRIMARY KEY (id),
   CONSTRAINT routine_slots_offering_id_fkey FOREIGN KEY (offering_id) REFERENCES public.course_offerings(id),
   CONSTRAINT routine_slots_room_number_fkey FOREIGN KEY (room_number) REFERENCES public.rooms(room_number)
-);
-CREATE TABLE public.room_booking_requests (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  teacher_user_id uuid NOT NULL,
-  offering_id uuid NOT NULL,
-  room_number text NOT NULL,
-  day_of_week integer NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
-  start_period text NOT NULL,
-  end_period text NOT NULL,
-  start_time time without time zone NOT NULL,
-  end_time time without time zone NOT NULL,
-  section text,
-  purpose text,
-  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text])),
-  admin_user_id uuid,
-  admin_remarks text,
-  requested_at timestamp with time zone DEFAULT now(),
-  reviewed_at timestamp with time zone,
-  created_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT room_booking_requests_pkey PRIMARY KEY (id),
-  CONSTRAINT rbr_teacher_fkey FOREIGN KEY (teacher_user_id) REFERENCES public.teachers(user_id),
-  CONSTRAINT rbr_offering_fkey FOREIGN KEY (offering_id) REFERENCES public.course_offerings(id),
-  CONSTRAINT rbr_room_fkey FOREIGN KEY (room_number) REFERENCES public.rooms(room_number),
-  CONSTRAINT rbr_admin_fkey FOREIGN KEY (admin_user_id) REFERENCES public.admins(user_id)
 );
 CREATE TABLE public.students (
   user_id uuid NOT NULL,

@@ -3,6 +3,7 @@ import 'models/teacher_course.dart';
 import '../Student Folder/models/course_model.dart';
 import '../theme/app_colors.dart';
 import 'Attendance/teacher_attendance_screen.dart';
+import 'Attendance/geo_attendance_room_screen.dart';
 import 'Grading/teacher_grading_screen.dart';
 import 'Schedule/teacher_schedule_screen.dart';
 import 'Announcements/announcements_screen.dart';
@@ -157,6 +158,22 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => CourseAttendanceScreen(course: widget.course),
+                        ),
+                      ),
+                    ),
+
+                    CourseActionCard(
+                      icon: Icons.location_on,
+                      title: 'Geo-Attendance',
+                      subtitle: 'Open proximity-based attendance room',
+                      color: const Color(0xFF0D9488),
+                      isDarkMode: isDarkMode,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => GeoAttendanceRoomScreen(
+                            preSelectedCourse: widget.course,
+                          ),
                         ),
                       ),
                     ),

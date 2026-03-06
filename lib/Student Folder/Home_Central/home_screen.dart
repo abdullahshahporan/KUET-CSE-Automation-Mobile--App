@@ -5,6 +5,7 @@ import 'package:kuet_cse_automation/theme/app_colors.dart';
 
 import '../../services/supabase_service.dart';
 import '../Attendance/attendance_screen.dart';
+import '../Attendance/student_geo_attendance_screen.dart';
 import '../Curriculum/curriculum_screen.dart';
 import 'widgets/upcoming_schedule_section.dart';
 
@@ -51,7 +52,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   // Welcome Section
                   _buildWelcomeSection(isDarkMode, _firstName),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 20),
+
+                  const SizedBox(height: 20),
 
                   // Features Section Header
                   Row(
@@ -76,7 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          '4 Items',
+                          '5 Items',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -156,6 +159,20 @@ class _HomeScreenState extends State<HomeScreen> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => const NoticeScreen(),
+                    ),
+                  ),
+                ),
+                _buildFeatureCard(
+                  context: context,
+                  icon: Icons.location_on_rounded,
+                  title: 'Geo-Attendance',
+                  subtitle: 'Location check-in',
+                  gradient: const [Color(0xFF0D9488), Color(0xFF0F766E)],
+                  isDarkMode: isDarkMode,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const StudentGeoAttendanceScreen(),
                     ),
                   ),
                 ),
