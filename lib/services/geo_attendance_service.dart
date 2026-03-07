@@ -196,7 +196,7 @@ class GeoAttendanceService {
           .eq('user_id', studentUserId)
           .single();
       final term = studentData['term'] as String;
-      final studentSection = studentData['section'] as String?;
+      //final studentSection = studentData['section'] as String?;
       final rollNo = studentData['roll_no'] as String? ?? '';
 
       // Close expired rooms (use UTC for correct comparison)
