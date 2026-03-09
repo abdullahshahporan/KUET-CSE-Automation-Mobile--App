@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../theme/app_colors.dart';
 import 'room_model.dart';
 import 'room_booking_model.dart';
@@ -22,6 +23,7 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
   Map<int, List<RoomSlot>> _booked = {};
   List<RoomBookingRequest> _bookings = [];
   int _selectedDay = 0;
+  DateTime? _selectedDate;
   bool _initialLoad = true;
 
   static const _dayOrder = [0, 1, 2, 3, 4, 5, 6]; // Sun–Sat
@@ -41,9 +43,16 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
 
   Future<void> _loadSchedule() async {
     setState(() => _isLoading = true);
-    final booked = await RoomService.fetchRoomSchedule(widget.room.roomNumber);
+    final booked = await RoomService.fetchRoomSchedule(
+      widget.room.roomNumber,
+      date: _selectedDate,
+    );
+    final bookingDateStr = _selectedDate != null
+        ? DateFormat('yyyy-MM-dd').format(_selectedDate!)
+        : null;
     final bookings = await RoomBookingService.fetchRoomBookings(
-        widget.room.roomNumber);
+        widget.room.roomNumber,
+        bookingDate: bookingDateStr);
     if (mounted) {
       setState(() {
         _booked = booked;
@@ -457,10 +466,14 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
 
   // ═══════════════════ Request Slot Tab ═══════════════════
   Widget _buildRequestTab(bool isDark) {
+    final bookingDateStr = _selectedDate != null
+        ? DateFormat('yyyy-MM-dd').format(_selectedDate!)
+        : null;
     final statuses = RoomBookingService.computePeriodStatuses(
       day: _selectedDay,
       routineSlots: _booked,
       bookings: _bookings,
+      bookingDate: bookingDateStr,
     );
 
     final freeCount = statuses.where((s) => s.state == PeriodState.free).length;
@@ -477,17 +490,100 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Day selector ──
+            // ── Date picker ──
             Row(
               children: [
                 Icon(Icons.calendar_today_outlined,
                     size: 14, color: AppColors.primary),
                 const SizedBox(width: 6),
-                Text('Select Day',
+                Text('Select Date',
                     style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 14,
                         color: AppColors.textPrimary(isDark))),
+              ],
+            ),
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: () async {
+                final now = DateTime.now();
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: _selectedDate ?? now,
+                  firstDate: now.subtract(const Duration(days: 30)),
+                  lastDate: now.add(const Duration(days: 60)),
+                  builder: (context, child) {
+                    return Theme(
+                      data: Theme.of(context).copyWith(
+                        colorScheme: Theme.of(context).colorScheme.copyWith(
+                          primary: AppColors.primary,
+                        ),
+                      ),
+                      child: child!,
+                    );
+                  },
+                );
+                if (picked != null) {
+                  setState(() {
+                    _selectedDate = picked;
+                    _selectedDay = picked.weekday == 7 ? 0 : picked.weekday;
+                  });
+                  _loadSchedule();
+                }
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 13),
+                decoration: BoxDecoration(
+                  color: AppColors.surface(isDark),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border(isDark)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_today,
+                        size: 16, color: AppColors.primary),
+                    const SizedBox(width: 10),
+                    Text(
+                      _selectedDate != null
+                          ? DateFormat('EEEE, MMM d, yyyy')
+                              .format(_selectedDate!)
+                          : 'Tap to select a date',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: _selectedDate != null
+                            ? AppColors.textPrimary(isDark)
+                            : AppColors.textSecondary(isDark),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 18),
+
+            // ── Day selector (auto-set from date, but also usable standalone) ──
+            Row(
+              children: [
+                Icon(Icons.view_week_outlined,
+                    size: 14, color: AppColors.primary),
+                const SizedBox(width: 6),
+                Text('Day',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: AppColors.textPrimary(isDark))),
+                if (_selectedDate != null) ...[  
+                  const SizedBox(width: 8),
+                  Text(
+                    '(from selected date)',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textSecondary(isDark)),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 10),

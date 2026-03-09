@@ -18,6 +18,7 @@ class TeacherScheduleService {
           .select('''
             id, offering_id, room_number, day_of_week,
             start_time, end_time, section,
+            valid_from, valid_until,
             course_offerings!inner (
               id, teacher_user_id, is_active,
               courses ( code, title, course_type )

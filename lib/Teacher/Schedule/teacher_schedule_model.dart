@@ -12,6 +12,8 @@ class TeacherSlot {
   final String endTime;
   final String? section;
   final String courseType; // Theory / Lab
+  final String? validFrom;
+  final String? validUntil;
 
   TeacherSlot({
     required this.id,
@@ -24,6 +26,8 @@ class TeacherSlot {
     required this.endTime,
     this.section,
     this.courseType = 'Theory',
+    this.validFrom,
+    this.validUntil,
   });
 
   factory TeacherSlot.fromMap(Map<String, dynamic> m) {
@@ -41,7 +45,22 @@ class TeacherSlot {
       endTime: m['end_time'] as String? ?? '',
       section: m['section'] as String?,
       courseType: course['course_type'] as String? ?? 'Theory',
+      validFrom: m['valid_from'] as String?,
+      validUntil: m['valid_until'] as String?,
     );
+  }
+
+  /// Whether this slot is valid on the given date.
+  bool isValidOnDate(DateTime date) {
+    if (validFrom != null) {
+      final from = DateTime.tryParse(validFrom!);
+      if (from != null && date.isBefore(from)) return false;
+    }
+    if (validUntil != null) {
+      final until = DateTime.tryParse(validUntil!);
+      if (until != null && date.isAfter(until)) return false;
+    }
+    return true;
   }
 
   /// e.g. "09:00 - 10:00"

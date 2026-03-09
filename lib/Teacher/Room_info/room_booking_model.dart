@@ -38,6 +38,7 @@ class RoomBookingRequest {
   final String? courseTitle;
   final String? teacherName;
   final DateTime? requestedAt;
+  final String? bookingDate; // yyyy-MM-dd
 
   RoomBookingRequest({
     required this.id,
@@ -56,6 +57,7 @@ class RoomBookingRequest {
     this.courseTitle,
     this.teacherName,
     this.requestedAt,
+    this.bookingDate,
   });
 
   factory RoomBookingRequest.fromMap(Map<String, dynamic> m) {
@@ -82,6 +84,7 @@ class RoomBookingRequest {
       requestedAt: m['requested_at'] != null
           ? DateTime.tryParse(m['requested_at'] as String)
           : null,
+      bookingDate: m['booking_date'] as String?,
     );
   }
 

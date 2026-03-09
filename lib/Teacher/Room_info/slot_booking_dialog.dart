@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../theme/app_colors.dart';
 import 'room_model.dart';
 import 'room_booking_model.dart';
@@ -6,8 +7,8 @@ import 'room_booking_service.dart';
 import 'room_service.dart';
 
 /// Professional "Add Routine Slot" dialog.
-/// Teacher picks Course, Room (pre-filled), Day, From/To Period
-/// and submits a booking request with timestamp-based conflict resolution.
+/// Teacher picks Course, Room (pre-filled), Date (derives day), From/To Period
+/// and submits a booking request with date-based conflict resolution.
 class SlotBookingDialog extends StatefulWidget {
   final Room room;
   final int initialDay;
@@ -30,6 +31,7 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
   List<Map<String, dynamic>> _offerings = [];
   Map<String, dynamic>? _selectedOffering;
   late int _selectedDay;
+  DateTime? _selectedDate;
   Period? _fromPeriod;
   Period? _toPeriod;
   String? _selectedSection;
@@ -42,12 +44,16 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
 
   static const _sections = ['A', 'B'];
 
-  /// Free periods for the currently selected day.
+  /// Free periods for the currently selected day (auto-synced from date).
   List<Period> get _freePeriods {
+    final bookingDateStr = _selectedDate != null
+        ? DateFormat('yyyy-MM-dd').format(_selectedDate!)
+        : null;
     final statuses = RoomBookingService.computePeriodStatuses(
       day: _selectedDay,
       routineSlots: widget.routineSlots,
       bookings: widget.bookings,
+      bookingDate: bookingDateStr,
     );
     return statuses
         .where((ps) => ps.state == PeriodState.free)
@@ -56,7 +62,7 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
   }
 
   bool get _canSubmit {
-    if (_selectedOffering == null || _isSubmitting) return false;
+    if (_selectedOffering == null || _isSubmitting || _selectedDate == null) return false;
     if (_useCustomTime) {
       return _customStart != null && _customEnd != null;
     }
@@ -95,6 +101,8 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
 
     BookingResult result;
 
+    final bookingDateStr = DateFormat('yyyy-MM-dd').format(_selectedDate!);
+
     if (_useCustomTime) {
       result = await RoomBookingService.submitCustomBookingRequest(
         roomNumber: widget.room.roomNumber,
@@ -102,6 +110,7 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
         dayOfWeek: _selectedDay,
         customStart: _customStart!,
         customEnd: _customEnd!,
+        bookingDate: bookingDateStr,
         section: _selectedSection,
       );
     } else {
@@ -111,6 +120,7 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
         dayOfWeek: _selectedDay,
         fromPeriod: _fromPeriod!,
         toPeriod: _toPeriod!,
+        bookingDate: bookingDateStr,
         section: _selectedSection,
       );
     }
@@ -278,22 +288,74 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
                   ),
                   const SizedBox(height: 18),
 
-                  // ── Day ──
+                  // ── Date (replaces day-only picker) ──
                   _sectionLabel(
-                      'Day', Icons.calendar_today_outlined, isDark),
+                      'Date', Icons.calendar_today_outlined, isDark),
                   const SizedBox(height: 8),
-                  _buildDropdown<int>(
-                    value: _selectedDay,
-                    hint: 'Select day',
-                    items: RoomService.workDays,
-                    labelFn: (d) => RoomSlot.dayNames[d],
-                    onChanged: (v) => setState(() {
-                      _selectedDay = v!;
-                      _fromPeriod = null;
-                      _toPeriod = null;
-                      _errorMessage = null;
-                    }),
-                    isDark: isDark,
+                  GestureDetector(
+                    onTap: () async {
+                      final now = DateTime.now();
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: _selectedDate ?? now,
+                        firstDate: now,
+                        lastDate: now.add(const Duration(days: 60)),
+                        builder: (context, child) {
+                          return Theme(
+                            data: Theme.of(context).copyWith(
+                              colorScheme: Theme.of(context).colorScheme.copyWith(
+                                primary: AppColors.primary,
+                              ),
+                            ),
+                            child: child!,
+                          );
+                        },
+                      );
+                      if (picked != null) {
+                        if (picked.weekday == DateTime.saturday) {
+                          if (mounted) {
+                            setState(() => _errorMessage = 'Saturday is not a valid class day');
+                          }
+                          return;
+                        }
+                        setState(() {
+                          _selectedDate = picked;
+                          _selectedDay = picked.weekday == 7 ? 0 : picked.weekday;
+                          _fromPeriod = null;
+                          _toPeriod = null;
+                          _errorMessage = null;
+                        });
+                      }
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 15),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.grey[850] : Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: AppColors.border(isDark)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.calendar_today,
+                              size: 16, color: AppColors.primary),
+                          const SizedBox(width: 10),
+                          Text(
+                            _selectedDate != null
+                                ? DateFormat('EEEE, MMM d, yyyy').format(_selectedDate!)
+                                : 'Tap to select date',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: _selectedDate != null
+                                  ? AppColors.textPrimary(isDark)
+                                  : AppColors.textSecondary(isDark),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 18),
 

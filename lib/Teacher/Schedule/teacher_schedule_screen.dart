@@ -16,6 +16,7 @@ class TeacherScheduleScreen extends StatefulWidget {
 class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
   Map<int, List<TeacherSlot>> _schedule = {};
   bool _isLoading = true;
+  DateTime _selectedDate = DateTime.now();
 
   /// Days to show (Sun–Thu typical for KUET)
   static const _displayDays = [0, 1, 2, 3, 4]; // Sun–Thu
@@ -41,6 +42,16 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
       }
       data = filtered;
     }
+
+    // Filter by date validity: keep permanent slots + date-scoped slots valid on selected date
+    final dateFiltered = <int, List<TeacherSlot>>{};
+    for (final entry in data.entries) {
+      final slots = entry.value
+          .where((s) => s.isValidOnDate(_selectedDate))
+          .toList();
+      if (slots.isNotEmpty) dateFiltered[entry.key] = slots;
+    }
+    data = dateFiltered;
 
     if (mounted) setState(() { _schedule = data; _isLoading = false; });
   }
@@ -83,6 +94,9 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
                   children: [
                     // Header card
                     _buildHeaderCard(isDarkMode),
+                    const SizedBox(height: 12),
+                    // Date picker
+                    _buildDatePicker(isDarkMode),
                     const SizedBox(height: 24),
                     // Day cards
                     ..._displayDays.map((d) => _buildDayCard(d, isDarkMode)),
@@ -90,6 +104,58 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildDatePicker(bool isDarkMode) {
+    final dateStr =
+        '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
+    return GestureDetector(
+      onTap: () async {
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: _selectedDate,
+          firstDate: DateTime(2024),
+          lastDate: DateTime(2030),
+        );
+        if (picked != null) {
+          setState(() => _selectedDate = picked);
+          _load();
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.calendar_today, size: 18,
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+            const SizedBox(width: 10),
+            Text(
+              dateStr,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: isDarkMode ? Colors.white : Colors.black87,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              'Tap to change date',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

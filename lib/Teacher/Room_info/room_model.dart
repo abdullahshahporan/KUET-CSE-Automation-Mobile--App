@@ -57,6 +57,8 @@ class RoomSlot {
   final String startTime;
   final String endTime;
   final String? section;
+  final String? validFrom;
+  final String? validUntil;
 
   RoomSlot({
     required this.id,
@@ -68,6 +70,8 @@ class RoomSlot {
     required this.startTime,
     required this.endTime,
     this.section,
+    this.validFrom,
+    this.validUntil,
   });
 
   factory RoomSlot.fromMap(Map<String, dynamic> m) {
@@ -85,7 +89,22 @@ class RoomSlot {
       startTime: m['start_time'] as String? ?? '',
       endTime: m['end_time'] as String? ?? '',
       section: m['section'] as String?,
+      validFrom: m['valid_from'] as String?,
+      validUntil: m['valid_until'] as String?,
     );
+  }
+
+  /// Whether this routine slot is valid on the given date.
+  bool isValidOnDate(DateTime date) {
+    if (validFrom != null) {
+      final from = DateTime.tryParse(validFrom!);
+      if (from != null && date.isBefore(from)) return false;
+    }
+    if (validUntil != null) {
+      final until = DateTime.tryParse(validUntil!);
+      if (until != null && date.isAfter(until)) return false;
+    }
+    return true;
   }
 
   /// e.g. "09:00 - 10:00"

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Home/Features/Notice/Notice_Screen.dart';
+import 'package:kuet_cse_automation/Student%20Folder/Home/Features/RoomRequest/cr_room_request_screen.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Home/Features/Schedule/unified_schedule_screen.dart';
 import 'package:kuet_cse_automation/theme/app_colors.dart';
 
@@ -7,6 +8,7 @@ import '../../services/supabase_service.dart';
 import '../Attendance/attendance_screen.dart';
 import '../Attendance/student_geo_attendance_screen.dart';
 import '../Curriculum/curriculum_screen.dart';
+import '../services/cr_room_request_service.dart';
 import 'widgets/upcoming_schedule_section.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -18,19 +20,24 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _firstName = 'Student';
+  bool _isCR = false;
   
   @override
   void initState() {
     super.initState();
-    _loadUserName();
+    _loadUserData();
   }
   
-  Future<void> _loadUserName() async {
+  Future<void> _loadUserData() async {
     final profile = await SupabaseService.getStudentProfile();
     if (mounted && profile != null) {
       setState(() {
         _firstName = SupabaseService.getFirstName(profile['full_name']);
       });
+    }
+    final isCR = await CRRoomRequestService.checkIsCR();
+    if (mounted) {
+      setState(() => _isCR = isCR);
     }
   }
 
@@ -79,7 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          '5 Items',
+                          _isCR ? '6 Items' : '5 Items',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -176,6 +183,21 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
+                if (_isCR)
+                  _buildFeatureCard(
+                    context: context,
+                    icon: Icons.meeting_room_rounded,
+                    title: 'Room Request',
+                    subtitle: 'CR room booking',
+                    gradient: const [Color(0xFFF97316), Color(0xFFEA580C)],
+                    isDarkMode: isDarkMode,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CRRoomRequestScreen(),
+                      ),
+                    ),
+                  ),
               ]),
             ),
           ),

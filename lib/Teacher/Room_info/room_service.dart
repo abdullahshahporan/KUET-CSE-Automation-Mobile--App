@@ -25,13 +25,16 @@ class RoomService {
   }
 
   // ─── Fetch schedule for a specific room ───────────────
+  /// If [date] is provided, only returns routine_slots valid on that date
+  /// (matching day_of_week and valid_from/valid_until range).
   static Future<Map<int, List<RoomSlot>>> fetchRoomSchedule(
-      String roomNumber) async {
+      String roomNumber, {DateTime? date}) async {
     try {
       final data = await SupabaseService.client
           .from('routine_slots')
           .select('''
             id, room_number, day_of_week, start_time, end_time, section,
+            valid_from, valid_until,
             course_offerings!inner (
               id, is_active,
               courses ( code, title, course_type ),
@@ -42,9 +45,17 @@ class RoomService {
           .eq('course_offerings.is_active', true)
           .order('start_time', ascending: true);
 
-      final slots = (data as List)
+      var slots = (data as List)
           .map((e) => RoomSlot.fromMap(e as Map<String, dynamic>))
           .toList();
+
+      // If a specific date is provided, filter by day match + validity range
+      if (date != null) {
+        final dayOfWeek = date.weekday == 7 ? 0 : date.weekday;
+        slots = slots
+            .where((s) => s.dayOfWeek == dayOfWeek && s.isValidOnDate(date))
+            .toList();
+      }
 
       // Group by day
       final grouped = <int, List<RoomSlot>>{};

@@ -6,21 +6,28 @@ import 'room_model.dart';
 
 /// Service for room booking requests (CRUD + period status computation).
 class RoomBookingService {
-  // ─── Fetch pending/approved bookings for a room ───────
+  // ─── Fetch pending/approved bookings for a room on a specific date ───────
   static Future<List<RoomBookingRequest>> fetchRoomBookings(
-      String roomNumber) async {
+      String roomNumber, {String? bookingDate}) async {
     try {
-      final data = await SupabaseService.client
+      var query = SupabaseService.client
           .from('room_booking_requests')
           .select('''
             id, teacher_user_id, offering_id, room_number,
             day_of_week, start_period, end_period,
             start_time, end_time, section, purpose, status, requested_at,
+            booking_date,
             course_offerings ( courses ( code, title ) ),
             teachers!rbr_teacher_fkey ( full_name )
           ''')
           .eq('room_number', roomNumber)
-          .eq('status', 'approved')
+          .eq('status', 'approved');
+
+      if (bookingDate != null) {
+        query = query.eq('booking_date', bookingDate);
+      }
+
+      final data = await query
           .order('day_of_week')
           .order('start_time');
 
@@ -43,6 +50,7 @@ class RoomBookingService {
     required int dayOfWeek,
     required Period fromPeriod,
     required Period toPeriod,
+    required String bookingDate,
     String? section,
     String? purpose,
   }) async {
@@ -52,12 +60,13 @@ class RoomBookingService {
     }
 
     try {
-      // 1. Check for conflicting bookings (same room, same day, overlapping periods)
+      // 1. Check for conflicting bookings (same room, same date, overlapping periods)
       final conflicts = await _checkConflicts(
         roomNumber: roomNumber,
         dayOfWeek: dayOfWeek,
         fromPeriod: fromPeriod,
         toPeriod: toPeriod,
+        bookingDate: bookingDate,
       );
 
       if (conflicts.isNotEmpty) {
@@ -81,10 +90,23 @@ class RoomBookingService {
         'end_period': toPeriod.label,
         'start_time': '${fromPeriod.start}:00',
         'end_time': '${toPeriod.end}:00',
+        'booking_date': bookingDate,
         'section': section,
         'purpose': purpose,
         'status': 'approved',
       });
+
+      // 3. Sync to routine_slots so schedule & TV display show this booking
+      await _syncToRoutineSlot(
+        offeringId: offeringId,
+        roomNumber: roomNumber,
+        dayOfWeek: dayOfWeek,
+        startTime: '${fromPeriod.start}:00',
+        endTime: '${toPeriod.end}:00',
+        bookingDate: bookingDate,
+        section: section,
+      );
+
       return const BookingResult(
           success: true, message: 'Slot booked successfully!');
     } catch (e) {
@@ -114,6 +136,7 @@ class RoomBookingService {
     required int dayOfWeek,
     required TimeOfDay customStart,
     required TimeOfDay customEnd,
+    required String bookingDate,
     String? section,
     String? purpose,
   }) async {
@@ -142,18 +165,19 @@ class RoomBookingService {
         '${customEnd.hour.toString().padLeft(2, '0')}:${customEnd.minute.toString().padLeft(2, '0')}';
 
     try {
-      // Check for time-based conflicts in the break window
+      // Check for time-based conflicts in the break window on this specific date
       final data = await SupabaseService.client
           .from('room_booking_requests')
           .select('''
             id, teacher_user_id, offering_id, room_number,
             day_of_week, start_period, end_period,
             start_time, end_time, section, purpose, status, requested_at,
+            booking_date,
             course_offerings ( courses ( code, title ) ),
             teachers!rbr_teacher_fkey ( full_name )
           ''')
           .eq('room_number', roomNumber)
-          .eq('day_of_week', dayOfWeek)
+          .eq('booking_date', bookingDate)
           .eq('status', 'approved')
           .order('requested_at', ascending: true);
 
@@ -186,10 +210,23 @@ class RoomBookingService {
         'end_period': 'Custom',
         'start_time': '$startStr:00',
         'end_time': '$endStr:00',
+        'booking_date': bookingDate,
         'section': section,
         'purpose': purpose,
         'status': 'approved',
       });
+
+      // Sync to routine_slots so schedule & TV display show this booking
+      await _syncToRoutineSlot(
+        offeringId: offeringId,
+        roomNumber: roomNumber,
+        dayOfWeek: dayOfWeek,
+        startTime: '$startStr:00',
+        endTime: '$endStr:00',
+        bookingDate: bookingDate,
+        section: section,
+      );
+
       return const BookingResult(
           success: true, message: 'Custom slot booked successfully!');
     } catch (e) {
@@ -206,6 +243,7 @@ class RoomBookingService {
     required int dayOfWeek,
     required Period fromPeriod,
     required Period toPeriod,
+    required String bookingDate,
   }) async {
     try {
       final data = await SupabaseService.client
@@ -214,11 +252,12 @@ class RoomBookingService {
             id, teacher_user_id, offering_id, room_number,
             day_of_week, start_period, end_period,
             start_time, end_time, section, purpose, status, requested_at,
+            booking_date,
             course_offerings ( courses ( code, title ) ),
             teachers!rbr_teacher_fkey ( full_name )
           ''')
           .eq('room_number', roomNumber)
-          .eq('day_of_week', dayOfWeek)
+          .eq('booking_date', bookingDate)
           .eq('status', 'approved')
           .order('requested_at', ascending: true);
 
@@ -261,14 +300,20 @@ class RoomBookingService {
     }
   }
 
-  // ─── Compute period statuses for a given day ──────────
+  // ─── Compute period statuses for a given date ──────────
+  /// Combines permanent routine slots (auto-synced by day_of_week) with
+  /// date-specific bookings to show the full schedule for a specific date.
   static List<PeriodStatus> computePeriodStatuses({
     required int day,
     required Map<int, List<RoomSlot>> routineSlots,
     required List<RoomBookingRequest> bookings,
+    String? bookingDate,
   }) {
     final daySlots = routineSlots[day] ?? [];
-    final dayBookings = bookings.where((b) => b.dayOfWeek == day).toList();
+    // Filter bookings for the specific date if provided
+    final dayBookings = bookingDate != null
+        ? bookings.where((b) => b.bookingDate == bookingDate).toList()
+        : bookings.where((b) => b.dayOfWeek == day).toList();
 
     return Period.all.map((period) {
       // 1. Check routine slots (permanent schedule)
@@ -302,6 +347,50 @@ class RoomBookingService {
       // 3. Otherwise free
       return PeriodStatus(period: period, state: PeriodState.free);
     }).toList();
+  }
+
+  // ─── Sync a booking to routine_slots for schedule & TV display ──
+  static Future<void> _syncToRoutineSlot({
+    required String offeringId,
+    required String roomNumber,
+    required int dayOfWeek,
+    required String startTime,
+    required String endTime,
+    required String bookingDate,
+    String? section,
+  }) async {
+    try {
+      // Check if a routine_slot already exists for this exact slot
+      final existing = await SupabaseService.client
+          .from('routine_slots')
+          .select('id')
+          .eq('offering_id', offeringId)
+          .eq('room_number', roomNumber)
+          .eq('day_of_week', dayOfWeek)
+          .eq('start_time', startTime)
+          .eq('valid_from', bookingDate)
+          .eq('valid_until', bookingDate)
+          .limit(1);
+
+      if ((existing as List).isNotEmpty) {
+        // Already synced
+        return;
+      }
+
+      await SupabaseService.client.from('routine_slots').insert({
+        'offering_id': offeringId,
+        'room_number': roomNumber,
+        'day_of_week': dayOfWeek,
+        'start_time': startTime,
+        'end_time': endTime,
+        'section': section,
+        'valid_from': bookingDate,
+        'valid_until': bookingDate,
+      });
+    } catch (e) {
+      debugPrint('Error syncing to routine_slots: $e');
+      // Non-fatal: booking itself succeeded, schedule sync is best-effort
+    }
   }
 
   static String _fmt(String t) => t.length >= 5 ? t.substring(0, 5) : t;
