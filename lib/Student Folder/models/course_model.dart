@@ -11,6 +11,7 @@ class Course {
   final int term;
   final String? description;
   final bool isElective;
+  final String? electiveGroup;
   final String? session;
   final String? batch;
 
@@ -25,6 +26,7 @@ class Course {
     required this.term,
     this.description,
     this.isElective = false,
+    this.electiveGroup,
     this.session,
     this.batch,
   });
@@ -70,6 +72,7 @@ class Course {
       term: termNum,
       description: courseData['description'] as String?,
       isElective: json['is_elective'] as bool? ?? false,
+      electiveGroup: json['elective_group'] as String?,
       session: _extractSession(offerings),
       batch: _extractBatch(offerings),
     );
