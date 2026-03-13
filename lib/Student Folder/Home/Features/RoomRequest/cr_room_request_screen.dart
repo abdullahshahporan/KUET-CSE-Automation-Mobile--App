@@ -43,7 +43,6 @@ class _CRRoomRequestScreenState extends State<CRRoomRequestScreen> {
   // Student info
   String _term = '';
   String _session = '';
-  String? _section;
   String? _selectedSection;
 
   @override
@@ -69,7 +68,6 @@ class _CRRoomRequestScreenState extends State<CRRoomRequestScreen> {
         final first = offerings.first;
         _term = first['term'] as String? ?? '';
         _session = first['session'] as String? ?? '';
-        _section = first['section'] as String?;
       }
 
       // Build unique courses list
@@ -144,7 +142,6 @@ class _CRRoomRequestScreenState extends State<CRRoomRequestScreen> {
         // Auto-select if only one teacher
         if (teachers.length == 1) {
           _selectedTeacher = teachers.first;
-          _section = teachers.first['section'] as String?;
         }
       } else {
         _teachersForCourse = [];
@@ -161,7 +158,6 @@ class _CRRoomRequestScreenState extends State<CRRoomRequestScreen> {
       _selectedStartTime = null;
       _selectedEndTime = null;
       _periodStatuses = [];
-      _section = teacher?['section'] as String?;
     });
   }
 
