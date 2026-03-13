@@ -12,6 +12,7 @@ import 'room_service.dart';
 class SlotBookingDialog extends StatefulWidget {
   final Room room;
   final int initialDay;
+  final DateTime? initialDate;
   final Map<int, List<RoomSlot>> routineSlots;
   final List<RoomBookingRequest> bookings;
 
@@ -19,6 +20,7 @@ class SlotBookingDialog extends StatefulWidget {
     super.key,
     required this.room,
     required this.initialDay,
+    this.initialDate,
     required this.routineSlots,
     required this.bookings,
   });
@@ -32,6 +34,9 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
   Map<String, dynamic>? _selectedOffering;
   late int _selectedDay;
   DateTime? _selectedDate;
+  Map<int, List<RoomSlot>> _availabilityRoutineSlots = {};
+  List<RoomBookingRequest> _availabilityBookings = [];
+  bool _isAvailabilityLoading = false;
   Period? _fromPeriod;
   Period? _toPeriod;
   String? _selectedSection;
@@ -44,15 +49,15 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
 
   static const _sections = ['A', 'B'];
 
-  /// Free periods for the currently selected day (auto-synced from date).
+  /// Free periods for the currently selected date.
   List<Period> get _freePeriods {
-    final bookingDateStr = _selectedDate != null
-        ? DateFormat('yyyy-MM-dd').format(_selectedDate!)
-        : null;
+    if (_selectedDate == null) return const [];
+
+    final bookingDateStr = DateFormat('yyyy-MM-dd').format(_selectedDate!);
     final statuses = RoomBookingService.computePeriodStatuses(
       day: _selectedDay,
-      routineSlots: widget.routineSlots,
-      bookings: widget.bookings,
+      routineSlots: _availabilityRoutineSlots,
+      bookings: _availabilityBookings,
       bookingDate: bookingDateStr,
     );
     return statuses
@@ -62,7 +67,12 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
   }
 
   bool get _canSubmit {
-    if (_selectedOffering == null || _isSubmitting || _selectedDate == null) return false;
+    if (_selectedOffering == null ||
+        _isSubmitting ||
+        _selectedDate == null ||
+        _isAvailabilityLoading) {
+      return false;
+    }
     if (_useCustomTime) {
       return _customStart != null && _customEnd != null;
     }
@@ -73,7 +83,13 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
   void initState() {
     super.initState();
     _selectedDay = widget.initialDay;
+    _selectedDate = widget.initialDate;
+    _availabilityRoutineSlots = widget.routineSlots;
+    _availabilityBookings = widget.bookings;
     _loadOfferings();
+    if (_selectedDate != null) {
+      _refreshAvailabilityForDate(_selectedDate!);
+    }
   }
 
   Future<void> _loadOfferings() async {
@@ -84,6 +100,28 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _refreshAvailabilityForDate(DateTime date) async {
+    setState(() {
+      _isAvailabilityLoading = true;
+    });
+
+    final routineSlots = await RoomService.fetchRoomSchedule(
+      widget.room.roomNumber,
+      date: date,
+    );
+    final bookings = await RoomBookingService.fetchRoomBookings(
+      widget.room.roomNumber,
+      bookingDate: DateFormat('yyyy-MM-dd').format(date),
+    );
+
+    if (!mounted) return;
+    setState(() {
+      _availabilityRoutineSlots = routineSlots;
+      _availabilityBookings = bookings;
+      _isAvailabilityLoading = false;
+    });
   }
 
   String _offeringLabel(Map<String, dynamic> o) {
@@ -149,7 +187,8 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
       child: _isLoading
           ? const SizedBox(
               height: 200,
-              child: Center(child: CircularProgressIndicator()))
+              child: Center(child: CircularProgressIndicator()),
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
               child: Column(
@@ -165,24 +204,32 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
                           color: AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(Icons.event_note,
-                            color: AppColors.primary, size: 22),
+                        child: const Icon(
+                          Icons.event_note,
+                          color: AppColors.primary,
+                          size: 22,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Request Slot',
-                                style: TextStyle(
-                                    fontSize: 19,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.textPrimary(isDark))),
-                            Text('Book a room for your class',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color:
-                                        AppColors.textSecondary(isDark))),
+                            Text(
+                              'Request Slot',
+                              style: TextStyle(
+                                fontSize: 19,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary(isDark),
+                              ),
+                            ),
+                            Text(
+                              'Book a room for your class',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary(isDark),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -194,9 +241,11 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
                           onTap: () => Navigator.pop(context),
                           child: Padding(
                             padding: const EdgeInsets.all(6),
-                            child: Icon(Icons.close,
-                                size: 18,
-                                color: AppColors.textSecondary(isDark)),
+                            child: Icon(
+                              Icons.close,
+                              size: 18,
+                              color: AppColors.textSecondary(isDark),
+                            ),
                           ),
                         ),
                       ),
@@ -213,19 +262,26 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
                         color: AppColors.danger.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color: AppColors.danger.withValues(alpha: 0.3)),
+                          color: AppColors.danger.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.error_outline,
-                              color: AppColors.danger, size: 18),
+                          const Icon(
+                            Icons.error_outline,
+                            color: AppColors.danger,
+                            size: 18,
+                          ),
                           const SizedBox(width: 10),
                           Expanded(
-                            child: Text(_errorMessage!,
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.danger,
-                                    fontWeight: FontWeight.w500)),
+                            child: Text(
+                              _errorMessage!,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.danger,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -241,56 +297,61 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
                     hint: 'Select a course...',
                     items: _offerings,
                     labelFn: _offeringLabel,
-                    onChanged: (v) =>
-                        setState(() => _selectedOffering = v),
+                    onChanged: (v) => setState(() => _selectedOffering = v),
                     isDark: isDark,
                   ),
                   const SizedBox(height: 18),
 
                   // ── Room (read-only) ──
-                  _sectionLabel(
-                      'Room', Icons.meeting_room_outlined, isDark),
+                  _sectionLabel('Room', Icons.meeting_room_outlined, isDark),
                   const SizedBox(height: 8),
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 15),
+                      horizontal: 14,
+                      vertical: 15,
+                    ),
                     decoration: BoxDecoration(
                       color: isDark ? Colors.grey[850] : Colors.grey[50],
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                          color: AppColors.border(isDark)),
+                      border: Border.all(color: AppColors.border(isDark)),
                     ),
                     child: Row(
                       children: [
                         Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color:
-                                AppColors.primary.withValues(alpha: 0.1),
+                            color: AppColors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.meeting_room,
-                              size: 16, color: AppColors.primary),
+                          child: const Icon(
+                            Icons.meeting_room,
+                            size: 16,
+                            color: AppColors.primary,
+                          ),
                         ),
                         const SizedBox(width: 10),
-                        Text(widget.room.roomNumber,
-                            style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary(isDark))),
+                        Text(
+                          widget.room.roomNumber,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary(isDark),
+                          ),
+                        ),
                         const Spacer(),
-                        Icon(Icons.lock_outline,
-                            size: 14,
-                            color: AppColors.textSecondary(isDark)),
+                        Icon(
+                          Icons.lock_outline,
+                          size: 14,
+                          color: AppColors.textSecondary(isDark),
+                        ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 18),
 
                   // ── Date (replaces day-only picker) ──
-                  _sectionLabel(
-                      'Date', Icons.calendar_today_outlined, isDark),
+                  _sectionLabel('Date', Icons.calendar_today_outlined, isDark),
                   const SizedBox(height: 8),
                   GestureDetector(
                     onTap: () async {
@@ -303,9 +364,8 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
                         builder: (context, child) {
                           return Theme(
                             data: Theme.of(context).copyWith(
-                              colorScheme: Theme.of(context).colorScheme.copyWith(
-                                primary: AppColors.primary,
-                              ),
+                              colorScheme: Theme.of(context).colorScheme
+                                  .copyWith(primary: AppColors.primary),
                             ),
                             child: child!,
                           );
@@ -314,37 +374,49 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
                       if (picked != null) {
                         if (picked.weekday == DateTime.saturday) {
                           if (mounted) {
-                            setState(() => _errorMessage = 'Saturday is not a valid class day');
+                            setState(
+                              () => _errorMessage =
+                                  'Saturday is not a valid class day',
+                            );
                           }
                           return;
                         }
                         setState(() {
                           _selectedDate = picked;
-                          _selectedDay = picked.weekday == 7 ? 0 : picked.weekday;
+                          _selectedDay = picked.weekday == 7
+                              ? 0
+                              : picked.weekday;
                           _fromPeriod = null;
                           _toPeriod = null;
                           _errorMessage = null;
                         });
+                        await _refreshAvailabilityForDate(picked);
                       }
                     },
                     child: Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 15),
+                        horizontal: 14,
+                        vertical: 15,
+                      ),
                       decoration: BoxDecoration(
                         color: isDark ? Colors.grey[850] : Colors.grey[50],
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                            color: AppColors.border(isDark)),
+                        border: Border.all(color: AppColors.border(isDark)),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.calendar_today,
-                              size: 16, color: AppColors.primary),
+                          Icon(
+                            Icons.calendar_today,
+                            size: 16,
+                            color: AppColors.primary,
+                          ),
                           const SizedBox(width: 10),
                           Text(
                             _selectedDate != null
-                                ? DateFormat('EEEE, MMM d, yyyy').format(_selectedDate!)
+                                ? DateFormat(
+                                    'EEEE, MMM d, yyyy',
+                                  ).format(_selectedDate!)
                                 : 'Tap to select date',
                             style: TextStyle(
                               fontSize: 14,
@@ -360,16 +432,14 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
                   const SizedBox(height: 18),
 
                   // ── Section ──
-                  _sectionLabel(
-                      'Section', Icons.group_outlined, isDark),
+                  _sectionLabel('Section', Icons.group_outlined, isDark),
                   const SizedBox(height: 8),
                   _buildDropdown<String>(
                     value: _selectedSection,
                     hint: 'Select section (optional)',
                     items: _sections,
                     labelFn: (s) => 'Section $s',
-                    onChanged: (v) =>
-                        setState(() => _selectedSection = v),
+                    onChanged: (v) => setState(() => _selectedSection = v),
                     isDark: isDark,
                   ),
                   const SizedBox(height: 18),
@@ -377,14 +447,20 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
                   // ── Time Slot Mode Toggle ──
                   Row(
                     children: [
-                      Icon(Icons.access_time_rounded,
-                          size: 14, color: AppColors.primary),
+                      Icon(
+                        Icons.access_time_rounded,
+                        size: 14,
+                        color: AppColors.primary,
+                      ),
                       const SizedBox(width: 6),
-                      Text('Time Slot',
-                          style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary(isDark))),
+                      Text(
+                        'Time Slot',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary(isDark),
+                        ),
+                      ),
                       const Spacer(),
                       Container(
                         padding: const EdgeInsets.all(2),
@@ -398,21 +474,27 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             _buildModeChip(
-                                'Period', !_useCustomTime, isDark,
-                                () => setState(() {
-                                      _useCustomTime = false;
-                                      _customStart = null;
-                                      _customEnd = null;
-                                      _errorMessage = null;
-                                    })),
+                              'Period',
+                              !_useCustomTime,
+                              isDark,
+                              () => setState(() {
+                                _useCustomTime = false;
+                                _customStart = null;
+                                _customEnd = null;
+                                _errorMessage = null;
+                              }),
+                            ),
                             _buildModeChip(
-                                'Custom', _useCustomTime, isDark,
-                                () => setState(() {
-                                      _useCustomTime = true;
-                                      _fromPeriod = null;
-                                      _toPeriod = null;
-                                      _errorMessage = null;
-                                    })),
+                              'Custom',
+                              _useCustomTime,
+                              isDark,
+                              () => setState(() {
+                                _useCustomTime = true;
+                                _fromPeriod = null;
+                                _toPeriod = null;
+                                _errorMessage = null;
+                              }),
+                            ),
                           ],
                         ),
                       ),
@@ -420,7 +502,23 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
                   ),
                   const SizedBox(height: 12),
 
-                  if (!_useCustomTime) ...[
+                  if (_selectedDate == null) ...[
+                    _buildHintBanner(
+                      'Select a date first to load occupied and free slots for that day.',
+                      isDark,
+                    ),
+                    const SizedBox(height: 12),
+                  ] else if (_isAvailabilityLoading) ...[
+                    _buildHintBanner(
+                      'Checking occupied slots for the selected date...',
+                      isDark,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  if (_selectedDate != null &&
+                      !_isAvailabilityLoading &&
+                      !_useCustomTime) ...[
                     // ── Standard Period Selectors ──
                     Row(
                       children: [
@@ -439,11 +537,12 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
                                   _fromPeriod = v;
                                   _errorMessage = null;
                                   if (_toPeriod != null &&
-                                      Period.all.indexWhere((x) =>
-                                              x.label ==
-                                              _toPeriod!.label) <
-                                          Period.all.indexWhere((x) =>
-                                              x.label == v!.label)) {
+                                      Period.all.indexWhere(
+                                            (x) => x.label == _toPeriod!.label,
+                                          ) <
+                                          Period.all.indexWhere(
+                                            (x) => x.label == v!.label,
+                                          )) {
                                     _toPeriod = null;
                                   }
                                 }),
@@ -481,34 +580,44 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(colors: [
-                          AppColors.accent.withValues(alpha: 0.06),
-                          AppColors.primary.withValues(alpha: 0.04),
-                        ]),
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.accent.withValues(alpha: 0.06),
+                            AppColors.primary.withValues(alpha: 0.04),
+                          ],
+                        ),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                            color:
-                                AppColors.accent.withValues(alpha: 0.2)),
+                          color: AppColors.accent.withValues(alpha: 0.2),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.free_breakfast_outlined,
-                                  size: 14, color: AppColors.accent),
+                              Icon(
+                                Icons.free_breakfast_outlined,
+                                size: 14,
+                                color: AppColors.accent,
+                              ),
                               const SizedBox(width: 6),
-                              Text('Break Period',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.accent)),
+                              Text(
+                                'Break Period',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.accent,
+                                ),
+                              ),
                               const Spacer(),
-                              Text('1:10 PM – 2:30 PM',
-                                  style: TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors
-                                          .textSecondary(isDark))),
+                              Text(
+                                '1:10 PM – 2:30 PM',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textSecondary(isDark),
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 14),
@@ -524,11 +633,13 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
                               ),
                               Padding(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 10),
-                                child: Icon(Icons.arrow_forward,
-                                    size: 16,
-                                    color:
-                                        AppColors.textSecondary(isDark)),
+                                  horizontal: 10,
+                                ),
+                                child: Icon(
+                                  Icons.arrow_forward,
+                                  size: 16,
+                                  color: AppColors.textSecondary(isDark),
+                                ),
                               ),
                               Expanded(
                                 child: _buildTimePicker(
@@ -567,8 +678,9 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
                         boxShadow: _canSubmit
                             ? [
                                 BoxShadow(
-                                  color: AppColors.primary
-                                      .withValues(alpha: 0.3),
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.3,
+                                  ),
                                   blurRadius: 12,
                                   offset: const Offset(0, 4),
                                 ),
@@ -582,21 +694,30 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
                                 width: 18,
                                 height: 18,
                                 child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white))
-                            : const Icon(Icons.send_rounded,
-                                color: Colors.white, size: 18),
-                        label: Text(
-                            _isSubmitting ? 'Submitting...' : 'Request Slot',
-                            style: const TextStyle(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.send_rounded,
                                 color: Colors.white,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600)),
+                                size: 18,
+                              ),
+                        label: Text(
+                          _isSubmitting ? 'Submitting...' : 'Request Slot',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
                           disabledBackgroundColor: Colors.transparent,
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14)),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                       ),
                     ),
@@ -610,16 +731,33 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
   // ─── Helpers ──────────────────────────────────────────
 
   Widget _sectionLabel(String text, IconData icon, bool isDark) => Row(
-        children: [
-          Icon(icon, size: 14, color: AppColors.primary),
-          const SizedBox(width: 6),
-          Text(text,
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary(isDark))),
-        ],
-      );
+    children: [
+      Icon(icon, size: 14, color: AppColors.primary),
+      const SizedBox(width: 6),
+      Text(
+        text,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textPrimary(isDark),
+        ),
+      ),
+    ],
+  );
+
+  Widget _buildHintBanner(String text, bool isDark) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: AppColors.primary.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+    ),
+    child: Text(
+      text,
+      style: TextStyle(fontSize: 12, color: AppColors.textSecondary(isDark)),
+    ),
+  );
 
   Widget _buildDropdown<T>({
     required T? value,
@@ -637,26 +775,41 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
             : AppColors.lightBackground,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-            color: AppColors.primary.withValues(alpha: 0.25), width: 1.2),
+          color: AppColors.primary.withValues(alpha: 0.25),
+          width: 1.2,
+        ),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
           value: value,
-          hint: Text(hint,
-              style: TextStyle(
-                  color: AppColors.textSecondary(isDark), fontSize: 13)),
+          hint: Text(
+            hint,
+            style: TextStyle(
+              color: AppColors.textSecondary(isDark),
+              fontSize: 13,
+            ),
+          ),
           isExpanded: true,
           borderRadius: BorderRadius.circular(14),
           dropdownColor: AppColors.surface(isDark),
-          icon: const Icon(Icons.keyboard_arrow_down,
-              color: AppColors.primary, size: 20),
+          icon: const Icon(
+            Icons.keyboard_arrow_down,
+            color: AppColors.primary,
+            size: 20,
+          ),
           items: items
-              .map((item) => DropdownMenuItem<T>(
+              .map(
+                (item) => DropdownMenuItem<T>(
                   value: item,
-                  child: Text(labelFn(item),
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textPrimary(isDark)))))
+                  child: Text(
+                    labelFn(item),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textPrimary(isDark),
+                    ),
+                  ),
+                ),
+              )
               .toList(),
           onChanged: onChanged,
         ),
@@ -681,38 +834,39 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
           ],
         ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-            color: AppColors.primary.withValues(alpha: 0.15)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.info_outline,
-              size: 16, color: AppColors.primary),
+          const Icon(Icons.info_outline, size: 16, color: AppColors.primary),
           const SizedBox(width: 10),
           Expanded(
             child: RichText(
               text: TextSpan(
                 style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary(isDark)),
+                  fontSize: 12,
+                  color: AppColors.textSecondary(isDark),
+                ),
                 children: [
                   const TextSpan(text: 'Term '),
                   TextSpan(
-                      text: term,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary)),
+                    text: term,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
                   const TextSpan(text: '  •  '),
                   TextSpan(
-                      text: session,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold)),
+                    text: session,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   if (batch.toString().isNotEmpty) ...[
                     const TextSpan(text: '  •  Batch '),
                     TextSpan(
-                        text: batch.toString(),
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold)),
+                      text: batch.toString(),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ],
                 ],
               ),
@@ -725,8 +879,7 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
 
   List<Period> _toOptions(List<Period> available) {
     if (_fromPeriod == null) return available;
-    final fromIdx =
-        Period.all.indexWhere((x) => x.label == _fromPeriod!.label);
+    final fromIdx = Period.all.indexWhere((x) => x.label == _fromPeriod!.label);
     return available.where((p) {
       final pIdx = Period.all.indexWhere((x) => x.label == p.label);
       return pIdx >= fromIdx;
@@ -735,7 +888,11 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
 
   // ─── Mode toggle chip ─────────────────────────────────
   Widget _buildModeChip(
-      String label, bool active, bool isDark, VoidCallback onTap) {
+    String label,
+    bool active,
+    bool isDark,
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -744,17 +901,19 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
         decoration: BoxDecoration(
           gradient: active
               ? const LinearGradient(
-                  colors: [AppColors.primary, AppColors.accent])
+                  colors: [AppColors.primary, AppColors.accent],
+                )
               : null,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Text(label,
-            style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: active
-                    ? Colors.white
-                    : AppColors.textSecondary(isDark))),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: active ? Colors.white : AppColors.textSecondary(isDark),
+          ),
+        ),
       ),
     );
   }
@@ -776,32 +935,39 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
               : AppColors.lightBackground,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-              color: value != null
-                  ? AppColors.accent.withValues(alpha: 0.4)
-                  : AppColors.border(isDark)),
+            color: value != null
+                ? AppColors.accent.withValues(alpha: 0.4)
+                : AppColors.border(isDark),
+          ),
         ),
         child: Column(
           children: [
-            Text(label,
-                style: TextStyle(
-                    fontSize: 10,
-                    color: AppColors.textSecondary(isDark))),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                color: AppColors.textSecondary(isDark),
+              ),
+            ),
             const SizedBox(height: 4),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.schedule,
-                    size: 14,
-                    color: value != null
-                        ? AppColors.accent
-                        : AppColors.textSecondary(isDark)),
+                Icon(
+                  Icons.schedule,
+                  size: 14,
+                  color: value != null
+                      ? AppColors.accent
+                      : AppColors.textSecondary(isDark),
+                ),
                 const SizedBox(width: 6),
                 Text(
                   value != null ? _formatTime12(value) : 'Tap to set',
                   style: TextStyle(
                     fontSize: 14,
-                    fontWeight:
-                        value != null ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: value != null
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                     color: value != null
                         ? AppColors.textPrimary(isDark)
                         : AppColors.textSecondary(isDark),
@@ -837,16 +1003,17 @@ class _SlotBookingDialogState extends State<SlotBookingDialog> {
           data: Theme.of(context).copyWith(
             timePickerTheme: TimePickerThemeData(
               backgroundColor: AppColors.surface(
-                  Theme.of(context).brightness == Brightness.dark),
+                Theme.of(context).brightness == Brightness.dark,
+              ),
               hourMinuteColor: AppColors.primary.withValues(alpha: 0.1),
               dialHandColor: AppColors.primary,
               dialBackgroundColor: AppColors.primary.withValues(alpha: 0.08),
               entryModeIconColor: AppColors.primary,
             ),
             colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: AppColors.primary,
-                  secondary: AppColors.accent,
-                ),
+              primary: AppColors.primary,
+              secondary: AppColors.accent,
+            ),
           ),
           child: child!,
         );

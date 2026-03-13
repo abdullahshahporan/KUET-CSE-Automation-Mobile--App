@@ -68,8 +68,11 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
         final year = CourseUtils.yearFromCode(courseCode);
         final termNum = CourseUtils.termFromCode(courseCode);
 
-        final typeStr = (course['course_type'] as String? ?? 'Theory').toLowerCase();
-        final courseType = typeStr == 'lab' ? CourseType.lab : CourseType.theory;
+        final typeStr = (course['course_type'] as String? ?? 'Theory')
+            .toLowerCase();
+        final courseType = typeStr == 'lab'
+            ? CourseType.lab
+            : CourseType.theory;
         final credit = (course['credit'] as num?)?.toDouble() ?? 3.0;
 
         return TeacherCourse(
@@ -80,8 +83,9 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
           year: year,
           term: termNum,
           expectedClasses: courseType == CourseType.lab
-              ? (credit * 6.67).round() // ~10 for 1.5 credit lab
-              : (credit * 6).round(),   // ~18 for 3 credit theory
+              ? (credit * 6.67)
+                    .round() // ~10 for 1.5 credit lab
+              : (credit * 6).round(), // ~18 for 3 credit theory
           sections: courseType == CourseType.theory ? ['A', 'B'] : [],
           groups: courseType == CourseType.lab ? ['A1', 'A2', 'B1', 'B2'] : [],
           teachers: [_teacherName],
@@ -113,15 +117,14 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
   // Load today's schedule from Supabase
   Future<void> _loadTodaySchedule() async {
     try {
-      final schedule = await TeacherScheduleService.fetchSchedule();
-      // DateTime.now().weekday: 1=Mon..7=Sun
-      // TeacherSlot.dayOfWeek: 0=Sun..6=Sat
-      final dartWeekday = DateTime.now().weekday; // 1=Mon..7=Sun
-      final dbDay = dartWeekday == 7 ? 0 : dartWeekday; // Convert to 0=Sun..6=Sat
+      final schedule =
+          await TeacherScheduleService.fetchEffectiveScheduleForDate(
+            DateTime.now(),
+          );
 
       if (mounted) {
         setState(() {
-          _todaySlots = schedule[dbDay] ?? [];
+          _todaySlots = schedule;
           _loadingSchedule = false;
         });
       }
@@ -511,6 +514,22 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
                         style: TextStyle(
                           fontSize: 12,
                           color: AppColors.textSecondary(isDarkMode),
+                        ),
+                      ),
+                    ] else ...[
+                      const SizedBox(width: 16),
+                      Icon(
+                        Icons.room_preferences_outlined,
+                        size: 14,
+                        color: AppColors.warning,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Unassigned',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.warning,
                         ),
                       ),
                     ],

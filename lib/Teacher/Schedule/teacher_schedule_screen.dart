@@ -1,378 +1,715 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
+import '../../theme/app_colors.dart';
+import 'teacher_room_allocation_service.dart';
 import 'teacher_schedule_model.dart';
 import 'teacher_schedule_service.dart';
 
-/// Teacher Schedule screen — fetches from Supabase, supports edit/add/delete.
-class TeacherScheduleScreen extends StatefulWidget {
-  /// If provided, only show slots for this course code.
-  final String? courseCode;
+typedef TeacherScheduleLoader =
+    Future<List<TeacherSlot>> Function(DateTime date, {String? courseCode});
+typedef RoomAvailabilityLoader =
+    Future<List<RoomAvailabilityOption>> Function(
+      TeacherSlot slot,
+      DateTime date,
+    );
+typedef RoomAssigner =
+    Future<RoomAssignmentResult> Function({
+      required TeacherSlot slot,
+      required DateTime date,
+      required String roomNumber,
+    });
 
-  const TeacherScheduleScreen({super.key, this.courseCode});
+class TeacherScheduleScreen extends StatefulWidget {
+  final String? courseCode;
+  final DateTime? initialDate;
+  final TeacherScheduleLoader? scheduleLoader;
+  final RoomAvailabilityLoader? availabilityLoader;
+  final RoomAssigner? roomAssigner;
+
+  const TeacherScheduleScreen({
+    super.key,
+    this.courseCode,
+    this.initialDate,
+    this.scheduleLoader,
+    this.availabilityLoader,
+    this.roomAssigner,
+  });
 
   @override
   State<TeacherScheduleScreen> createState() => _TeacherScheduleScreenState();
 }
 
 class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
-  Map<int, List<TeacherSlot>> _schedule = {};
+  late DateTime _selectedDate;
   bool _isLoading = true;
-  DateTime _selectedDate = DateTime.now();
+  List<TeacherSlot> _slots = [];
 
-  /// Days to show (Sun–Thu typical for KUET)
-  static const _displayDays = [0, 1, 2, 3, 4]; // Sun–Thu
+  TeacherScheduleLoader get _scheduleLoader =>
+      widget.scheduleLoader ??
+      TeacherScheduleService.fetchEffectiveScheduleForDate;
+
+  RoomAvailabilityLoader get _availabilityLoader =>
+      widget.availabilityLoader ??
+      ((slot, date) =>
+          TeacherRoomAllocationService.fetchRoomAvailabilityForSlot(
+            slot: slot,
+            date: date,
+          ));
+
+  RoomAssigner get _roomAssigner =>
+      widget.roomAssigner ?? TeacherScheduleService.assignRoomForDate;
+
+  int get _assignedCount => _slots.where((slot) => slot.isAssigned).length;
 
   @override
   void initState() {
     super.initState();
+    _selectedDate = widget.initialDate ?? DateTime.now();
     _load();
   }
 
   Future<void> _load() async {
     setState(() => _isLoading = true);
-    var data = await TeacherScheduleService.fetchSchedule();
-
-    // Filter by course code if provided
-    if (widget.courseCode != null) {
-      final filtered = <int, List<TeacherSlot>>{};
-      for (final entry in data.entries) {
-        final slots = entry.value
-            .where((s) => s.courseCode == widget.courseCode)
-            .toList();
-        if (slots.isNotEmpty) filtered[entry.key] = slots;
-      }
-      data = filtered;
-    }
-
-    // Filter by date validity: keep permanent slots + date-scoped slots valid on selected date
-    final dateFiltered = <int, List<TeacherSlot>>{};
-    for (final entry in data.entries) {
-      final slots = entry.value
-          .where((s) => s.isValidOnDate(_selectedDate))
-          .toList();
-      if (slots.isNotEmpty) dateFiltered[entry.key] = slots;
-    }
-    data = dateFiltered;
-
-    if (mounted) setState(() { _schedule = data; _isLoading = false; });
+    final slots = await _scheduleLoader(
+      _selectedDate,
+      courseCode: widget.courseCode,
+    );
+    if (!mounted) return;
+    setState(() {
+      _slots = slots;
+      _isLoading = false;
+    });
   }
 
-  int get _totalClasses =>
-      _schedule.values.fold(0, (s, list) => s + list.length);
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2024),
+      lastDate: DateTime(2030),
+    );
+    if (picked == null) return;
+    setState(() => _selectedDate = picked);
+    await _load();
+  }
 
-  int get _courseCount {
-    final codes = <String>{};
-    for (final list in _schedule.values) {
-      for (final slot in list) {
-        codes.add(slot.courseCode);
-      }
-    }
-    return codes.length;
+  Future<void> _assignSlot(TeacherSlot slot) async {
+    final result = await showModalBottomSheet<RoomAssignmentResult>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _AssignRoomSheet(
+        slot: slot,
+        date: _selectedDate,
+        availabilityLoader: _availabilityLoader,
+        roomAssigner: _roomAssigner,
+      ),
+    );
+
+    if (result == null || !result.success) return;
+    await _load();
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(result.message),
+        backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dateText = DateFormat('EEEE, MMM d, yyyy').format(_selectedDate);
+    final unassignedCount = _slots.length - _assignedCount;
 
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.grey[100],
+      backgroundColor: AppColors.background(isDark),
       appBar: AppBar(
-        title: Text(widget.courseCode != null
-            ? '${widget.courseCode} Schedule'
-            : 'My Schedule'),
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        title: Text(
+          widget.courseCode != null
+              ? '${widget.courseCode} Allocation'
+              : 'Room Allocation',
+        ),
+        backgroundColor: AppColors.surface(isDark),
         elevation: 0,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            )
           : RefreshIndicator(
+              color: AppColors.primary,
               onRefresh: _load,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header card
-                    _buildHeaderCard(isDarkMode),
-                    const SizedBox(height: 12),
-                    // Date picker
-                    _buildDatePicker(isDarkMode),
-                    const SizedBox(height: 24),
-                    // Day cards
-                    ..._displayDays.map((d) => _buildDayCard(d, isDarkMode)),
-                  ],
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
                 ),
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _buildHero(dateText),
+                  const SizedBox(height: 14),
+                  _buildDatePicker(isDark, dateText),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStat(
+                          'Total',
+                          _slots.length,
+                          AppColors.info,
+                          isDark,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _buildStat(
+                          'Assigned',
+                          _assignedCount,
+                          AppColors.success,
+                          isDark,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _buildStat(
+                          'Unassigned',
+                          unassignedCount,
+                          AppColors.warning,
+                          isDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  if (_slots.isEmpty)
+                    _buildEmptyState(isDark)
+                  else
+                    ..._slots.map((slot) => _buildSlotCard(slot, isDark)),
+                ],
               ),
             ),
     );
   }
 
-  Widget _buildDatePicker(bool isDarkMode) {
-    final dateStr =
-        '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
-    return GestureDetector(
-      onTap: () async {
-        final picked = await showDatePicker(
-          context: context,
-          initialDate: _selectedDate,
-          firstDate: DateTime(2024),
-          lastDate: DateTime(2030),
-        );
-        if (picked != null) {
-          setState(() => _selectedDate = picked);
-          _load();
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+  Widget _buildHero(String dateText) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, AppColors.accent],
+        ),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.meeting_room_outlined, color: Colors.white),
           ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Allocate Rooms by Date',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  dateText,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.88),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDatePicker(bool isDark, String dateText) {
+    return InkWell(
+      onTap: _pickDate,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surface(isDark),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border(isDark)),
         ),
         child: Row(
           children: [
-            Icon(Icons.calendar_today, size: 18,
-                color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+            const Icon(
+              Icons.calendar_today,
+              size: 16,
+              color: AppColors.primary,
+            ),
             const SizedBox(width: 10),
-            Text(
-              dateStr,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: isDarkMode ? Colors.white : Colors.black87,
+            Expanded(
+              child: Text(
+                dateText,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary(isDark),
+                ),
               ),
             ),
-            const Spacer(),
-            Text(
-              'Tap to change date',
-              style: TextStyle(
-                fontSize: 12,
-                color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
-              ),
-            ),
+            const Text('Change', style: TextStyle(color: AppColors.primary)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeaderCard(bool isDarkMode) {
+  Widget _buildStat(String label, int value, Color color, bool isDark) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.purple[600]!, Colors.indigo[500]!],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.purple.withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
+        color: AppColors.surface(isDark),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
-      child: Row(
+      child: Column(
         children: [
-          const Icon(Icons.schedule, color: Colors.white, size: 28),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Weekly Schedule',
-                style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              Text(
-                widget.courseCode != null
-                    ? '$_totalClasses Classes/Week'
-                    : '$_courseCount Courses | $_totalClasses Classes/Week',
-                style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14),
-              ),
-            ],
+          Text(
+            '$value',
+            style: TextStyle(
+              color: color,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary(isDark),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDayCard(int day, bool isDarkMode) {
-    final slots = _schedule[day] ?? [];
-    final isToday = _isTodayDay(day);
-    final dayName = TeacherSlot.dayNames[day];
-
+  Widget _buildEmptyState(bool isDark) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: isToday ? Border.all(color: Colors.purple, width: 2) : null,
+        color: AppColors.surface(isDark),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border(isDark)),
       ),
       child: Column(
+        children: [
+          Icon(
+            Icons.event_busy_outlined,
+            size: 36,
+            color: AppColors.primary.withValues(alpha: 0.6),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'No classes scheduled for this date',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: AppColors.textPrimary(isDark),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSlotCard(TeacherSlot slot, bool isDark) {
+    final highlight = slot.isAssigned ? AppColors.success : AppColors.warning;
+    final isLab =
+        slot.courseType.toLowerCase().contains('lab') ||
+        slot.courseType.toLowerCase().contains('sessional');
+    final stripColor = isLab ? AppColors.accent : AppColors.primary;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface(isDark),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: highlight.withValues(alpha: 0.2)),
+      ),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Day header
           Container(
-            padding: const EdgeInsets.all(16),
+            width: 4,
+            height: 88,
             decoration: BoxDecoration(
-              color: isToday
-                  ? Colors.purple.withOpacity(0.1)
-                  : (isDarkMode ? Colors.grey[850] : Colors.grey[100]),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
-              ),
+              color: stripColor,
+              borderRadius: BorderRadius.circular(4),
             ),
-            child: Row(
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  dayName,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isToday
-                        ? Colors.purple
-                        : (isDarkMode ? Colors.white : Colors.black87),
-                  ),
-                ),
-                if (isToday) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.purple,
-                      borderRadius: BorderRadius.circular(10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        slot.courseCode,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: AppColors.textPrimary(isDark),
+                        ),
+                      ),
                     ),
-                    child: const Text('Today',
-                        style: TextStyle(color: Colors.white, fontSize: 11)),
-                  ),
-                ],
-                const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: highlight.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        slot.isAssigned ? 'Allocated' : 'Unassigned',
+                        style: TextStyle(
+                          color: highlight,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
                 Text(
-                  '${slots.length} ${slots.length == 1 ? 'class' : 'classes'}',
+                  slot.courseTitle,
+                  style: TextStyle(color: AppColors.textSecondary(isDark)),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  '${slot.timeRange}${(slot.section ?? '').isNotEmpty ? ' • Section ${slot.section}' : ''}',
                   style: TextStyle(
-                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                    fontSize: 13,
+                    fontSize: 12,
+                    color: AppColors.textSecondary(isDark),
                   ),
                 ),
-
+                const SizedBox(height: 6),
+                Text(
+                  slot.isAssigned
+                      ? 'Room: ${slot.roomNumber}'
+                      : 'Room: Unassigned',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: slot.isAssigned
+                        ? AppColors.success
+                        : AppColors.warning,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (slot.isAssigned)
+                  Text(
+                    'Previously allocated classes cannot be reassigned here.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary(isDark),
+                    ),
+                  )
+                else
+                  OutlinedButton.icon(
+                    onPressed: () => _assignSlot(slot),
+                    icon: const Icon(Icons.add_business_outlined, size: 16),
+                    label: const Text('Assign Room'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: BorderSide(
+                        color: AppColors.primary.withValues(alpha: 0.25),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
-          // Slots
-          if (slots.isEmpty)
+        ],
+      ),
+    );
+  }
+}
+
+class _AssignRoomSheet extends StatefulWidget {
+  final TeacherSlot slot;
+  final DateTime date;
+  final RoomAvailabilityLoader availabilityLoader;
+  final RoomAssigner roomAssigner;
+
+  const _AssignRoomSheet({
+    required this.slot,
+    required this.date,
+    required this.availabilityLoader,
+    required this.roomAssigner,
+  });
+
+  @override
+  State<_AssignRoomSheet> createState() => _AssignRoomSheetState();
+}
+
+class _AssignRoomSheetState extends State<_AssignRoomSheet> {
+  bool _isLoading = true;
+  bool _isSubmitting = false;
+  String? _selectedRoom;
+  String? _errorMessage;
+  List<RoomAvailabilityOption> _options = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadOptions();
+  }
+
+  Future<void> _loadOptions() async {
+    final options = await widget.availabilityLoader(widget.slot, widget.date);
+    if (!mounted) return;
+    setState(() {
+      _options = options;
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _submit() async {
+    if (_selectedRoom == null || _isSubmitting) return;
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
+
+    final result = await widget.roomAssigner(
+      slot: widget.slot,
+      date: widget.date,
+      roomNumber: _selectedRoom!,
+    );
+
+    if (!mounted) return;
+    if (result.success) {
+      Navigator.of(context).pop(result);
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = false;
+      _errorMessage = result.message;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface(isDark),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Assign Room',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary(isDark),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${widget.slot.courseCode} • ${widget.slot.timeRange}',
+            style: TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary(isDark),
+            ),
+          ),
+          if (_errorMessage != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              _errorMessage!,
+              style: const TextStyle(
+                color: AppColors.danger,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
+          if (_isLoading)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: CircularProgressIndicator(color: AppColors.primary),
+              ),
+            )
+          else if (_options.isEmpty)
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(vertical: 24),
               child: Text(
-                'No classes scheduled',
+                'No rooms are available to evaluate right now.',
                 style: TextStyle(
-                  color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
-                  fontStyle: FontStyle.italic,
+                  fontSize: 13,
+                  color: AppColors.textSecondary(isDark),
                 ),
               ),
             )
           else
-            ...slots.map((s) => _buildSlotItem(s, isDarkMode)),
+            SizedBox(
+              height: 340,
+              child: ListView.separated(
+                itemCount: _options.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (_, index) {
+                  final option = _options[index];
+                  final selected = _selectedRoom == option.room.roomNumber;
+                  return InkWell(
+                    onTap: option.isAvailable
+                        ? () => setState(
+                            () => _selectedRoom = option.room.roomNumber,
+                          )
+                        : null,
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceElevated(isDark),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: selected
+                              ? AppColors.primary
+                              : option.isAvailable
+                              ? AppColors.border(isDark)
+                              : AppColors.danger.withValues(alpha: 0.2),
+                          width: selected ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  option.room.roomNumber,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textPrimary(isDark),
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                option.isAvailable
+                                    ? 'Available'
+                                    : 'Unavailable',
+                                style: TextStyle(
+                                  color: option.isAvailable
+                                      ? AppColors.success
+                                      : AppColors.danger,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            [
+                              if ((option.room.buildingName ?? '').isNotEmpty)
+                                option.room.buildingName!,
+                              '${option.room.capacity} seats',
+                              option.room.roomType,
+                            ].join(' • '),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary(isDark),
+                            ),
+                          ),
+                          if ((option.conflictLabel ?? '').isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              option.conflictLabel!,
+                              style: const TextStyle(
+                                color: AppColors.danger,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton.icon(
+              onPressed: _selectedRoom != null && !_isSubmitting
+                  ? _submit
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+              ),
+              icon: _isSubmitting
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.check_circle_outline,
+                      size: 18,
+                      color: Colors.white,
+                    ),
+              label: Text(
+                _isSubmitting ? 'Assigning...' : 'Confirm Room Allocation',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
-  }
-
-  Widget _buildSlotItem(TeacherSlot slot, bool isDarkMode) {
-    final isLab = slot.courseType.toLowerCase().contains('lab') ||
-        slot.courseType.toLowerCase().contains('sessional');
-    final color = isLab ? Colors.purple : Colors.blue;
-
-    return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            Container(
-              width: 4,
-              height: 50,
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          slot.courseCode,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: isDarkMode ? Colors.white : Colors.black87,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (slot.section != null && slot.section!.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: color.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            slot.section!,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: color,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    slot.courseTitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
-                      const SizedBox(width: 4),
-                      Text(slot.timeRange,
-                          style: TextStyle(fontSize: 13, color: Colors.grey[500])),
-                      const SizedBox(width: 12),
-                      Icon(Icons.room, size: 14, color: Colors.grey[500]),
-                      const SizedBox(width: 4),
-                      Text(slot.roomNumber,
-                          style: TextStyle(fontSize: 13, color: Colors.grey[500])),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-    );
-  }
-
-  bool _isTodayDay(int dayOfWeek) {
-    // DateTime.now().weekday: 1=Mon…7=Sun → convert to 0=Sun…6=Sat
-    final now = DateTime.now().weekday; // 1-7
-    final todayIndex = now == 7 ? 0 : now; // Sun=0
-    return todayIndex == dayOfWeek;
   }
 }

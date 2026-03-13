@@ -39,6 +39,7 @@ class RoomBookingRequest {
   final String? teacherName;
   final DateTime? requestedAt;
   final String? bookingDate; // yyyy-MM-dd
+  final String requestSource; // teacher | cr
 
   RoomBookingRequest({
     required this.id,
@@ -58,6 +59,7 @@ class RoomBookingRequest {
     this.teacherName,
     this.requestedAt,
     this.bookingDate,
+    this.requestSource = 'teacher',
   });
 
   factory RoomBookingRequest.fromMap(Map<String, dynamic> m) {
@@ -85,6 +87,34 @@ class RoomBookingRequest {
           ? DateTime.tryParse(m['requested_at'] as String)
           : null,
       bookingDate: m['booking_date'] as String?,
+      requestSource: 'teacher',
+    );
+  }
+
+  factory RoomBookingRequest.fromCrRoomRequestMap(Map<String, dynamic> m) {
+    final teacher = m['teachers'] as Map<String, dynamic>? ?? {};
+
+    return RoomBookingRequest(
+      id: m['id'] as String,
+      teacherUserId: m['teacher_user_id'] as String? ?? '',
+      offeringId: null,
+      roomNumber: m['room_number'] as String? ?? '',
+      dayOfWeek: m['day_of_week'] as int? ?? 0,
+      startPeriod: 'CR',
+      endPeriod: 'CR',
+      startTime: m['start_time'] as String? ?? '',
+      endTime: m['end_time'] as String? ?? '',
+      section: m['section'] as String?,
+      purpose: m['reason'] as String?,
+      status: m['status'] as String? ?? 'approved',
+      courseCode: m['course_code'] as String?,
+      courseTitle: null,
+      teacherName: teacher['full_name'] as String?,
+      requestedAt: m['created_at'] != null
+          ? DateTime.tryParse(m['created_at'] as String)
+          : null,
+      bookingDate: m['request_date'] as String?,
+      requestSource: 'cr',
     );
   }
 
@@ -93,11 +123,23 @@ class RoomBookingRequest {
   /// Whether this is a custom break-period booking.
   bool get isCustom => startPeriod == 'Custom';
 
+  bool get isCrRequest => requestSource == 'cr';
+
   /// Check if this booking covers a specific period.
   bool coversPeriod(Period p) {
     final startIdx = Period.all.indexWhere((x) => x.label == startPeriod);
     final endIdx = Period.all.indexWhere((x) => x.label == endPeriod);
     final pIdx = Period.all.indexWhere((x) => x.label == p.label);
-    return pIdx >= startIdx && pIdx <= endIdx;
+
+    if (startIdx >= 0 && endIdx >= 0 && pIdx >= 0) {
+      return pIdx >= startIdx && pIdx <= endIdx;
+    }
+
+    final bookingStart = _fmt(startTime);
+    final bookingEnd = _fmt(endTime);
+    return bookingStart.compareTo(p.end) < 0 &&
+        bookingEnd.compareTo(p.start) > 0;
   }
+
+  static String _fmt(String t) => t.length >= 5 ? t.substring(0, 5) : t;
 }

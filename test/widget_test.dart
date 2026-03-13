@@ -17,7 +17,7 @@ void main() {
 
     // Verify that the app launches without errors
     await tester.pumpAndSettle();
-    
+
     // Basic smoke test - app should have loaded
     expect(find.byType(MaterialApp), findsOneWidget);
   });

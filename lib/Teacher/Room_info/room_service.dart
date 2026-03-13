@@ -7,12 +7,48 @@ class RoomService {
   /// Working days: Sun(0) – Thu(4) for Bangladesh.
   static const workDays = [0, 1, 2, 3, 4];
 
+  /// Return normalized variants for a room label so schedule data remains
+  /// readable even when different tables store the same room differently.
+  static List<String> roomNumberVariants(String roomNumber) {
+    final variants = <String>{};
+
+    void addVariant(String value) {
+      final trimmed = value.trim();
+      if (trimmed.isEmpty) return;
+      variants.add(trimmed);
+      variants.add(trimmed.toUpperCase());
+    }
+
+    addVariant(roomNumber);
+
+    final compact = roomNumber.replaceAll(RegExp(r'\s+'), ' ').trim();
+    addVariant(compact);
+
+    final collapsed = roomNumber.replaceAll(RegExp(r'[\s_-]+'), '');
+    addVariant(collapsed);
+
+    for (final part in roomNumber.split(RegExp(r'[-_/\s]+'))) {
+      addVariant(part);
+    }
+
+    final trailingToken = RegExp(
+      r'([A-Za-z]*\d+[A-Za-z]*)$',
+    ).firstMatch(compact);
+    if (trailingToken != null) {
+      addVariant(trailingToken.group(1)!);
+    }
+
+    return variants.toList();
+  }
+
   // ─── Fetch all active rooms ───────────────────────────
   static Future<List<Room>> fetchAllRooms() async {
     try {
       final data = await SupabaseService.client
           .from('rooms')
-          .select('room_number, building_name, capacity, room_type, facilities, is_active')
+          .select(
+            'room_number, building_name, capacity, room_type, facilities, is_active',
+          )
           .eq('is_active', true)
           .order('room_number');
       return (data as List)
@@ -28,8 +64,11 @@ class RoomService {
   /// If [date] is provided, only returns routine_slots valid on that date
   /// (matching day_of_week and valid_from/valid_until range).
   static Future<Map<int, List<RoomSlot>>> fetchRoomSchedule(
-      String roomNumber, {DateTime? date}) async {
+    String roomNumber, {
+    DateTime? date,
+  }) async {
     try {
+      final roomVariants = roomNumberVariants(roomNumber);
       final data = await SupabaseService.client
           .from('routine_slots')
           .select('''
@@ -41,7 +80,7 @@ class RoomService {
               teachers ( full_name )
             )
           ''')
-          .eq('room_number', roomNumber)
+          .inFilter('room_number', roomVariants)
           .eq('course_offerings.is_active', true)
           .order('start_time', ascending: true);
 
@@ -71,5 +110,4 @@ class RoomService {
       return {};
     }
   }
-
 }

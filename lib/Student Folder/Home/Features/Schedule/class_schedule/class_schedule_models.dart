@@ -37,14 +37,14 @@ class ClassSchedule {
     final startTime = json['start_time'] as String? ?? '00:00:00';
     final endTime = json['end_time'] as String? ?? '00:00:00';
     final dayOfWeek = json['day_of_week'] as int? ?? 0;
-    final roomNumber = json['room_number'] as String? ?? 'TBA';
+    final roomNumber = (json['room_number'] as String?)?.trim();
 
     return ClassSchedule(
       id: (json['id'] ?? '').toString(),
       courseName: course['title'] as String? ?? 'Unknown Course',
       courseCode: course['code'] as String? ?? '',
       teacher: teacher['full_name'] as String? ?? 'TBA',
-      room: roomNumber,
+      room: (roomNumber == null || roomNumber.isEmpty) ? 'TBA' : roomNumber,
       startTime: startTime,
       endTime: endTime,
       time: TimeUtils.timeRange12h(startTime, endTime),

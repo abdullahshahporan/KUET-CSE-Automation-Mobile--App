@@ -51,8 +51,9 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
         ? DateFormat('yyyy-MM-dd').format(_selectedDate!)
         : null;
     final bookings = await RoomBookingService.fetchRoomBookings(
-        widget.room.roomNumber,
-        bookingDate: bookingDateStr);
+      widget.room.roomNumber,
+      bookingDate: bookingDateStr,
+    );
     if (mounted) {
       setState(() {
         _booked = booked;
@@ -81,8 +82,11 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
         backgroundColor: AppColors.surface(isDark),
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new,
-              size: 18, color: AppColors.textPrimary(isDark)),
+          icon: Icon(
+            Icons.arrow_back_ios_new,
+            size: 18,
+            color: AppColors.textPrimary(isDark),
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
@@ -93,23 +97,32 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
                 color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.meeting_room,
-                  color: AppColors.primary, size: 18),
+              child: const Icon(
+                Icons.meeting_room,
+                color: AppColors.primary,
+                size: 18,
+              ),
             ),
             const SizedBox(width: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(widget.room.roomNumber,
-                    style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary(isDark))),
+                Text(
+                  widget.room.roomNumber,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary(isDark),
+                  ),
+                ),
                 if (widget.room.buildingName != null)
-                  Text(widget.room.buildingName!,
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textSecondary(isDark))),
+                  Text(
+                    widget.room.buildingName!,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textSecondary(isDark),
+                    ),
+                  ),
               ],
             ),
           ],
@@ -120,44 +133,49 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
-              color: isDark
-                  ? AppColors.darkSurfaceElevated
-                  : Colors.grey[100],
+              color: isDark ? AppColors.darkSurfaceElevated : Colors.grey[100],
               borderRadius: BorderRadius.circular(12),
             ),
             child: TabBar(
               controller: _tabController,
               labelColor: Colors.white,
               unselectedLabelColor: AppColors.textSecondary(isDark),
-              labelStyle:
-                  const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              labelStyle: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
               unselectedLabelStyle: const TextStyle(fontSize: 13),
               indicator: BoxDecoration(
                 gradient: const LinearGradient(
-                    colors: [AppColors.primary, AppColors.accent]),
+                  colors: [AppColors.primary, AppColors.accent],
+                ),
                 borderRadius: BorderRadius.circular(10),
               ),
               indicatorSize: TabBarIndicatorSize.tab,
               dividerColor: Colors.transparent,
               tabs: const [
                 Tab(
-                    height: 36,
-                    child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.calendar_today, size: 14),
-                          SizedBox(width: 6),
-                          Text('Schedule'),
-                        ])),
+                  height: 36,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.calendar_today, size: 14),
+                      SizedBox(width: 6),
+                      Text('Schedule'),
+                    ],
+                  ),
+                ),
                 Tab(
-                    height: 36,
-                    child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.event_available, size: 14),
-                          SizedBox(width: 6),
-                          Text('Request Slot'),
-                        ])),
+                  height: 36,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.event_available, size: 14),
+                      SizedBox(width: 6),
+                      Text('Request Slot'),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -170,27 +188,32 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
                 children: [
                   const CircularProgressIndicator(color: AppColors.primary),
                   const SizedBox(height: 16),
-                  Text('Loading schedule...',
-                      style: TextStyle(
-                          color: AppColors.textSecondary(isDark),
-                          fontSize: 13)),
+                  Text(
+                    'Loading schedule...',
+                    style: TextStyle(
+                      color: AppColors.textSecondary(isDark),
+                      fontSize: 13,
+                    ),
+                  ),
                 ],
               ),
             )
           : TabBarView(
               controller: _tabController,
-              children: [
-                _buildBookedTab(isDark),
-                _buildRequestTab(isDark),
-              ],
+              children: [_buildBookedTab(isDark), _buildRequestTab(isDark)],
             ),
     );
   }
 
   // ═══════════════════ Booked Schedule Tab ═══════════════════
   Widget _buildBookedTab(bool isDark) {
-    final daysWithSlots =
-        _dayOrder.where((d) => _booked.containsKey(d)).toList();
+    if (_selectedDate != null) {
+      return _buildSelectedDateBookedTab(isDark);
+    }
+
+    final daysWithSlots = _dayOrder
+        .where((d) => _booked.containsKey(d))
+        .toList();
 
     if (daysWithSlots.isEmpty) {
       return Center(
@@ -203,19 +226,29 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
                 color: AppColors.primary.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.event_busy,
-                  size: 48, color: AppColors.primary.withValues(alpha: 0.4)),
+              child: Icon(
+                Icons.event_busy,
+                size: 48,
+                color: AppColors.primary.withValues(alpha: 0.4),
+              ),
             ),
             const SizedBox(height: 16),
-            Text('No classes scheduled',
-                style: TextStyle(
-                    color: AppColors.textPrimary(isDark),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600)),
+            Text(
+              'No classes scheduled',
+              style: TextStyle(
+                color: AppColors.textPrimary(isDark),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             const SizedBox(height: 6),
-            Text('This room has no scheduled classes yet',
-                style: TextStyle(
-                    color: AppColors.textSecondary(isDark), fontSize: 13)),
+            Text(
+              'This room has no scheduled classes yet',
+              style: TextStyle(
+                color: AppColors.textSecondary(isDark),
+                fontSize: 13,
+              ),
+            ),
           ],
         ),
       );
@@ -226,7 +259,8 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
       onRefresh: _loadSchedule,
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics()),
+          parent: BouncingScrollPhysics(),
+        ),
         padding: const EdgeInsets.all(16),
         itemCount: daysWithSlots.length,
         itemBuilder: (_, i) {
@@ -235,6 +269,162 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
           return _buildDaySection(day, slots, isDark);
         },
       ),
+    );
+  }
+
+  Widget _buildSelectedDateBookedTab(bool isDark) {
+    final slots = _booked[_selectedDay] ?? const <RoomSlot>[];
+    final extraBookings = _selectedDateUnmirroredBookings(slots);
+
+    if (slots.isEmpty && extraBookings.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.event_busy,
+                size: 48,
+                color: AppColors.primary.withValues(alpha: 0.4),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No bookings for selected date',
+              style: TextStyle(
+                color: AppColors.textPrimary(isDark),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'No routine class or approved room booking found',
+              style: TextStyle(
+                color: AppColors.textSecondary(isDark),
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: _loadSchedule,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        padding: const EdgeInsets.all(16),
+        children: [
+          Container(
+            margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface(isDark),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border(isDark)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.calendar_month,
+                    size: 18,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        DateFormat('EEEE, MMM d, yyyy').format(_selectedDate!),
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary(isDark),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${slots.length} scheduled class${slots.length == 1 ? '' : 'es'} • '
+                        '${extraBookings.length} direct booking${extraBookings.length == 1 ? '' : 's'}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary(isDark),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (slots.isNotEmpty) ...[
+            _buildSectionTitle(
+              'Scheduled On This Date',
+              Icons.schedule,
+              isDark,
+            ),
+            const SizedBox(height: 10),
+            Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                color: AppColors.surface(isDark),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.border(isDark)),
+              ),
+              child: Column(
+                children: slots
+                    .map((slot) => _buildSlotItem(slot, isDark))
+                    .toList(),
+              ),
+            ),
+          ],
+          if (extraBookings.isNotEmpty) ...[
+            _buildSectionTitle(
+              'Approved Date Bookings',
+              Icons.verified_outlined,
+              isDark,
+            ),
+            const SizedBox(height: 10),
+            ...extraBookings.map(
+              (booking) => _buildDateBookingTile(booking, isDark),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title, IconData icon, bool isDark) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: AppColors.primary),
+        const SizedBox(width: 6),
+        Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+            color: AppColors.textPrimary(isDark),
+          ),
+        ),
+      ],
     );
   }
 
@@ -270,14 +460,17 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               gradient: isToday
-                  ? LinearGradient(colors: [
-                      AppColors.primary.withValues(alpha: 0.1),
-                      AppColors.accent.withValues(alpha: 0.05),
-                    ])
+                  ? LinearGradient(
+                      colors: [
+                        AppColors.primary.withValues(alpha: 0.1),
+                        AppColors.accent.withValues(alpha: 0.05),
+                      ],
+                    )
                   : null,
               color: isToday ? null : AppColors.background(isDark),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
             ),
             child: Row(
               children: [
@@ -311,41 +504,49 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
                 if (isToday) ...[
                   const SizedBox(width: 8),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                          colors: [AppColors.primary, AppColors.accent]),
+                        colors: [AppColors.primary, AppColors.accent],
+                      ),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Text('Today',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      'Today',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
                 const Spacer(),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: isDark ? Colors.grey[800] : Colors.grey[100],
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                      '${slots.length} class${slots.length > 1 ? 'es' : ''}',
-                      style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.textSecondary(isDark))),
+                    '${slots.length} class${slots.length > 1 ? 'es' : ''}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textSecondary(isDark),
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-          Divider(
-              height: 1,
-              color: AppColors.border(isDark)),
+          Divider(height: 1, color: AppColors.border(isDark)),
           ...slots.map((s) => _buildSlotItem(s, isDark)),
         ],
       ),
@@ -353,9 +554,17 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
   }
 
   Widget _buildSlotItem(RoomSlot slot, bool isDark) {
-    final isLab = slot.courseType.toLowerCase().contains('lab') ||
+    final isLab =
+        slot.courseType.toLowerCase().contains('lab') ||
         slot.courseType.toLowerCase().contains('sessional');
     final color = isLab ? AppColors.accent : AppColors.primary;
+    final selectedDateStr = _selectedDate != null
+        ? DateFormat('yyyy-MM-dd').format(_selectedDate!)
+        : null;
+    final isDateBooking =
+        selectedDateStr != null &&
+        slot.validFrom == selectedDateStr &&
+        slot.validUntil == selectedDateStr;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -381,78 +590,126 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
                 Row(
                   children: [
                     Flexible(
-                      child: Text(slot.courseCode,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: AppColors.textPrimary(isDark),
-                          ),
-                          overflow: TextOverflow.ellipsis),
+                      child: Text(
+                        slot.courseCode,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: AppColors.textPrimary(isDark),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    if (slot.section != null &&
-                        slot.section!.isNotEmpty) ...[
+                    if (slot.section != null && slot.section!.isNotEmpty) ...[
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 2),
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: color.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(
-                              color: color.withValues(alpha: 0.2)),
+                            color: color.withValues(alpha: 0.2),
+                          ),
                         ),
-                        child: Text(slot.section!,
-                            style: TextStyle(
-                                fontSize: 10,
-                                color: color,
-                                fontWeight: FontWeight.w600)),
+                        child: Text(
+                          slot.section!,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: color,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ],
                     if (isLab) ...[
                       const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.accent.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Text('Lab',
-                            style: TextStyle(
-                                fontSize: 9,
-                                color: AppColors.accent,
-                                fontWeight: FontWeight.w600)),
+                        child: const Text(
+                          'Lab',
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: AppColors.accent,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (isDateBooking) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'Date Booking',
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: AppColors.warning,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ],
                   ],
                 ),
                 const SizedBox(height: 3),
-                Text(slot.courseTitle,
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary(isDark)),
-                    overflow: TextOverflow.ellipsis),
+                Text(
+                  slot.courseTitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary(isDark),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
                 const SizedBox(height: 5),
                 Row(
                   children: [
-                    Icon(Icons.access_time_rounded,
-                        size: 12, color: AppColors.textSecondary(isDark)),
+                    Icon(
+                      Icons.access_time_rounded,
+                      size: 12,
+                      color: AppColors.textSecondary(isDark),
+                    ),
                     const SizedBox(width: 4),
-                    Text(slot.timeRange,
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.textSecondary(isDark))),
+                    Text(
+                      slot.timeRange,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary(isDark),
+                      ),
+                    ),
                     const SizedBox(width: 14),
-                    Icon(Icons.person_outline_rounded,
-                        size: 12, color: AppColors.textSecondary(isDark)),
+                    Icon(
+                      Icons.person_outline_rounded,
+                      size: 12,
+                      color: AppColors.textSecondary(isDark),
+                    ),
                     const SizedBox(width: 4),
                     Flexible(
-                      child: Text(slot.teacherName,
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: AppColors.textSecondary(isDark)),
-                          overflow: TextOverflow.ellipsis),
+                      child: Text(
+                        slot.teacherName,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondary(isDark),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
@@ -469,23 +726,27 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
     final bookingDateStr = _selectedDate != null
         ? DateFormat('yyyy-MM-dd').format(_selectedDate!)
         : null;
-    final statuses = RoomBookingService.computePeriodStatuses(
-      day: _selectedDay,
-      routineSlots: _booked,
-      bookings: _bookings,
-      bookingDate: bookingDateStr,
-    );
+    final statuses = _selectedDate != null
+        ? RoomBookingService.computePeriodStatuses(
+            day: _selectedDay,
+            routineSlots: _booked,
+            bookings: _bookings,
+            bookingDate: bookingDateStr,
+          )
+        : <PeriodStatus>[];
 
     final freeCount = statuses.where((s) => s.state == PeriodState.free).length;
-    final occupiedCount =
-        statuses.where((s) => s.state == PeriodState.occupied).length;
+    final occupiedCount = statuses
+        .where((s) => s.state == PeriodState.occupied)
+        .length;
 
     return RefreshIndicator(
       color: AppColors.primary,
       onRefresh: _loadSchedule,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics()),
+          parent: BouncingScrollPhysics(),
+        ),
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -493,14 +754,20 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
             // ── Date picker ──
             Row(
               children: [
-                Icon(Icons.calendar_today_outlined,
-                    size: 14, color: AppColors.primary),
+                Icon(
+                  Icons.calendar_today_outlined,
+                  size: 14,
+                  color: AppColors.primary,
+                ),
                 const SizedBox(width: 6),
-                Text('Select Date',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        color: AppColors.textPrimary(isDark))),
+                Text(
+                  'Select Date',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: AppColors.textPrimary(isDark),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 10),
@@ -515,9 +782,9 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
                   builder: (context, child) {
                     return Theme(
                       data: Theme.of(context).copyWith(
-                        colorScheme: Theme.of(context).colorScheme.copyWith(
-                          primary: AppColors.primary,
-                        ),
+                        colorScheme: Theme.of(
+                          context,
+                        ).colorScheme.copyWith(primary: AppColors.primary),
                       ),
                       child: child!,
                     );
@@ -534,7 +801,9 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 13),
+                  horizontal: 14,
+                  vertical: 13,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.surface(isDark),
                   borderRadius: BorderRadius.circular(12),
@@ -542,13 +811,17 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.calendar_today,
-                        size: 16, color: AppColors.primary),
+                    Icon(
+                      Icons.calendar_today,
+                      size: 16,
+                      color: AppColors.primary,
+                    ),
                     const SizedBox(width: 10),
                     Text(
                       _selectedDate != null
-                          ? DateFormat('EEEE, MMM d, yyyy')
-                              .format(_selectedDate!)
+                          ? DateFormat(
+                              'EEEE, MMM d, yyyy',
+                            ).format(_selectedDate!)
                           : 'Tap to select a date',
                       style: TextStyle(
                         fontSize: 14,
@@ -567,21 +840,28 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
             // ── Day selector (auto-set from date, but also usable standalone) ──
             Row(
               children: [
-                Icon(Icons.view_week_outlined,
-                    size: 14, color: AppColors.primary),
+                Icon(
+                  Icons.view_week_outlined,
+                  size: 14,
+                  color: AppColors.primary,
+                ),
                 const SizedBox(width: 6),
-                Text('Day',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        color: AppColors.textPrimary(isDark))),
-                if (_selectedDate != null) ...[  
+                Text(
+                  'Day',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: AppColors.textPrimary(isDark),
+                  ),
+                ),
+                if (_selectedDate != null) ...[
                   const SizedBox(width: 8),
                   Text(
                     '(from selected date)',
                     style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textSecondary(isDark)),
+                      fontSize: 11,
+                      color: AppColors.textSecondary(isDark),
+                    ),
                   ),
                 ],
               ],
@@ -600,28 +880,36 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
                       color: Colors.transparent,
                       child: InkWell(
                         borderRadius: BorderRadius.circular(10),
-                        onTap: () => setState(() => _selectedDay = day),
+                        onTap: _selectedDate == null
+                            ? () => setState(() => _selectedDay = day)
+                            : null,
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             gradient: selected
-                                ? const LinearGradient(colors: [
-                                    AppColors.primary,
-                                    AppColors.accent
-                                  ])
+                                ? const LinearGradient(
+                                    colors: [
+                                      AppColors.primary,
+                                      AppColors.accent,
+                                    ],
+                                  )
                                 : null,
                             color: selected
                                 ? null
                                 : (isDark
-                                    ? AppColors.darkSurfaceElevated
-                                    : Colors.grey[100]),
+                                      ? AppColors.darkSurfaceElevated
+                                      : Colors.grey[100]),
                             borderRadius: BorderRadius.circular(10),
                             border: !selected && isToday
                                 ? Border.all(
-                                    color: AppColors.primary
-                                        .withValues(alpha: 0.4))
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.4,
+                                    ),
+                                  )
                                 : null,
                           ),
                           child: Center(
@@ -631,8 +919,8 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
                                 color: selected
                                     ? Colors.white
                                     : (isToday
-                                        ? AppColors.primary
-                                        : AppColors.textSecondary(isDark)),
+                                          ? AppColors.primary
+                                          : AppColors.textSecondary(isDark)),
                                 fontWeight: selected || isToday
                                     ? FontWeight.bold
                                     : FontWeight.normal,
@@ -650,19 +938,44 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
 
             const SizedBox(height: 18),
 
+            if (_selectedDate == null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Text(
+                  'Select a date first. Occupied and free slots are computed per date, not by weekday only.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary(isDark),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+            ],
+
             // ── Summary chips ──
             Row(
               children: [
-                _buildMiniChip(
-                    '$freeCount Free', AppColors.success, isDark),
+                _buildMiniChip('$freeCount Free', AppColors.success, isDark),
                 const SizedBox(width: 8),
                 _buildMiniChip(
-                    '$occupiedCount Occupied', AppColors.danger, isDark),
+                  '$occupiedCount Occupied',
+                  AppColors.danger,
+                  isDark,
+                ),
                 const SizedBox(width: 8),
                 _buildMiniChip(
-                    '${statuses.length - freeCount - occupiedCount} Booked',
-                    AppColors.warning,
-                    isDark),
+                  '${statuses.length - freeCount - occupiedCount} Booked',
+                  AppColors.warning,
+                  isDark,
+                ),
               ],
             ),
 
@@ -671,30 +984,43 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
             // ── Period status header ──
             Row(
               children: [
-                Icon(Icons.grid_view_rounded,
-                    size: 14, color: AppColors.primary),
+                Icon(
+                  Icons.grid_view_rounded,
+                  size: 14,
+                  color: AppColors.primary,
+                ),
                 const SizedBox(width: 6),
-                Text('Period Status',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        color: AppColors.textPrimary(isDark))),
+                Text(
+                  'Period Status',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: AppColors.textPrimary(isDark),
+                  ),
+                ),
                 const Spacer(),
-                Text(RoomSlot.dayNames[_selectedDay],
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.primary)),
+                Text(
+                  RoomSlot.dayNames[_selectedDay],
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.primary,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 10),
 
             // ── Custom bookings for this day ──
             ..._bookings
-                .where((b) =>
-                    b.dayOfWeek == _selectedDay &&
-                    b.isCustom &&
-                    b.status == 'approved')
+                .where(
+                  (b) =>
+                      b.dayOfWeek == _selectedDay &&
+                      b.isCustom &&
+                      b.status == 'approved' &&
+                      (_selectedDate == null ||
+                          b.bookingDate == bookingDateStr),
+                )
                 .map((b) => _buildCustomBookingTile(b, isDark)),
 
             ...statuses.map((ps) => _buildPeriodStatusTile(ps, isDark)),
@@ -721,18 +1047,25 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
                 ),
                 child: ElevatedButton.icon(
                   onPressed: _openBookingDialog,
-                  icon: const Icon(Icons.add_circle_outline,
-                      color: Colors.white, size: 18),
-                  label: const Text('Request a Slot',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600)),
+                  icon: const Icon(
+                    Icons.add_circle_outline,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                  label: const Text(
+                    'Request a Slot',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
                     shadowColor: Colors.transparent,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                 ),
               ),
@@ -758,15 +1091,17 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
           Container(
             width: 6,
             height: 6,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 6),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
         ],
       ),
     );
@@ -779,9 +1114,7 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.white,
+          color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.white,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
@@ -814,36 +1147,48 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Break Period',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                          color: AppColors.textPrimary(isDark))),
+                  Text(
+                    'Break Period',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: AppColors.textPrimary(isDark),
+                    ),
+                  ),
                   const SizedBox(height: 3),
                   Row(
                     children: [
-                      Icon(Icons.access_time_rounded,
-                          size: 12,
-                          color: AppColors.textSecondary(isDark)),
+                      Icon(
+                        Icons.access_time_rounded,
+                        size: 12,
+                        color: AppColors.textSecondary(isDark),
+                      ),
                       const SizedBox(width: 4),
                       Text(
-                          '${Period.to12h(b.startTime)} - ${Period.to12h(b.endTime)}',
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary(isDark))),
+                        '${Period.to12h(b.startTime)} - ${Period.to12h(b.endTime)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary(isDark),
+                        ),
+                      ),
                       if (b.courseCode != null) ...[
                         const SizedBox(width: 10),
-                        Icon(Icons.book_outlined,
-                            size: 12,
-                            color: AppColors.textSecondary(isDark)),
+                        Icon(
+                          Icons.book_outlined,
+                          size: 12,
+                          color: AppColors.textSecondary(isDark),
+                        ),
                         const SizedBox(width: 4),
                         Flexible(
-                          child: Text(b.courseCode!,
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: color),
-                              overflow: TextOverflow.ellipsis),
+                          child: Text(
+                            b.courseCode!,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: color,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ],
@@ -853,8 +1198,7 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
             ),
             // Custom Booking badge
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
                 color: color,
                 borderRadius: BorderRadius.circular(8),
@@ -862,19 +1206,164 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.event_available_rounded,
-                      size: 12, color: Colors.white),
+                  Icon(
+                    Icons.event_available_rounded,
+                    size: 12,
+                    color: Colors.white,
+                  ),
                   SizedBox(width: 4),
-                  Text('Custom Booking',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600)),
+                  Text(
+                    'Custom Booking',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDateBookingTile(RoomBookingRequest booking, bool isDark) {
+    final color = booking.isCrRequest ? AppColors.warning : AppColors.accent;
+    final badgeLabel = booking.isCrRequest ? 'CR Booking' : 'Teacher Booking';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surface(isDark),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.15)
+                : Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 3.5,
+            height: 42,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [color, color.withValues(alpha: 0.3)],
+              ),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        booking.courseCode ?? 'Booked Slot',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: AppColors.textPrimary(isDark),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        badgeLabel,
+                        style: TextStyle(
+                          color: color,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.access_time_rounded,
+                      size: 12,
+                      color: AppColors.textSecondary(isDark),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${Period.to12h(booking.startTime)} - ${Period.to12h(booking.endTime)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary(isDark),
+                      ),
+                    ),
+                    if (booking.section != null &&
+                        booking.section!.isNotEmpty) ...[
+                      const SizedBox(width: 10),
+                      Icon(
+                        Icons.group_outlined,
+                        size: 12,
+                        color: AppColors.textSecondary(isDark),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        booking.section!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary(isDark),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                if ((booking.teacherName ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.person_outline,
+                        size: 12,
+                        color: AppColors.textSecondary(isDark),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          booking.teacherName!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary(isDark),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -937,35 +1426,48 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(ps.period.label,
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        color: AppColors.textPrimary(isDark))),
+                Text(
+                  ps.period.label,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: AppColors.textPrimary(isDark),
+                  ),
+                ),
                 const SizedBox(height: 3),
                 Row(
                   children: [
-                    Icon(Icons.access_time_rounded,
-                        size: 12,
-                        color: AppColors.textSecondary(isDark)),
+                    Icon(
+                      Icons.access_time_rounded,
+                      size: 12,
+                      color: AppColors.textSecondary(isDark),
+                    ),
                     const SizedBox(width: 4),
-                    Text('${Period.to12h(ps.period.start)} - ${Period.to12h(ps.period.end)}',
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary(isDark))),
+                    Text(
+                      '${Period.to12h(ps.period.start)} - ${Period.to12h(ps.period.end)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary(isDark),
+                      ),
+                    ),
                     if (ps.courseCode != null) ...[
                       const SizedBox(width: 10),
-                      Icon(Icons.book_outlined,
-                          size: 12,
-                          color: AppColors.textSecondary(isDark)),
+                      Icon(
+                        Icons.book_outlined,
+                        size: 12,
+                        color: AppColors.textSecondary(isDark),
+                      ),
                       const SizedBox(width: 4),
                       Flexible(
-                        child: Text(ps.courseCode!,
-                            style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: statusColor),
-                            overflow: TextOverflow.ellipsis),
+                        child: Text(
+                          ps.courseCode!,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: statusColor,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ],
@@ -975,24 +1477,25 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
           ),
           // Status badge
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
               color: statusColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
-              border:
-                  Border.all(color: statusColor.withValues(alpha: 0.2)),
+              border: Border.all(color: statusColor.withValues(alpha: 0.2)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(statusIcon, size: 12, color: statusColor),
                 const SizedBox(width: 4),
-                Text(statusLabel,
-                    style: TextStyle(
-                        color: statusColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600)),
+                Text(
+                  statusLabel,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),
@@ -1007,6 +1510,7 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
       builder: (_) => SlotBookingDialog(
         room: widget.room,
         initialDay: _selectedDay,
+        initialDate: _selectedDate,
         routineSlots: _booked,
         bookings: _bookings,
       ),
@@ -1021,13 +1525,15 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
                 Icon(Icons.check_circle, color: Colors.white, size: 18),
                 SizedBox(width: 10),
                 Expanded(
-                    child: Text('Booking request submitted successfully!')),
+                  child: Text('Booking request submitted successfully!'),
+                ),
               ],
             ),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -1036,6 +1542,34 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
   }
 
   // ─── Helpers ──────────────────────────────────────────
+  List<RoomBookingRequest> _selectedDateUnmirroredBookings(
+    List<RoomSlot> slots,
+  ) {
+    final selectedDateStr = _selectedDate != null
+        ? DateFormat('yyyy-MM-dd').format(_selectedDate!)
+        : null;
+    if (selectedDateStr == null) return const [];
+
+    return _bookings.where((booking) {
+      if (booking.bookingDate != selectedDateStr ||
+          booking.status != 'approved') {
+        return false;
+      }
+
+      return !slots.any((slot) => _slotMirrorsBooking(slot, booking));
+    }).toList();
+  }
+
+  bool _slotMirrorsBooking(RoomSlot slot, RoomBookingRequest booking) {
+    return slot.dayOfWeek == booking.dayOfWeek &&
+        _fmtTime(slot.startTime) == _fmtTime(booking.startTime) &&
+        _fmtTime(slot.endTime) == _fmtTime(booking.endTime) &&
+        (booking.courseCode == null || slot.courseCode == booking.courseCode);
+  }
+
+  String _fmtTime(String time) =>
+      time.length >= 5 ? time.substring(0, 5) : time;
+
   bool _isTodayDay(int dayOfWeek) {
     final now = DateTime.now().weekday; // 1=Mon…7=Sun
     final todayIndex = now == 7 ? 0 : now; // Sun=0

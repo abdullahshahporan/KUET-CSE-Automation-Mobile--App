@@ -7,12 +7,10 @@ import 'class_schedule_models.dart';
 
 /// Provider for selected section filter (A / B)
 /// Default is empty string — means use auto-detected section from roll.
-final selectedSectionProvider =
-    StateProvider<String>((ref) => '');
+final selectedSectionProvider = StateProvider<String>((ref) => '');
 
 /// Async provider that fetches class schedule from Supabase.
-final classScheduleProvider =
-    FutureProvider<Map<String, dynamic>>((ref) async {
+final classScheduleProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final sectionOverride = ref.watch(selectedSectionProvider);
   return ScheduleService.fetchClassSchedule(sectionOverride: sectionOverride);
 });
@@ -48,12 +46,16 @@ class ScheduleService {
       final rollNo = studentData['roll_no'] as String? ?? '';
 
       final autoSection = CourseUtils.sectionFromRoll(rollNo);
-      final activeSection = sectionOverride.isEmpty ? autoSection : sectionOverride;
+      final activeSection = sectionOverride.isEmpty
+          ? autoSection
+          : sectionOverride;
 
       final parsed = CourseUtils.parseTerm(studentTerm);
       final year = parsed.year;
       final term = parsed.term;
-      debugPrint('[ClassSchedule] roll=$rollNo, activeSection=$activeSection, prefix=$year$term');
+      debugPrint(
+        '[ClassSchedule] roll=$rollNo, activeSection=$activeSection, prefix=$year$term',
+      );
 
       final response = await SupabaseService.client
           .from('routine_slots')
@@ -64,6 +66,8 @@ class ScheduleService {
             end_time,
             room_number,
             section,
+            valid_from,
+            valid_until,
             course_offerings (
               id,
               term,
@@ -93,6 +97,7 @@ class ScheduleService {
         final offering = map['course_offerings'] as Map<String, dynamic>?;
         if (offering == null) continue;
         if (offering['is_active'] != true) continue;
+        if (_isSingleDayOverride(map)) continue;
 
         final courseData = offering['courses'] as Map<String, dynamic>?;
         final courseCode = courseData?['code'] as String?;
@@ -109,11 +114,14 @@ class ScheduleService {
       }
 
       schedules.sort((a, b) {
-        if (a.dayOfWeek != b.dayOfWeek) return a.dayOfWeek.compareTo(b.dayOfWeek);
+        if (a.dayOfWeek != b.dayOfWeek)
+          return a.dayOfWeek.compareTo(b.dayOfWeek);
         return a.startTime.compareTo(b.startTime);
       });
 
-      debugPrint('[ClassSchedule] Returning ${schedules.length} slots for section $activeSection');
+      debugPrint(
+        '[ClassSchedule] Returning ${schedules.length} slots for section $activeSection',
+      );
       return {
         'schedules': schedules,
         'section': activeSection,
@@ -124,5 +132,11 @@ class ScheduleService {
       debugPrint('[ClassSchedule] ERROR: $e');
       return {'schedules': <ClassSchedule>[], 'section': 'A', 'rollNo': ''};
     }
+  }
+
+  static bool _isSingleDayOverride(Map<String, dynamic> map) {
+    final validFrom = map['valid_from'] as String?;
+    final validUntil = map['valid_until'] as String?;
+    return validFrom != null && validUntil != null && validFrom == validUntil;
   }
 }
