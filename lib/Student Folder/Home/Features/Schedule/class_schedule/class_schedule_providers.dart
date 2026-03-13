@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:kuet_cse_automation/services/optional_course_service.dart';
 import 'package:kuet_cse_automation/services/supabase_service.dart';
 import 'package:kuet_cse_automation/utils/course_utils.dart';
+
 import 'class_schedule_models.dart';
 
 /// Provider for selected section filter (A / B)
@@ -91,6 +93,16 @@ class ScheduleService {
       final List<dynamic> data = response as List<dynamic>;
       debugPrint('[ClassSchedule] Got ${data.length} total routine_slots');
 
+      // For 4th year, pre-fetch elective info for filtering
+      Set<String> electiveCourseIds = {};
+      Set<String> assignedOfferingIds = {};
+      if (year == 4) {
+        electiveCourseIds = await OptionalCourseService.getElectiveCourseIds(
+          term: '$year-$term',
+        );
+        assignedOfferingIds = await OptionalCourseService.getMyAssignedOfferingIds();
+      }
+
       final schedules = <ClassSchedule>[];
       for (final item in data) {
         final map = item as Map<String, dynamic>;
@@ -102,6 +114,17 @@ class ScheduleService {
         final courseData = offering['courses'] as Map<String, dynamic>?;
         final courseCode = courseData?['code'] as String?;
         if (!CourseUtils.codeMatchesTerm(courseCode, year, term)) continue;
+
+        // For 4th year: skip elective course slots student is not assigned to
+        if (year == 4) {
+          final courseId = courseData?['id']?.toString();
+          final offeringId = offering['id']?.toString();
+          if (courseId != null && electiveCourseIds.contains(courseId)) {
+            if (offeringId == null || !assignedOfferingIds.contains(offeringId)) {
+              continue;
+            }
+          }
+        }
 
         final slotSection = map['section'] as String?;
         if (slotSection != null && slotSection.isNotEmpty) {
