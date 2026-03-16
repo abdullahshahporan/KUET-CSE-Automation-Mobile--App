@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../../services/session_service.dart';
 import '../../services/supabase_core.dart';
+import '../../services/notification_service.dart';
 import '../../utils/course_utils.dart';
 import '../../Teacher/Room_info/room_booking_model.dart';
 import '../../Teacher/Room_info/room_model.dart';
@@ -127,6 +128,26 @@ class CRRoomRequestService {
         session: session,
         section: section,
         requestDate: requestDate,
+      );
+
+      // Fire notification to all students in the section
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      await NotificationService.createNotification(
+        type: 'room_allocated',
+        title: 'Room $roomNumber Booked — $courseCode',
+        body: 'CR booked Room $roomNumber for $courseCode on '
+            '${dayNames.elementAtOrNull(dayOfWeek) ?? 'Day $dayOfWeek'} '
+            '($startTime–$endTime).',
+        targetType: section != null ? 'SECTION' : 'YEAR_TERM',
+        targetValue: section ?? term,
+        targetYearTerm: section != null ? term : null,
+        metadata: {
+          'course_code': courseCode,
+          'room_number': roomNumber,
+          'start_time': startTime,
+          'end_time': endTime,
+          'request_date': requestDate,
+        },
       );
 
       return (success: true, message: 'Room booked successfully! (Auto-approved)');

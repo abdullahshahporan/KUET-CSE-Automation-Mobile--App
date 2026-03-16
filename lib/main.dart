@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kuet_cse_automation/app.dart';
+import 'services/local_notification_service.dart';
 import 'services/supabase_service.dart';
 import 'config/supabase_config.dart';
 
@@ -11,6 +12,10 @@ void main() async {
     supabaseUrl: SupabaseConfig.supabaseUrl,
     supabaseAnonKey: SupabaseConfig.supabaseAnonKey,
   );
+
+  // Setup foreground notifications and request runtime notification permission.
+  await LocalNotificationService.initialize();
+  await LocalNotificationService.requestPermission();
 
   runApp(CSEApp());
 }

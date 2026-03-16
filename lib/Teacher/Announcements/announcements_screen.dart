@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/teacher_course.dart';
 import '../../shared/ui_helpers.dart';
 import '../../theme/app_colors.dart';
+import '../../services/notification_service.dart';
 
 /// Course-specific Announcements Screen
 class AnnouncementsScreen extends StatefulWidget {
@@ -348,6 +349,24 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                             'date': 'Just now',
                           });
                         });
+                        // Fire notification so all enrolled students get it
+                        final typeMap = {
+                          'Class Test': 'exam_scheduled',
+                          'Assignment': 'assignment_due',
+                          'Quiz': 'exam_scheduled',
+                          'Notice': 'notice_posted',
+                        };
+                        NotificationService.createNotification(
+                          type: typeMap[selectedType] ?? 'announcement',
+                          title: '[${course.code}] ${titleController.text}',
+                          body: contentController.text,
+                          targetType: 'COURSE',
+                          targetValue: course.code,
+                          metadata: {
+                            'course_code': course.code,
+                            'announcement_type': selectedType,
+                          },
+                        );
                         Navigator.pop(context);
                         showAppSnackBar(context, message: 'Announcement posted!');
                       }

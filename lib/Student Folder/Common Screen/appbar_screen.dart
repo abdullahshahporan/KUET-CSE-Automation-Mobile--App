@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kuet_cse_automation/theme/app_colors.dart';
+import '../../shared/notification_bell.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String userName;
@@ -137,50 +138,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               },
             ),
           ),
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            child: IconButton(
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isDarkMode
-                      ? AppColors.darkBorder
-                      : AppColors.lightBorder.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Stack(
-                  children: [
-                    Icon(
-                      Icons.notifications_rounded,
-                      color: isDarkMode ? Colors.white : Colors.black87,
-                      size: 22,
-                    ),
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      child: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: AppColors.danger,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: isDarkMode
-                                ? AppColors.darkSurface
-                                : AppColors.lightSurface,
-                            width: 1.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              onPressed: () {
-                // Notification functionality
-              },
-            ),
-          ),
+          NotificationBell(isDarkMode: isDarkMode),
+          const SizedBox(width: 4),
         ],
       ),
     );

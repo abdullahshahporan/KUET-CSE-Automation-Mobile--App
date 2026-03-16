@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../services/geo_attendance_service.dart';
+import '../../services/notification_service.dart';
 import '../../services/supabase_service.dart';
 import '../../Student Folder/models/course_model.dart';
 import '../../theme/app_colors.dart';
@@ -152,14 +153,51 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
       );
 
       if (mounted) {
-        final sectionLabel = _selectedSection != null ? ' (${_selectedSection})' : '';
+        // Capture values before state reset
+        final courseCode = _selectedCourse!.code;
+        final term = _selectedCourse!.shortSemester; // e.g., "3-2"
+        final section = _selectedSection;
+        final roomNo = _roomNumber;
+        final durationMin = _durationMinutes;
+        final sectionLabel = section != null ? ' ($section)' : '';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Room opened for ${_selectedCourse!.code}$sectionLabel! Students within 200m can submit attendance.',
+              'Room opened for $courseCode$sectionLabel! Students within 200m can submit attendance.',
             ),
             backgroundColor: AppColors.success,
           ),
+        );
+        // Notify students that attendance is now open.
+        // Theory sections (A, B) → target that specific SECTION.
+        // Lab groups (A1, A2, B1, B2) → target YEAR_TERM since lab groups
+        // aren't stored separately in the students table.
+        final String notifTargetType;
+        final String notifTargetValue;
+        final String? notifYearTerm;
+        if (section != null && section.length == 1) {
+          notifTargetType = 'SECTION';
+          notifTargetValue = section;
+          notifYearTerm = term;
+        } else {
+          notifTargetType = 'YEAR_TERM';
+          notifTargetValue = term;
+          notifYearTerm = null;
+        }
+        final endHour = endTime.hour.toString().padLeft(2, '0');
+        final endMin = endTime.minute.toString().padLeft(2, '0');
+        await NotificationService.createNotification(
+          type: 'geo_attendance_open',
+          title: 'Attendance Open — $courseCode$sectionLabel',
+          body: 'Your attendance for $courseCode is now open. Submit within $durationMin min (before $endHour:$endMin).',
+          targetType: notifTargetType,
+          targetValue: notifTargetValue,
+          targetYearTerm: notifYearTerm,
+          metadata: {
+            'course_code': courseCode,
+            if (roomNo.isNotEmpty) 'room_number': roomNo,
+            'duration_minutes': durationMin,
+          },
         );
         if (!_isCourseScoped) _selectedCourse = null;
         _selectedSection = null;

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../services/notification_provider.dart';
 import '../../theme/app_colors.dart';
 import '../teacher_home_content.dart';
 import '../Schedule/teacher_schedule_screen.dart';
 import '../Room_info/room_info_screen.dart';
 import '../Teacher_Profile/teacher_profile.dart';
 import '../Fab_Menu/fab_menu_widget.dart';
+import '../../shared/notification_bell.dart';
 
 /// Main Teacher Navigation Screen with Bottom Navbar
 class TeacherMainScreen extends StatefulWidget {
@@ -16,6 +19,16 @@ class TeacherMainScreen extends StatefulWidget {
 
 class _TeacherMainScreenState extends State<TeacherMainScreen> {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<NotificationProvider>().initialize();
+      }
+    });
+  }
 
   final List<Widget> _screens = const [
     TeacherHomeContent(),
@@ -30,6 +43,54 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background(isDarkMode),
+      appBar: AppBar(
+        elevation: 0,
+        toolbarHeight: 60,
+        backgroundColor: isDarkMode ? AppColors.darkSurface : AppColors.lightSurface,
+        automaticallyImplyLeading: false,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.primary, AppColors.info],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.school_rounded, color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'KUET CSE',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
+                Text(
+                  'Teacher Portal',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDarkMode ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          NotificationBell(isDarkMode: isDarkMode),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: _buildBottomNavBar(isDarkMode),
       floatingActionButton: _currentIndex == 0 ? const TeacherFabMenu() : null,

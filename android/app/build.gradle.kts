@@ -13,6 +13,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -53,4 +54,6 @@ flutter {
 dependencies {
     // Required for Play Store splitcompat / deferred components references
     implementation("com.google.android.play:core:1.10.3")
+    // Required by flutter_local_notifications on newer Android toolchains
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }
