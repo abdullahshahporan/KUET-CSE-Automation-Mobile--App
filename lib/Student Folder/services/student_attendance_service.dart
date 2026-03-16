@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+
+import '../../services/optional_course_service.dart';
 import '../../services/supabase_service.dart';
 import '../models/student_attendance_data.dart';
 
@@ -149,7 +151,7 @@ class StudentAttendanceService {
     final offeringsData = await SupabaseService.from('course_offerings')
         .select('''
           id,
-          courses!inner ( code, title, credit, course_type )
+          courses!inner ( id, code, title, credit, course_type )
         ''')
         .eq('term', term)
         .eq('is_active', true);
@@ -157,9 +159,29 @@ class StudentAttendanceService {
     final offeringsList = offeringsData as List;
     final summaries = <CourseAttendanceSummary>[];
 
+    // For 4th year terms, filter out unassigned elective offerings
+    final termParts = term.split('-');
+    final yearNum = int.tryParse(termParts[0]) ?? 0;
+    Set<String> electiveCourseIds = {};
+    Set<String> assignedOfferingIds = {};
+    if (yearNum == 4) {
+      electiveCourseIds = await OptionalCourseService.getElectiveCourseIds(term: term);
+      assignedOfferingIds = await OptionalCourseService.getMyAssignedOfferingIds();
+    }
+
     for (final off in offeringsList) {
       final course = off['courses'] as Map<String, dynamic>;
       final offeringId = off['id'] as String;
+
+      // Skip unassigned electives for 4th year
+      if (yearNum == 4) {
+        final courseId = course['id']?.toString() ?? '';
+        if (electiveCourseIds.contains(courseId) &&
+            !assignedOfferingIds.contains(offeringId)) {
+          continue;
+        }
+      }
+
       final courseCode = course['code'] as String;
       final courseTitle = course['title'] as String;
       final credit = (course['credit'] as num).toDouble();

@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+
+import '../../services/optional_course_service.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/course_utils.dart';
 import '../models/course_model.dart';
@@ -70,15 +72,51 @@ class CourseInfoService {
         offeringsByCourse.putIfAbsent(cid, () => []).add(map);
       }
 
-      // Step 4: Build Course objects
+      // Step 4: For 4th year, identify elective courses and filter by assignment
+      Set<String> electiveCourseIds = {};
+      Set<String> assignedOfferingIds = {};
+      Map<String, String?> electiveGroupByCourseId = {};
+      if (year == 4) {
+        // Fetch curriculum data with elective_group for this term
+        final currData = await SupabaseService.from('curriculum')
+            .select('course_id, is_elective, elective_group')
+            .eq('term', '$year-$term')
+            .eq('is_elective', true);
+        for (final row in (currData as List)) {
+          final cid = row['course_id']?.toString() ?? '';
+          electiveCourseIds.add(cid);
+          electiveGroupByCourseId[cid] = row['elective_group'] as String?;
+        }
+        assignedOfferingIds = await OptionalCourseService.getMyAssignedOfferingIds();
+        debugPrint('[CourseInfo] Elective course IDs: ${electiveCourseIds.length}, '
+            'Assigned offering IDs: ${assignedOfferingIds.length}');
+      }
+
+      // Step 5: Build Course objects
       final courses = <Course>[];
       for (final courseData in matchedCourses) {
         final cid = courseData['id'].toString();
+        final isElective = electiveCourseIds.contains(cid);
+        final courseOfferings = offeringsByCourse[cid] ?? [];
+
+        // For elective courses, only include if student has an assignment
+        // for at least one of its offerings
+        if (isElective && year == 4) {
+          final hasAssignment = courseOfferings.any(
+            (o) => assignedOfferingIds.contains(o['id']?.toString()),
+          );
+          if (!hasAssignment) {
+            debugPrint('[CourseInfo] Skipping unassigned elective: ${courseData['code']}');
+            continue;
+          }
+        }
+
         final enrichedMap = <String, dynamic>{
           'term': '$year-$term',
           'courses': courseData,
-          'course_offerings': offeringsByCourse[cid] ?? [],
-          'is_elective': false,
+          'course_offerings': courseOfferings,
+          'is_elective': isElective,
+          'elective_group': electiveGroupByCourseId[cid],
         };
         courses.add(Course.fromSupabase(enrichedMap));
       }
