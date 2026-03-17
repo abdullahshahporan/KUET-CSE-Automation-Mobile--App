@@ -1,6 +1,9 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
+
 import '../services/class_reminder_service.dart';
+import '../services/exam_reminder_service.dart';
 import '../services/local_notification_service.dart';
 import '../services/notification_service.dart';
 import '../services/session_service.dart';
@@ -34,9 +37,11 @@ class NotificationProvider extends ChangeNotifier {
     await LocalNotificationService.initialize();
     await _loadNotifications();
     await ClassReminderService.syncTodayReminders();
+    await ExamReminderService.syncUpcomingReminders();
     _reminderSyncTimer?.cancel();
     _reminderSyncTimer = Timer.periodic(const Duration(minutes: 20), (_) {
       ClassReminderService.syncTodayReminders();
+      ExamReminderService.syncUpcomingReminders();
     });
     _subscribeRealtime();
   }
@@ -91,6 +96,10 @@ class NotificationProvider extends ChangeNotifier {
             newest.type == 'class_cancelled' ||
             newest.type == 'makeup_class') {
           await ClassReminderService.syncTodayReminders();
+        }
+        if (newest.type == 'exam_scheduled' ||
+            newest.type == 'exam_room_assigned') {
+          await ExamReminderService.syncUpcomingReminders();
         }
       }
 

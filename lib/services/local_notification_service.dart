@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -14,6 +15,7 @@ class LocalNotificationService {
   static bool _initialized = false;
   static bool _tzInitialized = false;
   static const _classReminderPayloadPrefix = 'class_reminder|';
+  static const _examReminderPayloadPrefix = 'exam_reminder|';
 
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
     'kuet_notifications',
@@ -110,6 +112,21 @@ class LocalNotificationService {
     }
   }
 
+  static Future<void> cancelExamReminders() async {
+    try {
+      if (!_initialized) await initialize();
+      final pending = await _plugin.pendingNotificationRequests();
+      for (final req in pending) {
+        final payload = req.payload ?? '';
+        if (payload.startsWith(_examReminderPayloadPrefix)) {
+          await _plugin.cancel(req.id);
+        }
+      }
+    } catch (e) {
+      debugPrint('[LocalNotificationService] cancelExamReminders error: $e');
+    }
+  }
+
   static Future<void> scheduleClassReminder({
     required String reminderKey,
     required DateTime classStartAt,
@@ -162,6 +179,54 @@ class LocalNotificationService {
       );
     } catch (e) {
       debugPrint('[LocalNotificationService] scheduleClassReminder error: $e');
+    }
+  }
+
+  static Future<void> scheduleExamReminder({
+    required String reminderKey,
+    required DateTime examStartsAt,
+    required int leadMinutes,
+    required String courseCode,
+    required String examLabel,
+    required String room,
+  }) async {
+    try {
+      if (!_initialized) await initialize();
+
+      final status = await Permission.notification.status;
+      if (!status.isGranted) return;
+
+      final reminderAt = examStartsAt.subtract(Duration(minutes: leadMinutes));
+      final now = DateTime.now();
+      if (!reminderAt.isAfter(now)) return;
+
+      final id = _stableNotificationId('exam|$reminderKey|$leadMinutes');
+      final examTime =
+          '${examStartsAt.hour.toString().padLeft(2, '0')}:${examStartsAt.minute.toString().padLeft(2, '0')}';
+      final details = NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channel.id,
+          _channel.name,
+          channelDescription: _channel.description,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: const DarwinNotificationDetails(),
+      );
+
+      await _plugin.zonedSchedule(
+        id,
+        'Exam reminder: $courseCode in $leadMinutes min',
+        '$examLabel at $examTime, Room $room',
+        tz.TZDateTime.from(reminderAt, tz.local),
+        details,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        payload: '$_examReminderPayloadPrefix$reminderKey',
+      );
+    } catch (e) {
+      debugPrint('[LocalNotificationService] scheduleExamReminder error: $e');
     }
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
 import '../../services/class_reminder_service.dart';
 import '../../services/local_notification_service.dart';
 import '../../services/notification_provider.dart';
@@ -535,8 +536,15 @@ _TypeConfig _typeConfig(String type) {
     'room_allocated' => _TypeConfig(Icons.meeting_room_rounded, AppColors.info, 'Room'),
     'room_request_approved' => _TypeConfig(Icons.check_circle_rounded, AppColors.success, 'Approved'),
     'room_request_rejected' => _TypeConfig(Icons.cancel_rounded, AppColors.danger, 'Rejected'),
+    'cr_room_request_submitted' => _TypeConfig(Icons.assignment_turned_in_rounded, AppColors.info, 'CR Request'),
+    'attendance_marking_reminder' => _TypeConfig(Icons.fact_check_rounded, AppColors.warning, 'Reminder'),
+    'course_anomaly_alert' => _TypeConfig(Icons.error_outline_rounded, AppColors.danger, 'Alert'),
     'notice_posted' => _TypeConfig(Icons.campaign_rounded, AppColors.warning, 'Notice'),
+    'exam_result_published' => _TypeConfig(Icons.grading_rounded, AppColors.success, 'Result'),
     'exam_scheduled' => _TypeConfig(Icons.quiz_rounded, AppColors.danger, 'Exam'),
+    'exam_room_assigned' => _TypeConfig(Icons.meeting_room_rounded, AppColors.info, 'Exam Room'),
+    'exam_reminder' => _TypeConfig(Icons.alarm_rounded, AppColors.warning, 'Reminder'),
+    'attendance_absent' => _TypeConfig(Icons.person_off_rounded, AppColors.danger, 'Absent'),
     'class_cancelled' => _TypeConfig(Icons.event_busy_rounded, AppColors.rose, 'Cancelled'),
     'class_rescheduled' => _TypeConfig(Icons.event_repeat_rounded, AppColors.accent, 'Rescheduled'),
     'assignment_due' => _TypeConfig(Icons.assignment_late_rounded, AppColors.warning, 'Assignment'),
