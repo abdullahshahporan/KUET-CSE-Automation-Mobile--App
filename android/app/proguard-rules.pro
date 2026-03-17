@@ -17,3 +17,8 @@
 -keepclassmembers class * {
     public <init>(...);
 }
+
+# Suppress R8 warnings for optional OpenTelemetry / Jackson classes
+-dontwarn com.fasterxml.jackson.core.JsonFactory
+-dontwarn com.fasterxml.jackson.core.JsonGenerator
+-dontwarn com.google.auto.value.AutoValue$CopyAnnotations

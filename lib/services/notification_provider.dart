@@ -22,6 +22,8 @@ class NotificationProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   Timer? _reminderSyncTimer;
+  Timer? _notificationSyncTimer;
+  final Set<String> _alertedNotificationIds = <String>{};
 
   List<AppNotification> get notifications => _notifications;
   int get unreadCount => _unreadCount;
@@ -43,12 +45,21 @@ class NotificationProvider extends ChangeNotifier {
       ClassReminderService.syncTodayReminders();
       ExamReminderService.syncUpcomingReminders();
     });
+
+    _notificationSyncTimer?.cancel();
+    _notificationSyncTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      _loadNotifications(silent: true, notifyForNew: true);
+    });
+
     _subscribeRealtime();
   }
 
   // ── Internal: load from Supabase ──────────────────────────
 
-  Future<void> _loadNotifications({bool silent = false}) async {
+  Future<void> _loadNotifications({
+    bool silent = false,
+    bool notifyForNew = false,
+  }) async {
     if (!silent) {
       _isLoading = true;
       _error = null;
@@ -56,7 +67,44 @@ class NotificationProvider extends ChangeNotifier {
     }
 
     try {
+      final previousIds = _notifications.map((n) => n.id).toSet();
       final list = await NotificationService.fetchNotifications(limit: 80);
+
+      if (notifyForNew) {
+        final newUnread = list
+            .where(
+              (n) =>
+                  !n.isRead &&
+                  !previousIds.contains(n.id) &&
+                  !_alertedNotificationIds.contains(n.id),
+            )
+            .toList();
+
+        for (final notification in newUnread) {
+          await LocalNotificationService.show(
+            title: notification.title,
+            body: notification.body,
+            payload: notification.id,
+          );
+          _alertedNotificationIds.add(notification.id);
+        }
+
+        if (newUnread.any(
+          (n) =>
+              n.type == 'class_rescheduled' ||
+              n.type == 'class_cancelled' ||
+              n.type == 'makeup_class',
+        )) {
+          await ClassReminderService.syncTodayReminders();
+        }
+
+        if (newUnread.any(
+          (n) => n.type == 'exam_scheduled' || n.type == 'exam_room_assigned',
+        )) {
+          await ExamReminderService.syncUpcomingReminders();
+        }
+      }
+
       _notifications = list;
       _unreadCount = list.where((n) => !n.isRead).length;
       _error = null;
@@ -77,33 +125,7 @@ class NotificationProvider extends ChangeNotifier {
 
   void _subscribeRealtime() {
     NotificationService.subscribe((newNotif) async {
-      // Only show local alert when this notification is newly visible to user.
-      final latest = await NotificationService.fetchNotifications(limit: 1);
-      final newest = latest.isNotEmpty ? latest.first : null;
-      final alreadyHad = newest == null
-          ? false
-          : _notifications.any((n) => n.id == newest.id);
-
-      if (newest != null && !alreadyHad && !newest.isRead) {
-        await LocalNotificationService.show(
-          title: newest.title,
-          body: newest.body,
-          payload: newest.id,
-        );
-
-        // If schedule changed, rebuild today's class reminders.
-        if (newest.type == 'class_rescheduled' ||
-            newest.type == 'class_cancelled' ||
-            newest.type == 'makeup_class') {
-          await ClassReminderService.syncTodayReminders();
-        }
-        if (newest.type == 'exam_scheduled' ||
-            newest.type == 'exam_room_assigned') {
-          await ExamReminderService.syncUpcomingReminders();
-        }
-      }
-
-      await _loadNotifications(silent: true);
+      await _loadNotifications(silent: true, notifyForNew: true);
       debugPrint('[Notifications] New: ${newNotif.title}');
     });
   }
@@ -134,6 +156,7 @@ class NotificationProvider extends ChangeNotifier {
   @override
   void dispose() {
     _reminderSyncTimer?.cancel();
+    _notificationSyncTimer?.cancel();
     NotificationService.unsubscribe();
     super.dispose();
   }
