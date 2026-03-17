@@ -1,5 +1,7 @@
 {
     "java.configuration.updateBuildConfiguration": "disabled",
-    "java.jdt.ls.java.home": "C:\\Program Files\\JetBrains\\IntelliJ IDEA 2025.3.1.1\\jbr",
-    "java.import.gradle.java.home": "C:\\Program Files\\JetBrains\\IntelliJ IDEA 2025.3.1.1\\jbr"
+    "java.jdt.ls.java.home": "C:\\Program Files\\Java\\jdk-22",
+    "java.import.gradle.java.home": "C:\\Program Files\\Java\\jdk-22",
+    "java.import.gradle.enabled": false,
+    "java.project.importOnFirstTimeStartup": "disabled"
 }

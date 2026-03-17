@@ -1,4 +1,6 @@
 import 'package:bcrypt/bcrypt.dart';
+
+import '../config/push_config.dart';
 import 'session_service.dart';
 import 'supabase_core.dart';
 
@@ -48,6 +50,7 @@ class AuthService {
         email: userEmail,
         role: role,
       );
+      PushConfig.loginUser(userId);
 
       // Update last_login (non-critical)
       try {
@@ -68,7 +71,10 @@ class AuthService {
   }
 
   /// Sign out – clears saved session.
-  static Future<void> signOut() async => SessionService.clearSession();
+  static Future<void> signOut() async {
+    PushConfig.logoutUser();
+    return SessionService.clearSession();
+  }
 
   /// Change password: verify current password, then update hash.
   static Future<Map<String, dynamic>> changePassword({

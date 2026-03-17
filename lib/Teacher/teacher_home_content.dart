@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart' as provider;
 
@@ -6,10 +8,10 @@ import '../app_theme.dart';
 import '../services/supabase_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/course_utils.dart';
+import 'Schedule/teacher_schedule_model.dart';
+import 'Schedule/teacher_schedule_service.dart';
 import 'course_detail_screen.dart';
 import 'models/teacher_course.dart';
-import 'Schedule/teacher_schedule_service.dart';
-import 'Schedule/teacher_schedule_model.dart';
 
 /// Teacher Home Content - Shows courses and upcoming schedule
 class TeacherHomeContent extends StatefulWidget {
@@ -25,6 +27,7 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
   List<TeacherCourse> _assignedCourses = [];
   bool _loadingCourses = true;
   dynamic _realtimeChannel;
+  Timer? _courseRefreshTimer;
   List<TeacherSlot> _todaySlots = [];
   bool _loadingSchedule = true;
 
@@ -35,6 +38,10 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
     _loadAssignedCourses();
     _loadTodaySchedule();
     _subscribeToChanges();
+    _courseRefreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (!mounted) return;
+      _loadAssignedCourses();
+    });
   }
 
   @override
@@ -43,6 +50,7 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
     if (_realtimeChannel != null) {
       SupabaseService.removeChannel(_realtimeChannel);
     }
+    _courseRefreshTimer?.cancel();
     super.dispose();
   }
 
