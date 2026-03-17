@@ -5,6 +5,7 @@ import 'config/push_config.dart';
 import 'config/supabase_config.dart';
 import 'services/local_notification_service.dart';
 import 'services/session_service.dart';
+import 'services/push_notification_service.dart';
 import 'services/supabase_service.dart';
 
 void main() async {
@@ -25,6 +26,7 @@ void main() async {
   if (currentUserId != null && currentUserId.trim().isNotEmpty) {
     PushConfig.loginUser(currentUserId);
   }
+  await PushNotificationService.initialize();
 
   runApp(CSEApp());
 }

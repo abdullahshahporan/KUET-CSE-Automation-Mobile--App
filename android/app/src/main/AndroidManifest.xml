@@ -14,6 +14,9 @@
     
     <!-- Wake lock for background operations -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Allow app to receive boot complete for re-scheduling local reminders -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     
     <application
         android:label="kuet_cse_automation"

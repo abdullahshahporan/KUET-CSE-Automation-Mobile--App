@@ -1,6 +1,7 @@
 import 'package:bcrypt/bcrypt.dart';
 
 import '../config/push_config.dart';
+import 'push_notification_service.dart';
 import 'session_service.dart';
 import 'supabase_core.dart';
 
@@ -51,6 +52,7 @@ class AuthService {
         role: role,
       );
       PushConfig.loginUser(userId);
+      await PushNotificationService.syncUserIdentity();
 
       // Update last_login (non-critical)
       try {
@@ -74,6 +76,8 @@ class AuthService {
   static Future<void> signOut() async {
     PushConfig.logoutUser();
     return SessionService.clearSession();
+    await PushNotificationService.clearUserIdentity();
+    await SessionService.clearSession();
   }
 
   /// Change password: verify current password, then update hash.
