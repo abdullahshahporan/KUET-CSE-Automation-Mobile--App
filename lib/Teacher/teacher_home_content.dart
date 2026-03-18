@@ -34,9 +34,7 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
   @override
   void initState() {
     super.initState();
-    _loadTeacherName();
-    _loadAssignedCourses();
-    _loadTodaySchedule();
+    _refreshDashboard();
     _subscribeToChanges();
     _courseRefreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
       if (!mounted) return;
@@ -143,6 +141,14 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
     }
   }
 
+  Future<void> _refreshDashboard() async {
+    await Future.wait([
+      _loadTeacherName(),
+      _loadAssignedCourses(),
+      _loadTodaySchedule(),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -163,61 +169,68 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
 
           // Content
           Expanded(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // My Courses Section
-                  _buildSectionHeader(
-                    'My Courses',
-                    _loadingCourses
-                        ? 'Loading...'
-                        : '${_assignedCourses.length} courses',
-                    isDarkMode,
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Course Cards
-                  if (_loadingCourses)
-                    _buildLoadingCoursesCard(isDarkMode)
-                  else if (_assignedCourses.isEmpty)
-                    _buildNoCoursesCard(isDarkMode)
-                  else
-                    ...displayedCourses.map(
-                      (course) => _buildCourseCard(course, isDarkMode),
+            child: RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: _refreshDashboard,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // My Courses Section
+                    _buildSectionHeader(
+                      'My Courses',
+                      _loadingCourses
+                          ? 'Loading...'
+                          : '${_assignedCourses.length} courses',
+                      isDarkMode,
                     ),
+                    const SizedBox(height: 12),
 
-                  // See More Button
-                  if (hasMoreCourses && !_showAllCourses)
-                    _buildSeeMoreButton(isDarkMode),
+                    // Course Cards
+                    if (_loadingCourses)
+                      _buildLoadingCoursesCard(isDarkMode)
+                    else if (_assignedCourses.isEmpty)
+                      _buildNoCoursesCard(isDarkMode)
+                    else
+                      ...displayedCourses.map(
+                        (course) => _buildCourseCard(course, isDarkMode),
+                      ),
 
-                  // See Less Button when expanded
-                  if (hasMoreCourses && _showAllCourses)
-                    _buildSeeLessButton(isDarkMode),
+                    // See More Button
+                    if (hasMoreCourses && !_showAllCourses)
+                      _buildSeeMoreButton(isDarkMode),
 
-                  const SizedBox(height: 24),
+                    // See Less Button when expanded
+                    if (hasMoreCourses && _showAllCourses)
+                      _buildSeeLessButton(isDarkMode),
 
-                  // Upcoming Schedule Section
-                  _buildSectionHeader(
-                    'Today\'s Schedule',
-                    _loadingSchedule
-                        ? 'Loading...'
-                        : '${todayClasses.length} classes',
-                    isDarkMode,
-                  ),
-                  const SizedBox(height: 12),
+                    const SizedBox(height: 24),
 
-                  if (todayClasses.isEmpty)
-                    _buildNoClassesCard(isDarkMode)
-                  else
-                    ...todayClasses.map(
-                      (classInfo) => _buildScheduleCard(classInfo, isDarkMode),
+                    // Upcoming Schedule Section
+                    _buildSectionHeader(
+                      'Today\'s Schedule',
+                      _loadingSchedule
+                          ? 'Loading...'
+                          : '${todayClasses.length} classes',
+                      isDarkMode,
                     ),
+                    const SizedBox(height: 12),
 
-                  const SizedBox(height: 80), // Space for FAB
-                ],
+                    if (todayClasses.isEmpty)
+                      _buildNoClassesCard(isDarkMode)
+                    else
+                      ...todayClasses.map(
+                        (classInfo) =>
+                            _buildScheduleCard(classInfo, isDarkMode),
+                      ),
+
+                    const SizedBox(height: 80), // Space for FAB
+                  ],
+                ),
               ),
             ),
           ),

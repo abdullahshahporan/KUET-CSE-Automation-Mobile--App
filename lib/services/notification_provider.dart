@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../config/push_config.dart';
 import '../services/class_reminder_service.dart';
 import '../services/exam_reminder_service.dart';
 import '../services/local_notification_service.dart';
@@ -17,6 +18,10 @@ import '../services/session_service.dart';
 // ─────────────────────────────────────────────────────────────
 
 class NotificationProvider extends ChangeNotifier {
+  static const Set<String> _silentLocalAlertTypes = <String>{
+    'geo_attendance_open',
+  };
+
   List<AppNotification> _notifications = [];
   int _unreadCount = 0;
   bool _isLoading = false;
@@ -81,11 +86,30 @@ class NotificationProvider extends ChangeNotifier {
             .toList();
 
         for (final notification in newUnread) {
-          await LocalNotificationService.show(
+          await NotificationService.saveLocalInboxNotification(
+            id: notification.id,
+            type: notification.type,
             title: notification.title,
             body: notification.body,
-            payload: notification.id,
+            targetType: notification.targetType,
+            targetValue: notification.targetValue,
+            targetYearTerm: notification.targetYearTerm,
+            metadata: {
+              ...notification.metadata,
+              'server_notification_id': notification.id,
+            },
+            createdAt: notification.createdAt,
+            isRead: notification.isRead,
           );
+
+          if (!_silentLocalAlertTypes.contains(notification.type) &&
+              !PushConfig.hasRemotePushCredentials) {
+            await LocalNotificationService.show(
+              title: notification.title,
+              body: notification.body,
+              payload: notification.id,
+            );
+          }
           _alertedNotificationIds.add(notification.id);
         }
 

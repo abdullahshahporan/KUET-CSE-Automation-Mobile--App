@@ -47,9 +47,7 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
   List<String> get _availableSections {
     final course = _selectedCourse;
     if (course == null) return [];
-    return course.type == CourseType.theory
-        ? course.sections
-        : course.groups;
+    return course.type == CourseType.theory ? course.sections : course.groups;
   }
 
   @override
@@ -72,7 +70,8 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
 
   Future<void> _initData() async {
     // Use provided data or load from Supabase
-    _teacherUserId = widget.teacherUserId ?? SupabaseService.currentUserId ?? '';
+    _teacherUserId =
+        widget.teacherUserId ?? SupabaseService.currentUserId ?? '';
 
     if (widget.courses != null && widget.courses!.isNotEmpty) {
       _courses = widget.courses!;
@@ -91,8 +90,11 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
         final courseCode = course['code'] as String? ?? '';
         final year = CourseUtils.yearFromCode(courseCode);
         final termNum = CourseUtils.termFromCode(courseCode);
-        final typeStr = (course['course_type'] as String? ?? 'Theory').toLowerCase();
-        final courseType = typeStr == 'lab' ? CourseType.lab : CourseType.theory;
+        final typeStr = (course['course_type'] as String? ?? 'Theory')
+            .toLowerCase();
+        final courseType = typeStr == 'lab'
+            ? CourseType.lab
+            : CourseType.theory;
         final credit = (course['credit'] as num?)?.toDouble() ?? 3.0;
         return TeacherCourse(
           code: courseCode,
@@ -143,7 +145,7 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
       final now = DateTime.now();
       final endTime = now.add(Duration(minutes: _durationMinutes));
 
-      await GeoAttendanceService.openRoom(
+      final roomData = await GeoAttendanceService.openRoom(
         offeringId: _selectedCourse!.offeringId!,
         teacherUserId: _teacherUserId,
         startTime: now,
@@ -168,36 +170,14 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
             backgroundColor: AppColors.success,
           ),
         );
-        // Notify students that attendance is now open.
-        // Theory sections (A, B) → target that specific SECTION.
-        // Lab groups (A1, A2, B1, B2) → target YEAR_TERM since lab groups
-        // aren't stored separately in the students table.
-        final String notifTargetType;
-        final String notifTargetValue;
-        final String? notifYearTerm;
-        if (section != null && section.length == 1) {
-          notifTargetType = 'SECTION';
-          notifTargetValue = section;
-          notifYearTerm = term;
-        } else {
-          notifTargetType = 'YEAR_TERM';
-          notifTargetValue = term;
-          notifYearTerm = null;
-        }
-        final endHour = endTime.hour.toString().padLeft(2, '0');
-        final endMin = endTime.minute.toString().padLeft(2, '0');
-        await NotificationService.createNotification(
-          type: 'geo_attendance_open',
-          title: 'Attendance Open — $courseCode$sectionLabel',
-          body: 'Your attendance for $courseCode is now open. Submit within $durationMin min (before $endHour:$endMin).',
-          targetType: notifTargetType,
-          targetValue: notifTargetValue,
-          targetYearTerm: notifYearTerm,
-          metadata: {
-            'course_code': courseCode,
-            if (roomNo.isNotEmpty) 'room_number': roomNo,
-            'duration_minutes': durationMin,
-          },
+        await NotificationService.notifyGeoAttendanceOpened(
+          courseCode: courseCode,
+          term: term,
+          section: section,
+          roomNumber: roomNo.isNotEmpty ? roomNo : null,
+          durationMinutes: durationMin,
+          endTime: endTime,
+          roomId: roomData['id']?.toString(),
         );
         if (!_isCourseScoped) _selectedCourse = null;
         _selectedSection = null;
@@ -243,7 +223,10 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
   }
 
   Future<void> _showAttendanceLogs(
-      String roomId, String courseCode, bool isDarkMode) async {
+    String roomId,
+    String courseCode,
+    bool isDarkMode,
+  ) async {
     final logs = await GeoAttendanceService.getRoomAttendanceLogs(roomId);
 
     if (!mounted) return;
@@ -309,44 +292,36 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                             itemCount: logs.length,
                             itemBuilder: (context, index) {
                               final log = logs[index];
-                              final student = log['students']
-                                  as Map<String, dynamic>?;
-                              final rollNo =
-                                  student?['roll_no'] ?? 'Unknown';
-                              final name =
-                                  student?['full_name'] ?? 'Unknown';
-                              final dist =
-                                  log['distance_meters'] as num? ?? 0;
+                              final student =
+                                  log['students'] as Map<String, dynamic>?;
+                              final rollNo = student?['roll_no'] ?? 'Unknown';
+                              final name = student?['full_name'] ?? 'Unknown';
+                              final dist = log['distance_meters'] as num? ?? 0;
                               final time = DateTime.tryParse(
-                                  log['submitted_at'] as String? ?? '');
+                                log['submitted_at'] as String? ?? '',
+                              );
 
                               return Container(
-                                margin:
-                                    const EdgeInsets.only(bottom: 8),
+                                margin: const EdgeInsets.only(bottom: 8),
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: AppColors.surfaceElevated(
-                                      isDarkMode),
-                                  borderRadius:
-                                      BorderRadius.circular(12),
+                                  color: AppColors.surfaceElevated(isDarkMode),
+                                  borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color:
-                                        AppColors.border(isDarkMode),
+                                    color: AppColors.border(isDarkMode),
                                   ),
                                 ),
                                 child: Row(
                                   children: [
                                     CircleAvatar(
                                       radius: 18,
-                                      backgroundColor: AppColors
-                                          .success
+                                      backgroundColor: AppColors.success
                                           .withOpacity(0.15),
                                       child: Text(
                                         '${index + 1}',
                                         style: TextStyle(
                                           color: AppColors.success,
-                                          fontWeight:
-                                              FontWeight.bold,
+                                          fontWeight: FontWeight.bold,
                                           fontSize: 13,
                                         ),
                                       ),
@@ -355,52 +330,46 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment:
-                                            CrossAxisAlignment
-                                                .start,
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             '$rollNo — $name',
                                             style: TextStyle(
-                                              fontWeight:
-                                                  FontWeight.w600,
-                                              color: AppColors
-                                                  .textPrimary(
-                                                      isDarkMode),
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.textPrimary(
+                                                isDarkMode,
+                                              ),
                                             ),
                                           ),
                                           Text(
                                             '${dist}m from building • ${time != null ? _formatTime(time) : ""}',
                                             style: TextStyle(
                                               fontSize: 12,
-                                              color: AppColors
-                                                  .textSecondary(
-                                                      isDarkMode),
+                                              color: AppColors.textSecondary(
+                                                isDarkMode,
+                                              ),
                                             ),
                                           ),
                                         ],
                                       ),
                                     ),
                                     Container(
-                                      padding:
-                                          const EdgeInsets.symmetric(
+                                      padding: const EdgeInsets.symmetric(
                                         horizontal: 8,
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: AppColors.success
-                                            .withOpacity(0.15),
-                                        borderRadius:
-                                            BorderRadius.circular(
-                                                6),
+                                        color: AppColors.success.withOpacity(
+                                          0.15,
+                                        ),
+                                        borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Text(
                                         'Present',
                                         style: TextStyle(
                                           fontSize: 12,
-                                          fontWeight:
-                                              FontWeight.w600,
-                                          color:
-                                              AppColors.success,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.success,
                                         ),
                                       ),
                                     ),
@@ -486,8 +455,9 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                         isDarkMode,
                       ),
                       const SizedBox(height: 10),
-                      ..._activeRooms.map((room) =>
-                          _buildActiveRoomCard(room, isDarkMode)),
+                      ..._activeRooms.map(
+                        (room) => _buildActiveRoomCard(room, isDarkMode),
+                      ),
                       const SizedBox(height: 24),
                     ],
 
@@ -511,8 +481,9 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                         isDarkMode,
                       ),
                       const SizedBox(height: 10),
-                      ..._recentRooms.map((room) =>
-                          _buildRecentRoomCard(room, isDarkMode)),
+                      ..._recentRooms.map(
+                        (room) => _buildRecentRoomCard(room, isDarkMode),
+                      ),
                     ],
                   ],
                 ),
@@ -608,7 +579,11 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
   }
 
   Widget _buildSectionTitle(
-      String title, IconData icon, Color color, bool isDarkMode) {
+    String title,
+    IconData icon,
+    Color color,
+    bool isDarkMode,
+  ) {
     return Row(
       children: [
         Icon(icon, size: 18, color: color),
@@ -656,8 +631,11 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                   color: AppColors.success.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(Icons.door_front_door,
-                    color: AppColors.success, size: 22),
+                child: Icon(
+                  Icons.door_front_door,
+                  color: AppColors.success,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -674,19 +652,25 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                     Row(
                       children: [
                         if (roomNum.isNotEmpty) ...[
-                          Icon(Icons.room, size: 13,
-                              color: AppColors.textSecondary(isDarkMode)),
+                          Icon(
+                            Icons.room,
+                            size: 13,
+                            color: AppColors.textSecondary(isDarkMode),
+                          ),
                           const SizedBox(width: 2),
-                          Text(roomNum,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textSecondary(isDarkMode),
-                              )),
+                          Text(
+                            roomNum,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary(isDarkMode),
+                            ),
+                          ),
                           const SizedBox(width: 8),
                         ],
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2,
+                            horizontal: 6,
+                            vertical: 2,
                           ),
                           decoration: BoxDecoration(
                             color: AppColors.success.withOpacity(0.2),
@@ -716,7 +700,10 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                   icon: const Icon(Icons.people, size: 18),
                   label: const Text('View Logs'),
                   onPressed: () => _showAttendanceLogs(
-                      room['id'] as String, code, isDarkMode),
+                    room['id'] as String,
+                    code,
+                    isDarkMode,
+                  ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primary,
                     side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
@@ -728,26 +715,32 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Builder(builder: (context) {
-                  final isExpired = _timeRemaining(endTime) == 'Expired';
-                  return ElevatedButton.icon(
-                    icon: Icon(isExpired ? Icons.lock : Icons.close, size: 18),
-                    label: Text(isExpired ? 'Expired' : 'Close Room'),
-                    onPressed: isExpired
-                        ? null
-                        : () => _closeRoom(room['id'] as String),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          isExpired ? Colors.grey : AppColors.danger,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: Colors.grey.shade400,
-                      disabledForegroundColor: Colors.white70,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                child: Builder(
+                  builder: (context) {
+                    final isExpired = _timeRemaining(endTime) == 'Expired';
+                    return ElevatedButton.icon(
+                      icon: Icon(
+                        isExpired ? Icons.lock : Icons.close,
+                        size: 18,
                       ),
-                    ),
-                  );
-                }),
+                      label: Text(isExpired ? 'Expired' : 'Close Room'),
+                      onPressed: isExpired
+                          ? null
+                          : () => _closeRoom(room['id'] as String),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isExpired
+                            ? Colors.grey
+                            : AppColors.danger,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: Colors.grey.shade400,
+                        disabledForegroundColor: Colors.white70,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
             ],
           ),
@@ -769,12 +762,14 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
         children: [
           // Course dropdown (hidden when course is pre-selected)
           if (!_isCourseScoped) ...[
-            Text('Course',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary(isDarkMode),
-                )),
+            Text(
+              'Course',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary(isDarkMode),
+              ),
+            ),
             const SizedBox(height: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -787,22 +782,28 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                 child: DropdownButton<String>(
                   isExpanded: true,
                   value: _selectedCourse?.offeringId,
-                  hint: Text('Select a course',
-                      style: TextStyle(
-                          color: AppColors.textMuted, fontSize: 14)),
+                  hint: Text(
+                    'Select a course',
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+                  ),
                   items: _courses
                       .where((c) => c.offeringId != null)
-                      .map((c) => DropdownMenuItem(
-                            value: c.offeringId,
-                            child: Text('${c.code} — ${c.title}',
-                                style: const TextStyle(fontSize: 14)),
-                          ))
+                      .map(
+                        (c) => DropdownMenuItem(
+                          value: c.offeringId,
+                          child: Text(
+                            '${c.code} — ${c.title}',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ),
+                      )
                       .toList(),
                   onChanged: (val) {
                     setState(() {
                       _selectedCourse = _courses.firstWhere(
-                          (c) => c.offeringId == val,
-                          orElse: () => _courses.first);
+                        (c) => c.offeringId == val,
+                        orElse: () => _courses.first,
+                      );
                       _selectedSection = null;
                     });
                   },
@@ -869,12 +870,14 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Room (optional)',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary(isDarkMode),
-                        )),
+                    Text(
+                      'Room (optional)',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary(isDarkMode),
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     TextField(
                       onChanged: (v) => _roomNumber = v,
@@ -882,16 +885,20 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                         hintText: 'e.g. 301',
                         hintStyle: TextStyle(color: AppColors.textMuted),
                         contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 12),
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                           borderSide: BorderSide(
-                              color: AppColors.border(isDarkMode)),
+                            color: AppColors.border(isDarkMode),
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                           borderSide: BorderSide(
-                              color: AppColors.border(isDarkMode)),
+                            color: AppColors.border(isDarkMode),
+                          ),
                         ),
                       ),
                     ),
@@ -903,39 +910,40 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Duration',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary(isDarkMode),
-                        )),
+                    Text(
+                      'Duration',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary(isDarkMode),
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                            color: AppColors.border(isDarkMode)),
+                        border: Border.all(color: AppColors.border(isDarkMode)),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<int>(
                           isExpanded: true,
                           value: _durationMinutes,
                           items: const [
+                            DropdownMenuItem(value: 30, child: Text('30 min')),
                             DropdownMenuItem(
-                                value: 30, child: Text('30 min')),
+                              value: 50,
+                              child: Text('50 min (1 period)'),
+                            ),
+                            DropdownMenuItem(value: 80, child: Text('80 min')),
                             DropdownMenuItem(
-                                value: 50,
-                                child: Text('50 min (1 period)')),
+                              value: 100,
+                              child: Text('100 min (2 periods)'),
+                            ),
                             DropdownMenuItem(
-                                value: 80, child: Text('80 min')),
-                            DropdownMenuItem(
-                                value: 100,
-                                child: Text('100 min (2 periods)')),
-                            DropdownMenuItem(
-                                value: 150,
-                                child: Text('150 min (3 periods)')),
+                              value: 150,
+                              child: Text('150 min (3 periods)'),
+                            ),
                           ],
                           onChanged: (v) {
                             if (v != null) {
@@ -963,8 +971,7 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                       width: 18,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(Colors.white),
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
                   : const Icon(Icons.radio_button_checked, size: 20),

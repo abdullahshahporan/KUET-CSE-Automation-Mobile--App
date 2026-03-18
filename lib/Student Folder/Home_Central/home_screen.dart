@@ -21,13 +21,15 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String _firstName = 'Student';
   bool _isCR = false;
-  
+  final GlobalKey<UpcomingScheduleSectionState> _upcomingScheduleKey =
+      GlobalKey<UpcomingScheduleSectionState>();
+
   @override
   void initState() {
     super.initState();
     _loadUserData();
   }
-  
+
   Future<void> _loadUserData() async {
     final profile = await SupabaseService.getStudentProfile();
     if (mounted && profile != null) {
@@ -41,6 +43,13 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _refreshHome() async {
+    await Future.wait([
+      _loadUserData(),
+      _upcomingScheduleKey.currentState?.refresh() ?? Future.value(),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -49,167 +58,175 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: isDarkMode
           ? AppColors.darkBackground
           : AppColors.lightBackground,
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Welcome Section
-                  _buildWelcomeSection(isDarkMode, _firstName),
-                  const SizedBox(height: 20),
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: _refreshHome,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Welcome Section
+                    _buildWelcomeSection(isDarkMode, _firstName),
+                    const SizedBox(height: 20),
 
-                  const SizedBox(height: 20),
+                    const SizedBox(height: 20),
 
-                  // Features Section Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Features',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: isDarkMode ? Colors.white : Colors.black87,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          _isCR ? '6 Items' : '5 Items',
+                    // Features Section Header
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Features',
                           style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primary,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: isDarkMode ? Colors.white : Colors.black87,
+                            letterSpacing: 0.3,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                ],
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            _isCR ? '6 Items' : '5 Items',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
               ),
             ),
-          ),
 
-          // Features Grid
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: 1.05,
-              ),
-              delegate: SliverChildListDelegate([
-                _buildFeatureCard(
-                  context: context,
-                  icon: Icons.fact_check_rounded,
-                  title: 'Attendance',
-                  subtitle: 'Track your presence',
-                  gradient: const [Color(0xFF10B981), Color(0xFF059669)],
-                  isDarkMode: isDarkMode,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AttendanceScreen(),
-                    ),
-                  ),
+            // Features Grid
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 14,
+                  mainAxisSpacing: 14,
+                  childAspectRatio: 1.05,
                 ),
-                _buildFeatureCard(
-                  context: context,
-                  icon: Icons.menu_book_rounded,
-                  title: 'Course Info',
-                  subtitle: 'Course syllabus',
-                  gradient: const [Color(0xFF14B8A6), Color(0xFF0D9488)],
-                  isDarkMode: isDarkMode,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const CourseInfoScreen(),
-                    ),
-                  ),
-                ),
-                _buildFeatureCard(
-                  context: context,
-                  icon: Icons.calendar_month_rounded,
-                  title: 'Class Schedule',
-                  subtitle: 'View timetable',
-                  gradient: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
-                  isDarkMode: isDarkMode,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const UnifiedScheduleScreen(),
-                    ),
-                  ),
-                ),
-                _buildFeatureCard(
-                  context: context,
-                  icon: Icons.campaign_rounded,
-                  title: 'Notices',
-                  subtitle: 'Important updates',
-                  gradient: const [Color(0xFFEF4444), Color(0xFFDC2626)],
-                  isDarkMode: isDarkMode,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const NoticeScreen(),
-                    ),
-                  ),
-                ),
-                _buildFeatureCard(
-                  context: context,
-                  icon: Icons.location_on_rounded,
-                  title: 'Geo-Attendance',
-                  subtitle: 'Location check-in',
-                  gradient: const [Color(0xFF0D9488), Color(0xFF0F766E)],
-                  isDarkMode: isDarkMode,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const StudentGeoAttendanceScreen(),
-                    ),
-                  ),
-                ),
-                if (_isCR)
+                delegate: SliverChildListDelegate([
                   _buildFeatureCard(
                     context: context,
-                    icon: Icons.meeting_room_rounded,
-                    title: 'Room Request',
-                    subtitle: 'CR room booking',
-                    gradient: const [Color(0xFFF97316), Color(0xFFEA580C)],
+                    icon: Icons.fact_check_rounded,
+                    title: 'Attendance',
+                    subtitle: 'Track your presence',
+                    gradient: const [Color(0xFF10B981), Color(0xFF059669)],
                     isDarkMode: isDarkMode,
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const CRRoomRequestScreen(),
+                        builder: (context) => const AttendanceScreen(),
                       ),
                     ),
                   ),
-              ]),
+                  _buildFeatureCard(
+                    context: context,
+                    icon: Icons.menu_book_rounded,
+                    title: 'Course Info',
+                    subtitle: 'Course syllabus',
+                    gradient: const [Color(0xFF14B8A6), Color(0xFF0D9488)],
+                    isDarkMode: isDarkMode,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CourseInfoScreen(),
+                      ),
+                    ),
+                  ),
+                  _buildFeatureCard(
+                    context: context,
+                    icon: Icons.calendar_month_rounded,
+                    title: 'Class Schedule',
+                    subtitle: 'View timetable',
+                    gradient: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+                    isDarkMode: isDarkMode,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const UnifiedScheduleScreen(),
+                      ),
+                    ),
+                  ),
+                  _buildFeatureCard(
+                    context: context,
+                    icon: Icons.campaign_rounded,
+                    title: 'Notices',
+                    subtitle: 'Important updates',
+                    gradient: const [Color(0xFFEF4444), Color(0xFFDC2626)],
+                    isDarkMode: isDarkMode,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const NoticeScreen(),
+                      ),
+                    ),
+                  ),
+                  _buildFeatureCard(
+                    context: context,
+                    icon: Icons.location_on_rounded,
+                    title: 'Geo-Attendance',
+                    subtitle: 'Location check-in',
+                    gradient: const [Color(0xFF0D9488), Color(0xFF0F766E)],
+                    isDarkMode: isDarkMode,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const StudentGeoAttendanceScreen(),
+                      ),
+                    ),
+                  ),
+                  if (_isCR)
+                    _buildFeatureCard(
+                      context: context,
+                      icon: Icons.meeting_room_rounded,
+                      title: 'Room Request',
+                      subtitle: 'CR room booking',
+                      gradient: const [Color(0xFFF97316), Color(0xFFEA580C)],
+                      isDarkMode: isDarkMode,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CRRoomRequestScreen(),
+                        ),
+                      ),
+                    ),
+                ]),
+              ),
             ),
-          ),
 
-          // Upcoming Schedule — fetched from Supabase
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
-              child: const UpcomingScheduleSection(),
+            // Upcoming Schedule — fetched from Supabase
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+                child: UpcomingScheduleSection(key: _upcomingScheduleKey),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -391,6 +408,4 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  }
-
+}

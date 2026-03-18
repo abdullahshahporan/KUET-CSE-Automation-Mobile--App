@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Common%20Screen/splash_screen.dart';
 import 'package:kuet_cse_automation/app_theme.dart';
 import 'package:kuet_cse_automation/services/notification_provider.dart';
+import 'package:kuet_cse_automation/services/push_notification_service.dart';
 import 'package:provider/provider.dart' as provider;
 
 class CSEApp extends StatelessWidget {
@@ -22,6 +23,7 @@ class CSEApp extends StatelessWidget {
           builder: (context, themeProvider, child) {
             return MaterialApp(
               debugShowCheckedModeBanner: false,
+              navigatorKey: PushNotificationService.navigatorKey,
               theme: AppTheme.lightTheme,
               darkTheme: AppTheme.darkTheme,
               themeMode: themeProvider.isDarkMode

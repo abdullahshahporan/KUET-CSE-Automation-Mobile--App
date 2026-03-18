@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:kuet_cse_automation/Auth/Sign_In_Screen.dart';
 import 'package:kuet_cse_automation/Teacher/teacher_navbar/teacher_navbar_screen.dart';
+import 'package:kuet_cse_automation/services/push_notification_service.dart';
 import 'package:kuet_cse_automation/theme/app_colors.dart';
 import '../../services/supabase_service.dart';
 import 'main_bottom_navbar_screen.dart';
@@ -21,6 +22,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+    PushNotificationService.markAppNotReady();
 
     _animationController = AnimationController(
       vsync: this,
@@ -53,9 +55,9 @@ class _SplashScreenState extends State<SplashScreen>
       destination = const SignInScreen();
     }
 
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => destination),
-    );
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (context) => destination));
   }
 
   @override

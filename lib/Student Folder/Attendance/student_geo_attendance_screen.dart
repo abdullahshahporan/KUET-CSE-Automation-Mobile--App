@@ -1,9 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/geo_attendance_service.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_colors.dart';
-
 
 /// Student screen to view open geo-attendance rooms and submit attendance.
 class StudentGeoAttendanceScreen extends StatefulWidget {
@@ -14,17 +16,54 @@ class StudentGeoAttendanceScreen extends StatefulWidget {
       _StudentGeoAttendanceScreenState();
 }
 
-class _StudentGeoAttendanceScreenState
-    extends State<StudentGeoAttendanceScreen> {
+class _StudentGeoAttendanceScreenState extends State<StudentGeoAttendanceScreen>
+    with WidgetsBindingObserver {
   bool _isLoading = true;
   List<Map<String, dynamic>> _openRooms = [];
   String? _submittingRoomId;
   String? _locationError;
+  RealtimeChannel? _realtimeChannel;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadData();
+    _subscribeRealtime();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    final channel = _realtimeChannel;
+    if (channel != null) {
+      unawaited(SupabaseService.removeChannel(channel));
+    }
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_loadData());
+    }
+  }
+
+  void _subscribeRealtime() {
+    final userId = SupabaseService.currentUserId;
+    if (userId == null || userId.isEmpty) return;
+
+    _realtimeChannel = SupabaseService.client
+        .channel('student-geo-attendance-screen-$userId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'geo_attendance_rooms',
+          callback: (_) {
+            unawaited(_loadData());
+          },
+        )
+        .subscribe();
   }
 
   Future<void> _loadData() async {
@@ -36,8 +75,7 @@ class _StudentGeoAttendanceScreenState
         return;
       }
 
-      final rooms =
-          await GeoAttendanceService.getOpenRoomsForStudent(
+      final rooms = await GeoAttendanceService.getOpenRoomsForStudent(
         studentUserId: userId,
       );
 
@@ -57,8 +95,10 @@ class _StudentGeoAttendanceScreenState
       // Check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        setState(() => _locationError =
-            'Location services are disabled. Please enable GPS.');
+        setState(
+          () => _locationError =
+              'Location services are disabled. Please enable GPS.',
+        );
         return null;
       }
 
@@ -67,15 +107,19 @@ class _StudentGeoAttendanceScreenState
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          setState(() => _locationError =
-              'Location permission denied. Please allow location access.');
+          setState(
+            () => _locationError =
+                'Location permission denied. Please allow location access.',
+          );
           return null;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        setState(() => _locationError =
-            'Location permission permanently denied. Go to Settings to enable.');
+        setState(
+          () => _locationError =
+              'Location permission permanently denied. Go to Settings to enable.',
+        );
         return null;
       }
 
@@ -91,8 +135,7 @@ class _StudentGeoAttendanceScreenState
 
       return position;
     } catch (e) {
-      setState(
-          () => _locationError = 'Could not get your location: $e');
+      setState(() => _locationError = 'Could not get your location: $e');
       return null;
     }
   }
@@ -153,10 +196,7 @@ class _StudentGeoAttendanceScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$e'),
-            backgroundColor: AppColors.danger,
-          ),
+          SnackBar(content: Text('$e'), backgroundColor: AppColors.danger),
         );
       }
     } finally {
@@ -168,8 +208,7 @@ class _StudentGeoAttendanceScreenState
     showDialog(
       context: context,
       builder: (context) {
-        final isDarkMode =
-            Theme.of(context).brightness == Brightness.dark;
+        final isDarkMode = Theme.of(context).brightness == Brightness.dark;
         return AlertDialog(
           backgroundColor: AppColors.surface(isDarkMode),
           shape: RoundedRectangleBorder(
@@ -177,12 +216,13 @@ class _StudentGeoAttendanceScreenState
           ),
           title: Row(
             children: [
-              Icon(Icons.location_off,
-                  color: AppColors.warning, size: 28),
+              Icon(Icons.location_off, color: AppColors.warning, size: 28),
               const SizedBox(width: 10),
               const Expanded(
-                child: Text('You\'re Not Nearby',
-                    style: TextStyle(fontSize: 18)),
+                child: Text(
+                  'You\'re Not Nearby',
+                  style: TextStyle(fontSize: 18),
+                ),
               ),
             ],
           ),
@@ -195,8 +235,11 @@ class _StudentGeoAttendanceScreenState
                   color: AppColors.warning.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.directions_walk_rounded,
-                    size: 48, color: AppColors.warning),
+                child: Icon(
+                  Icons.directions_walk_rounded,
+                  size: 48,
+                  color: AppColors.warning,
+                ),
               ),
               const SizedBox(height: 16),
               Text(
@@ -221,17 +264,17 @@ class _StudentGeoAttendanceScreenState
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 8),
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.info.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: AppColors.info.withOpacity(0.3)),
+                  border: Border.all(color: AppColors.info.withOpacity(0.3)),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline,
-                        size: 18, color: AppColors.info),
+                    Icon(Icons.info_outline, size: 18, color: AppColors.info),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -261,8 +304,10 @@ class _StudentGeoAttendanceScreenState
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                child: const Text('Got it',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Got it',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ],
@@ -335,8 +380,9 @@ class _StudentGeoAttendanceScreenState
                         ),
                         const SizedBox(height: 10),
 
-                        ..._openRooms.map((room) =>
-                            _buildRoomCard(room, isDarkMode)),
+                        ..._openRooms.map(
+                          (room) => _buildRoomCard(room, isDarkMode),
+                        ),
                       ],
                     ),
             ),
@@ -352,8 +398,11 @@ class _StudentGeoAttendanceScreenState
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.location_off_outlined,
-                  size: 64, color: AppColors.textMuted),
+              Icon(
+                Icons.location_off_outlined,
+                size: 64,
+                color: AppColors.textMuted,
+              ),
               const SizedBox(height: 16),
               Text(
                 'No Open Rooms',
@@ -367,9 +416,7 @@ class _StudentGeoAttendanceScreenState
               Text(
                 'Your teacher hasn\'t opened any room yet.\nPull down to refresh.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.textSecondary(isDarkMode),
-                ),
+                style: TextStyle(color: AppColors.textSecondary(isDarkMode)),
               ),
             ],
           ),
@@ -481,10 +528,11 @@ class _StudentGeoAttendanceScreenState
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: (alreadySubmitted
-                            ? AppColors.success
-                            : AppColors.primary)
-                        .withOpacity(0.12),
+                    color:
+                        (alreadySubmitted
+                                ? AppColors.success
+                                : AppColors.primary)
+                            .withOpacity(0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -523,8 +571,10 @@ class _StudentGeoAttendanceScreenState
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.success.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(6),
@@ -546,8 +596,11 @@ class _StudentGeoAttendanceScreenState
             // Details
             Row(
               children: [
-                Icon(Icons.person_outline,
-                    size: 15, color: AppColors.textMuted),
+                Icon(
+                  Icons.person_outline,
+                  size: 15,
+                  color: AppColors.textMuted,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   teacherName,
@@ -558,8 +611,11 @@ class _StudentGeoAttendanceScreenState
                 ),
                 if (roomNumber.isNotEmpty) ...[
                   const SizedBox(width: 12),
-                  Icon(Icons.room_outlined,
-                      size: 15, color: AppColors.textMuted),
+                  Icon(
+                    Icons.room_outlined,
+                    size: 15,
+                    color: AppColors.textMuted,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     'Room $roomNumber',
@@ -572,7 +628,10 @@ class _StudentGeoAttendanceScreenState
                 if (roomSection.isNotEmpty) ...[
                   const SizedBox(width: 12),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.primary.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(4),
@@ -588,8 +647,7 @@ class _StudentGeoAttendanceScreenState
                   ),
                 ],
                 const SizedBox(width: 12),
-                Icon(Icons.schedule,
-                    size: 15, color: AppColors.textMuted),
+                Icon(Icons.schedule, size: 15, color: AppColors.textMuted),
                 const SizedBox(width: 4),
                 Text(
                   _formatTimeRange(startTime, endTime),
@@ -616,8 +674,11 @@ class _StudentGeoAttendanceScreenState
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.check_circle,
-                              color: AppColors.success, size: 20),
+                          Icon(
+                            Icons.check_circle,
+                            color: AppColors.success,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             'Attendance Submitted',
@@ -636,9 +697,9 @@ class _StudentGeoAttendanceScreenState
                               width: 18,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(
-                                        Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : const Icon(Icons.location_on, size: 20),
@@ -657,8 +718,7 @@ class _StudentGeoAttendanceScreenState
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),

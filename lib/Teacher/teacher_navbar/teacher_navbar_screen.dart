@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/notification_provider.dart';
+import '../../services/push_notification_service.dart';
 import '../../theme/app_colors.dart';
 import '../teacher_home_content.dart';
 import '../Schedule/teacher_schedule_screen.dart';
@@ -25,6 +26,7 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
+        PushNotificationService.markAppReady();
         context.read<NotificationProvider>().initialize();
       }
     });
@@ -46,7 +48,9 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
       appBar: AppBar(
         elevation: 0,
         toolbarHeight: 60,
-        backgroundColor: isDarkMode ? AppColors.darkSurface : AppColors.lightSurface,
+        backgroundColor: isDarkMode
+            ? AppColors.darkSurface
+            : AppColors.lightSurface,
         automaticallyImplyLeading: false,
         title: Row(
           children: [
@@ -60,7 +64,11 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
                 ),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.school_rounded, color: Colors.white, size: 20),
+              child: const Icon(
+                Icons.school_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 12),
             Column(
@@ -79,7 +87,9 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
                   'Teacher Portal',
                   style: TextStyle(
                     fontSize: 11,
-                    color: isDarkMode ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                    color: isDarkMode
+                        ? AppColors.darkTextSecondary
+                        : AppColors.lightTextSecondary,
                   ),
                 ),
               ],

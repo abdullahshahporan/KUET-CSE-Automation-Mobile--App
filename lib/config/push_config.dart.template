@@ -3,4 +3,8 @@ class PushConfig {
 
   // Replace with your OneSignal App ID from OneSignal dashboard.
   static const String oneSignalAppId = 'YOUR_ONESIGNAL_APP_ID';
+
+  // Required to actually send remote push when notifications are created.
+  // Keep this out of source control in real production setups if possible.
+  static const String oneSignalRestApiKey = 'YOUR_ONESIGNAL_REST_API_KEY';
 }

@@ -10,6 +10,7 @@ import 'package:kuet_cse_automation/theme/app_colors.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/notification_provider.dart';
+import '../../services/push_notification_service.dart';
 import '../../services/supabase_service.dart';
 import 'geo_attendance_floating_widget.dart';
 
@@ -30,6 +31,7 @@ class _MainBottomNavBarScreenState extends State<MainBottomNavBarScreen> {
     _loadUserName();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
+        PushNotificationService.markAppReady();
         context.read<NotificationProvider>().initialize();
       }
     });

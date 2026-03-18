@@ -75,7 +75,6 @@ class AuthService {
   /// Sign out – clears saved session.
   static Future<void> signOut() async {
     PushConfig.logoutUser();
-    return SessionService.clearSession();
     await PushNotificationService.clearUserIdentity();
     await SessionService.clearSession();
   }
@@ -91,10 +90,9 @@ class AuthService {
     }
 
     try {
-      final profile = await SupabaseCore.from('profiles')
-          .select('password_hash')
-          .eq('user_id', userId)
-          .maybeSingle();
+      final profile = await SupabaseCore.from(
+        'profiles',
+      ).select('password_hash').eq('user_id', userId).maybeSingle();
 
       if (profile == null) {
         return {'success': false, 'message': 'Profile not found'};

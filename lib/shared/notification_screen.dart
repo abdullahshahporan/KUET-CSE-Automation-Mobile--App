@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:kuet_cse_automation/Student%20Folder/Attendance/student_geo_attendance_screen.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/class_reminder_service.dart';
@@ -40,8 +41,9 @@ class NotificationScreen extends StatelessWidget {
     NotificationProvider provider,
   ) {
     return AppBar(
-      backgroundColor:
-          isDarkMode ? AppColors.darkSurface : AppColors.lightSurface,
+      backgroundColor: isDarkMode
+          ? AppColors.darkSurface
+          : AppColors.lightSurface,
       elevation: 0,
       leading: IconButton(
         icon: Container(
@@ -119,9 +121,11 @@ class NotificationScreen extends StatelessWidget {
         if (provider.hasUnread)
           TextButton.icon(
             onPressed: () => provider.markAllRead(),
-            icon: Icon(Icons.done_all_rounded,
-                size: 16,
-                color: isDarkMode ? AppColors.primary : AppColors.primary),
+            icon: Icon(
+              Icons.done_all_rounded,
+              size: 16,
+              color: isDarkMode ? AppColors.primary : AppColors.primary,
+            ),
             label: Text(
               'Mark all read',
               style: TextStyle(
@@ -212,9 +216,7 @@ class NotificationScreen extends StatelessWidget {
     NotificationProvider provider,
   ) {
     if (provider.isLoading) {
-      return Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      );
+      return Center(child: CircularProgressIndicator(color: AppColors.primary));
     }
 
     if (provider.error != null) {
@@ -312,13 +314,15 @@ class NotificationScreen extends StatelessWidget {
   }
 
   Widget _buildErrorState(
-      BuildContext context, bool isDarkMode, NotificationProvider provider) {
+    BuildContext context,
+    bool isDarkMode,
+    NotificationProvider provider,
+  ) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline_rounded,
-              size: 48, color: AppColors.danger),
+          Icon(Icons.error_outline_rounded, size: 48, color: AppColors.danger),
           const SizedBox(height: 16),
           Text(
             provider.error ?? 'Something went wrong',
@@ -365,23 +369,31 @@ class _NotificationCard extends StatelessWidget {
     final isUnread = !notification.isRead;
 
     return InkWell(
-      onTap: onTap,
+      onTap: () async {
+        onTap();
+        if (notification.type == 'geo_attendance_open') {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const StudentGeoAttendanceScreen(),
+            ),
+          );
+        }
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         decoration: BoxDecoration(
           color: isUnread
               ? (isDarkMode
-                  ? config.color.withOpacity(0.08)
-                  : config.color.withOpacity(0.06))
+                    ? config.color.withOpacity(0.08)
+                    : config.color.withOpacity(0.06))
               : (isDarkMode ? AppColors.darkSurface : AppColors.lightSurface),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isUnread
                 ? config.color.withOpacity(0.35)
-                : (isDarkMode
-                    ? AppColors.darkBorder
-                    : AppColors.lightBorder),
+                : (isDarkMode ? AppColors.darkBorder : AppColors.lightBorder),
             width: isUnread ? 1.5 : 1,
           ),
           boxShadow: [
@@ -427,9 +439,7 @@ class _NotificationCard extends StatelessWidget {
                               fontWeight: isUnread
                                   ? FontWeight.w700
                                   : FontWeight.w600,
-                              color: isDarkMode
-                                  ? Colors.white
-                                  : Colors.black87,
+                              color: isDarkMode ? Colors.white : Colors.black87,
                               height: 1.3,
                             ),
                           ),
@@ -464,7 +474,9 @@ class _NotificationCard extends StatelessWidget {
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: config.color.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(8),
@@ -533,27 +545,111 @@ class _TypeConfig {
 
 _TypeConfig _typeConfig(String type) {
   return switch (type) {
-    'room_allocated' => _TypeConfig(Icons.meeting_room_rounded, AppColors.info, 'Room'),
-    'room_request_approved' => _TypeConfig(Icons.check_circle_rounded, AppColors.success, 'Approved'),
-    'room_request_rejected' => _TypeConfig(Icons.cancel_rounded, AppColors.danger, 'Rejected'),
-    'cr_room_request_submitted' => _TypeConfig(Icons.assignment_turned_in_rounded, AppColors.info, 'CR Request'),
-    'attendance_marking_reminder' => _TypeConfig(Icons.fact_check_rounded, AppColors.warning, 'Reminder'),
-    'course_anomaly_alert' => _TypeConfig(Icons.error_outline_rounded, AppColors.danger, 'Alert'),
-    'notice_posted' => _TypeConfig(Icons.campaign_rounded, AppColors.warning, 'Notice'),
-    'exam_result_published' => _TypeConfig(Icons.grading_rounded, AppColors.success, 'Result'),
-    'exam_scheduled' => _TypeConfig(Icons.quiz_rounded, AppColors.danger, 'Exam'),
-    'exam_room_assigned' => _TypeConfig(Icons.meeting_room_rounded, AppColors.info, 'Exam Room'),
-    'exam_reminder' => _TypeConfig(Icons.alarm_rounded, AppColors.warning, 'Reminder'),
-    'attendance_absent' => _TypeConfig(Icons.person_off_rounded, AppColors.danger, 'Absent'),
-    'class_cancelled' => _TypeConfig(Icons.event_busy_rounded, AppColors.rose, 'Cancelled'),
-    'class_rescheduled' => _TypeConfig(Icons.event_repeat_rounded, AppColors.accent, 'Rescheduled'),
-    'assignment_due' => _TypeConfig(Icons.assignment_late_rounded, AppColors.warning, 'Assignment'),
-    'attendance_low' => _TypeConfig(Icons.warning_rounded, AppColors.danger, 'Attendance'),
-    'announcement' => _TypeConfig(Icons.announcement_rounded, AppColors.primary, 'Announcement'),
-    'term_upgrade' => _TypeConfig(Icons.upgrade_rounded, AppColors.success, 'Upgrade'),
-    'makeup_class' => _TypeConfig(Icons.event_available_rounded, AppColors.teal, 'Makeup'),
-    'geo_attendance_open' => _TypeConfig(Icons.wifi_tethering_rounded, AppColors.success, 'Attendance'),
-    'optional_course' => _TypeConfig(Icons.menu_book_rounded, AppColors.info, 'Course'),
+    'room_allocated' => _TypeConfig(
+      Icons.meeting_room_rounded,
+      AppColors.info,
+      'Room',
+    ),
+    'room_request_approved' => _TypeConfig(
+      Icons.check_circle_rounded,
+      AppColors.success,
+      'Approved',
+    ),
+    'room_request_rejected' => _TypeConfig(
+      Icons.cancel_rounded,
+      AppColors.danger,
+      'Rejected',
+    ),
+    'cr_room_request_submitted' => _TypeConfig(
+      Icons.assignment_turned_in_rounded,
+      AppColors.info,
+      'CR Request',
+    ),
+    'attendance_marking_reminder' => _TypeConfig(
+      Icons.fact_check_rounded,
+      AppColors.warning,
+      'Reminder',
+    ),
+    'course_anomaly_alert' => _TypeConfig(
+      Icons.error_outline_rounded,
+      AppColors.danger,
+      'Alert',
+    ),
+    'notice_posted' => _TypeConfig(
+      Icons.campaign_rounded,
+      AppColors.warning,
+      'Notice',
+    ),
+    'exam_result_published' => _TypeConfig(
+      Icons.grading_rounded,
+      AppColors.success,
+      'Result',
+    ),
+    'exam_scheduled' => _TypeConfig(
+      Icons.quiz_rounded,
+      AppColors.danger,
+      'Exam',
+    ),
+    'exam_room_assigned' => _TypeConfig(
+      Icons.meeting_room_rounded,
+      AppColors.info,
+      'Exam Room',
+    ),
+    'exam_reminder' => _TypeConfig(
+      Icons.alarm_rounded,
+      AppColors.warning,
+      'Reminder',
+    ),
+    'attendance_absent' => _TypeConfig(
+      Icons.person_off_rounded,
+      AppColors.danger,
+      'Absent',
+    ),
+    'class_cancelled' => _TypeConfig(
+      Icons.event_busy_rounded,
+      AppColors.rose,
+      'Cancelled',
+    ),
+    'class_rescheduled' => _TypeConfig(
+      Icons.event_repeat_rounded,
+      AppColors.accent,
+      'Rescheduled',
+    ),
+    'assignment_due' => _TypeConfig(
+      Icons.assignment_late_rounded,
+      AppColors.warning,
+      'Assignment',
+    ),
+    'attendance_low' => _TypeConfig(
+      Icons.warning_rounded,
+      AppColors.danger,
+      'Attendance',
+    ),
+    'announcement' => _TypeConfig(
+      Icons.announcement_rounded,
+      AppColors.primary,
+      'Announcement',
+    ),
+    'term_upgrade' => _TypeConfig(
+      Icons.upgrade_rounded,
+      AppColors.success,
+      'Upgrade',
+    ),
+    'makeup_class' => _TypeConfig(
+      Icons.event_available_rounded,
+      AppColors.teal,
+      'Makeup',
+    ),
+    'geo_attendance_open' => _TypeConfig(
+      Icons.wifi_tethering_rounded,
+      AppColors.success,
+      'Attendance',
+    ),
+    'optional_course' => _TypeConfig(
+      Icons.menu_book_rounded,
+      AppColors.info,
+      'Course',
+    ),
     _ => _TypeConfig(Icons.notifications_rounded, AppColors.primary, 'Update'),
   };
 }

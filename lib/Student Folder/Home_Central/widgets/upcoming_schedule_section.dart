@@ -13,10 +13,10 @@ class UpcomingScheduleSection extends StatefulWidget {
 
   @override
   State<UpcomingScheduleSection> createState() =>
-      _UpcomingScheduleSectionState();
+      UpcomingScheduleSectionState();
 }
 
-class _UpcomingScheduleSectionState extends State<UpcomingScheduleSection> {
+class UpcomingScheduleSectionState extends State<UpcomingScheduleSection> {
   late Future<Map<String, dynamic>> _future;
 
   @override
@@ -25,10 +25,12 @@ class _UpcomingScheduleSectionState extends State<UpcomingScheduleSection> {
     _future = UpcomingScheduleService.getUpcoming();
   }
 
-  void _refresh() {
+  Future<void> refresh() async {
+    final nextFuture = UpcomingScheduleService.getUpcoming();
     setState(() {
-      _future = UpcomingScheduleService.getUpcoming();
+      _future = nextFuture;
     });
+    await nextFuture;
   }
 
   @override
@@ -43,8 +45,7 @@ class _UpcomingScheduleSectionState extends State<UpcomingScheduleSection> {
         }
 
         final today = (snap.data?['today'] as List<UpcomingClass>?) ?? [];
-        final tomorrow =
-            (snap.data?['tomorrow'] as List<UpcomingClass>?) ?? [];
+        final tomorrow = (snap.data?['tomorrow'] as List<UpcomingClass>?) ?? [];
         final dayLabel = snap.data?['dayLabel'] as String? ?? 'Tomorrow';
 
         if (today.isEmpty && tomorrow.isEmpty) {
@@ -55,12 +56,21 @@ class _UpcomingScheduleSectionState extends State<UpcomingScheduleSection> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // --- Section Header ---
-            _sectionHeader('Upcoming Classes', isDark, onRefresh: _refresh),
+            _sectionHeader(
+              'Upcoming Classes',
+              isDark,
+              onRefresh: () => refresh(),
+            ),
             const SizedBox(height: 14),
 
             // --- Today ---
             if (today.isNotEmpty) ...[
-              _subHeader('Today', Icons.today_rounded, AppColors.primary, isDark),
+              _subHeader(
+                'Today',
+                Icons.today_rounded,
+                AppColors.primary,
+                isDark,
+              ),
               const SizedBox(height: 10),
               ...today.map((c) => _ClassCard(item: c, isDark: isDark)),
               const SizedBox(height: 18),
@@ -69,7 +79,11 @@ class _UpcomingScheduleSectionState extends State<UpcomingScheduleSection> {
             // --- Next class day ---
             if (tomorrow.isNotEmpty) ...[
               _subHeader(
-                  dayLabel, Icons.event_rounded, AppColors.accent, isDark),
+                dayLabel,
+                Icons.event_rounded,
+                AppColors.accent,
+                isDark,
+              ),
               const SizedBox(height: 10),
               ...tomorrow.map((c) => _ClassCard(item: c, isDark: isDark)),
             ],
@@ -83,8 +97,7 @@ class _UpcomingScheduleSectionState extends State<UpcomingScheduleSection> {
 
   // ──────────────────── Sub-widgets ────────────────────
 
-  Widget _sectionHeader(String title, bool isDark,
-      {VoidCallback? onRefresh}) {
+  Widget _sectionHeader(String title, bool isDark, {VoidCallback? onRefresh}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -99,8 +112,11 @@ class _UpcomingScheduleSectionState extends State<UpcomingScheduleSection> {
         ),
         if (onRefresh != null)
           IconButton(
-            icon: Icon(Icons.refresh_rounded,
-                size: 20, color: AppColors.textSecondary(isDark)),
+            icon: Icon(
+              Icons.refresh_rounded,
+              size: 20,
+              color: AppColors.textSecondary(isDark),
+            ),
             onPressed: onRefresh,
             tooltip: 'Refresh',
             splashRadius: 18,
@@ -111,8 +127,7 @@ class _UpcomingScheduleSectionState extends State<UpcomingScheduleSection> {
     );
   }
 
-  Widget _subHeader(
-      String label, IconData icon, Color color, bool isDark) {
+  Widget _subHeader(String label, IconData icon, Color color, bool isDark) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -148,9 +163,11 @@ class _UpcomingScheduleSectionState extends State<UpcomingScheduleSection> {
         Center(
           child: Column(
             children: [
-              Icon(Icons.event_available_rounded,
-                  size: 48,
-                  color: AppColors.textSecondary(isDark).withOpacity(0.4)),
+              Icon(
+                Icons.event_available_rounded,
+                size: 48,
+                color: AppColors.textSecondary(isDark).withOpacity(0.4),
+              ),
               const SizedBox(height: 10),
               Text(
                 'No upcoming classes',
@@ -292,7 +309,9 @@ class _ClassCard extends StatelessWidget {
               ],
             ),
             child: Icon(
-              _isLab(item.courseCode) ? Icons.science_rounded : Icons.school_rounded,
+              _isLab(item.courseCode)
+                  ? Icons.science_rounded
+                  : Icons.school_rounded,
               color: Colors.white,
               size: 22,
             ),
@@ -320,8 +339,10 @@ class _ClassCard extends StatelessWidget {
                     ),
                     if (item.isOngoing)
                       Container(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.success.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(8),

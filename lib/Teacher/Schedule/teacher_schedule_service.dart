@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../../services/supabase_service.dart';
+import '../../services/notification_service.dart';
 import 'teacher_schedule_model.dart';
 import 'teacher_room_allocation_service.dart';
 
@@ -95,6 +96,9 @@ class TeacherScheduleService {
     String? section,
   }) async {
     try {
+      // Fetch offering_id before updating so we can notify students
+      final offeringId = await _getOfferingIdFromSlot(slotId);
+
       await SupabaseService.client
           .from('routine_slots')
           .update({
@@ -104,6 +108,17 @@ class TeacherScheduleService {
             'section': section,
           })
           .eq('id', slotId);
+
+      // Notify students about the schedule change
+      if (offeringId != null) {
+        await _notifyStudentsScheduleChange(
+          changeType: 'class_rescheduled',
+          offeringId: offeringId,
+          startTime: startTime,
+          endTime: endTime,
+          room: roomNumber,
+        );
+      }
       return true;
     } catch (e) {
       debugPrint('Error updating slot: $e');
@@ -114,10 +129,21 @@ class TeacherScheduleService {
   /// Delete a routine slot by ID.
   static Future<bool> deleteSlot(String slotId) async {
     try {
+      // Fetch offering_id before deleting so we can notify students
+      final offeringId = await _getOfferingIdFromSlot(slotId);
+
       await SupabaseService.client
           .from('routine_slots')
           .delete()
           .eq('id', slotId);
+
+      // Notify students about the cancellation
+      if (offeringId != null) {
+        await _notifyStudentsScheduleChange(
+          changeType: 'class_cancelled',
+          offeringId: offeringId,
+        );
+      }
       return true;
     } catch (e) {
       debugPrint('Error deleting slot: $e');
@@ -143,10 +169,128 @@ class TeacherScheduleService {
         'end_time': endTime,
         'section': section,
       });
+
+      // Notify students about the new class slot
+      await _notifyStudentsScheduleChange(
+        changeType: 'new_schedule',
+        offeringId: offeringId,
+        startTime: startTime,
+        endTime: endTime,
+        room: roomNumber,
+        dayOfWeek: dayOfWeek,
+      );
       return true;
     } catch (e) {
       debugPrint('Error adding slot: $e');
       return false;
+    }
+  }
+
+  // ── Private notification helpers ──────────────────────────
+
+  /// Look up offering_id from a routine slot.
+  static Future<String?> _getOfferingIdFromSlot(String slotId) async {
+    try {
+      final data = await SupabaseService.client
+          .from('routine_slots')
+          .select('offering_id')
+          .eq('id', slotId)
+          .maybeSingle();
+      return data?['offering_id'] as String?;
+    } catch (e) {
+      debugPrint('TeacherScheduleService: could not fetch offering_id: $e');
+      return null;
+    }
+  }
+
+  /// Notify enrolled students about a schedule change.
+  static Future<void> _notifyStudentsScheduleChange({
+    required String changeType,
+    required String offeringId,
+    String? startTime,
+    String? endTime,
+    String? room,
+    String? scheduleDate,
+    int? dayOfWeek,
+  }) async {
+    try {
+      // Look up course info from offering
+      final offeringData = await SupabaseService.client
+          .from('course_offerings')
+          .select('term, section, courses ( code, title )')
+          .eq('id', offeringId)
+          .maybeSingle();
+
+      if (offeringData == null) return;
+
+      final courses = offeringData['courses'] as Map<String, dynamic>?;
+      final courseCode = courses?['code'] as String?;
+      if (courseCode == null) return;
+
+      final courseTitle = (courses?['title'] as String?) ?? courseCode;
+      final term = offeringData['term'] as String?;
+      final section = (offeringData['section'] as String?)?.trim();
+
+      // Mirror web buildStudentAudience logic: SECTION > COURSE
+      final String targetType;
+      final String? targetValue;
+      final String? targetYearTerm;
+      if (section != null && section.isNotEmpty) {
+        targetType = 'SECTION';
+        targetValue = section;
+        targetYearTerm = term;
+      } else {
+        targetType = 'COURSE';
+        targetValue = courseCode;
+        targetYearTerm = null;
+      }
+
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      final dayLabel = (dayOfWeek != null && dayOfWeek >= 0 && dayOfWeek < days.length)
+          ? days[dayOfWeek]
+          : null;
+
+      final when = scheduleDate != null
+          ? ' on $scheduleDate'
+          : (dayLabel != null ? ' on $dayLabel' : '');
+      final timeStr = (startTime != null && endTime != null) ? ', $startTime–$endTime' : '';
+      final roomStr = room != null ? ', Room $room' : '';
+
+      final Map<String, Map<String, String>> payloads = {
+        'class_cancelled': {
+          'title': 'Class Cancelled — $courseCode',
+          'body': '$courseTitle class$when$timeStr$roomStr has been cancelled.',
+        },
+        'class_rescheduled': {
+          'title': 'Schedule Updated — $courseCode',
+          'body': '$courseTitle class has been rescheduled$when$timeStr$roomStr.',
+        },
+        'new_schedule': {
+          'title': 'New Class Scheduled — $courseCode',
+          'body': 'A new class slot for $courseTitle has been added$when$timeStr$roomStr.',
+        },
+      };
+
+      final payload = payloads[changeType] ?? payloads['class_rescheduled']!;
+      // 'new_schedule' maps to 'makeup_class' type (used for one-off or new schedule entries)
+      final notifType = changeType == 'new_schedule' ? 'makeup_class' : changeType;
+
+      await NotificationService.createNotification(
+        type: notifType,
+        title: payload['title']!,
+        body: payload['body']!,
+        targetType: targetType,
+        targetValue: targetValue,
+        targetYearTerm: targetYearTerm,
+        metadata: {
+          'course_code': courseCode,
+          if (room != null) 'room_number': room,
+          if (startTime != null) 'start_time': startTime,
+          if (endTime != null) 'end_time': endTime,
+        },
+      );
+    } catch (e) {
+      debugPrint('TeacherScheduleService: notification failed: $e');
     }
   }
 
