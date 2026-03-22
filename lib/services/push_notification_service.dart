@@ -8,6 +8,7 @@ import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 import '../Student Folder/Attendance/student_geo_attendance_screen.dart';
 import '../config/push_config.dart';
+import '../shared/notification_screen.dart';
 import 'session_service.dart';
 
 class PushNotificationService {
@@ -63,6 +64,10 @@ class PushNotificationService {
         if (SessionService.currentRole == 'TEACHER') return;
         await navigator.push(
           MaterialPageRoute(builder: (_) => const StudentGeoAttendanceScreen()),
+        );
+      case _PushNavigationType.notificationInbox:
+        await navigator.push(
+          MaterialPageRoute(builder: (_) => const NotificationScreen()),
         );
     }
   }
@@ -168,7 +173,10 @@ class PushNotificationService {
     _listenersRegistered = true;
   }
 
-  static void _handleForegroundNotification(OSNotificationWillDisplayEvent _) {}
+  static void _handleForegroundNotification(OSNotificationWillDisplayEvent event) {
+    // Display the push notification banner even when the app is in the foreground
+    event.notification.display();
+  }
 
   static void _handleNotificationClick(OSNotificationClickEvent event) {
     final request = _PushNavigationRequest.fromAdditionalData(
@@ -197,7 +205,7 @@ class PushNotificationService {
   }
 }
 
-enum _PushNavigationType { studentGeoAttendance }
+enum _PushNavigationType { studentGeoAttendance, notificationInbox }
 
 class _PushNavigationRequest {
   final _PushNavigationType type;
@@ -206,6 +214,9 @@ class _PushNavigationRequest {
 
   factory _PushNavigationRequest.studentGeoAttendance() =>
       const _PushNavigationRequest._(_PushNavigationType.studentGeoAttendance);
+
+  factory _PushNavigationRequest.notificationInbox() =>
+      const _PushNavigationRequest._(_PushNavigationType.notificationInbox);
 
   static _PushNavigationRequest? fromAdditionalData(
     Map<String, dynamic>? data,
@@ -217,6 +228,11 @@ class _PushNavigationRequest {
     if (type == 'geo_attendance_open' ||
         openScreen == 'student_geo_attendance') {
       return _PushNavigationRequest.studentGeoAttendance();
+    }
+
+    // All other recognized notification types → open notification inbox
+    if (type != null) {
+      return _PushNavigationRequest.notificationInbox();
     }
 
     return null;
