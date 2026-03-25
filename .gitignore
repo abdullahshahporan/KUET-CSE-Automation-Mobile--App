@@ -50,3 +50,4 @@ app.*.map.json
 
 # Supabase configuration (contains sensitive API keys)
 lib/config/supabase_config.dart
+lib/config/push_config.dart

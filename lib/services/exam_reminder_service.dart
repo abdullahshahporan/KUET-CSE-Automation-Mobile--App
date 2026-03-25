@@ -26,13 +26,19 @@ class ExamReminderService {
   static Future<void> syncUpcomingReminders() async {
     final userId = SessionService.currentUserId;
     final role = SessionService.currentRole;
-    if (userId == null || role != 'STUDENT') return;
+    if (userId == null) return;
 
     final leadMinutes = await getLeadMinutes();
     await LocalNotificationService.cancelExamReminders();
 
     try {
-      final exams = await ExamScheduleService.fetchExamSchedule();
+      final List<ExamSchedule> exams;
+      if (role == 'TEACHER') {
+        exams = await _fetchTeacherExams(userId);
+      } else {
+        exams = await ExamScheduleService.fetchExamSchedule();
+      }
+
       final now = DateTime.now();
 
       for (final exam in exams) {
@@ -51,6 +57,43 @@ class ExamReminderService {
       }
     } catch (e) {
       debugPrint('[ExamReminderService] syncUpcomingReminders error: $e');
+    }
+  }
+
+  /// Fetch upcoming exams for a teacher based on their active course offerings.
+  static Future<List<ExamSchedule>> _fetchTeacherExams(
+    String teacherUserId,
+  ) async {
+    try {
+      final response = await SupabaseCore.from('course_offerings').select('''
+          id, term,
+          courses ( id, code, title, course_type ),
+          exams (
+            id, name, exam_type, max_marks, exam_date,
+            exam_time, duration_minutes, room_numbers, created_at
+          )
+        ''').eq('teacher_user_id', teacherUserId).eq('is_active', true);
+
+      final exams = <ExamSchedule>[];
+      for (final offering in response as List) {
+        final offeringMap = offering as Map<String, dynamic>;
+        final examList = offeringMap['exams'] as List<dynamic>? ?? [];
+        for (final exam in examList) {
+          final flatMap = Map<String, dynamic>.from(
+            exam as Map<String, dynamic>,
+          );
+          flatMap['course_offerings'] = {
+            'id': offeringMap['id'],
+            'term': offeringMap['term'],
+            'courses': offeringMap['courses'],
+          };
+          exams.add(ExamSchedule.fromSupabase(flatMap));
+        }
+      }
+      return exams;
+    } catch (e) {
+      debugPrint('[ExamReminderService] _fetchTeacherExams error: $e');
+      return [];
     }
   }
 

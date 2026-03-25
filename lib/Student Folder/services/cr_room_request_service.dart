@@ -132,22 +132,35 @@ class CRRoomRequestService {
 
       // Fire notification to all students in the section
       const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      final dayLabel = dayNames.elementAtOrNull(dayOfWeek) ?? 'Day $dayOfWeek';
+      final notifMetadata = {
+        'course_code': courseCode,
+        'room_number': roomNumber,
+        'start_time': startTime,
+        'end_time': endTime,
+        'request_date': requestDate,
+      };
+
       await NotificationService.createNotification(
         type: 'room_allocated',
         title: 'Room $roomNumber Booked — $courseCode',
         body: 'CR booked Room $roomNumber for $courseCode on '
-            '${dayNames.elementAtOrNull(dayOfWeek) ?? 'Day $dayOfWeek'} '
-            '($startTime–$endTime).',
+            '$dayLabel ($startTime–$endTime).',
         targetType: section != null ? 'SECTION' : 'YEAR_TERM',
         targetValue: section ?? term,
         targetYearTerm: section != null ? term : null,
-        metadata: {
-          'course_code': courseCode,
-          'room_number': roomNumber,
-          'start_time': startTime,
-          'end_time': endTime,
-          'request_date': requestDate,
-        },
+        metadata: notifMetadata,
+      );
+
+      // Also notify the course teacher directly
+      await NotificationService.createNotification(
+        type: 'room_allocated',
+        title: 'Room $roomNumber Booked by CR — $courseCode',
+        body: 'CR booked Room $roomNumber for your course $courseCode on '
+            '$dayLabel ($startTime–$endTime).',
+        targetType: 'USER',
+        targetValue: teacherUserId,
+        metadata: notifMetadata,
       );
 
       return (success: true, message: 'Room booked successfully! (Auto-approved)');

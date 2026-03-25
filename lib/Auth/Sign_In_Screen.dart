@@ -28,6 +28,8 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Future<void> _signIn() async {
+    if (_isLoading) return;
+
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
@@ -38,6 +40,12 @@ class _SignInScreenState extends State<SignInScreen> {
         final result = await SupabaseService.signIn(
           email: email,
           password: password,
+        ).timeout(
+          const Duration(seconds: 20),
+          onTimeout: () => {
+            'success': false,
+            'message': 'Sign in timed out. Please check your internet and try again.',
+          },
         );
 
         if (mounted) {

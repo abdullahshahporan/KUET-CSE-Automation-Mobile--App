@@ -225,17 +225,18 @@ class _PushNavigationRequest {
         _readString(data, 'type') ?? _readString(data, 'notification_type');
     final openScreen = _readString(data, 'open_screen');
 
+    // Geo-attendance: open attendance submission screen directly
     if (type == 'geo_attendance_open' ||
         openScreen == 'student_geo_attendance') {
       return _PushNavigationRequest.studentGeoAttendance();
     }
 
-    // All other recognized notification types → open notification inbox
-    if (type != null) {
-      return _PushNavigationRequest.notificationInbox();
-    }
-
-    return null;
+    // All other notification types (announcement, room_allocated,
+    // notice_posted, exam_scheduled, assignment_due, class_rescheduled,
+    // class_cancelled, makeup_class, term_upgrade, optional_course, …)
+    // → open the notification inbox so users see all details.
+    // Also open inbox when no type is present (generic FCM tap).
+    return _PushNavigationRequest.notificationInbox();
   }
 
   static String? _readString(Map<String, dynamic>? data, String key) {

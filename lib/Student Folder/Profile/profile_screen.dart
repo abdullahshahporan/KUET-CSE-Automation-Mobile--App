@@ -150,6 +150,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 buildActionTile(Icons.lock_outline, 'Change Password', isDarkMode, () {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen()));
                 }),
+                const Divider(height: 1),
+                buildTestNotificationTile(context, isDarkMode),
               ]),
               const SizedBox(height: 16),
 
