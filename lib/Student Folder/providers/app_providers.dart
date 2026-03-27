@@ -16,19 +16,32 @@ Future<List<Notice>> _fetchNotices() async {
     final userId = SessionService.currentUserId;
     if (userId == null) return [];
 
-    // Get student's term
-    final student = await SupabaseCore.from('students')
-        .select('term')
-        .eq('user_id', userId)
-        .maybeSingle();
-    final term = student?['term'] as String?;
-    if (term == null) return [];
+    // Determine if user is a teacher or student
+    final role = SessionService.currentRole ?? '';
+    final isTeacher = role.toLowerCase() == 'teacher';
 
-    // Get all active course offerings for this term, with course + teacher info
-    final offerings = await SupabaseCore.from('course_offerings')
-        .select('id, courses(code, title), teachers(full_name)')
-        .eq('term', term)
-        .eq('is_active', true);
+    late final List<dynamic> offerings;
+
+    if (isTeacher) {
+      // Teachers: fetch course offerings they are assigned to
+      offerings = await SupabaseCore.from('course_offerings')
+          .select('id, courses(code, title), teachers(full_name)')
+          .eq('teacher_user_id', userId)
+          .eq('is_active', true);
+    } else {
+      // Students: get term first, then fetch offerings for that term
+      final student = await SupabaseCore.from('students')
+          .select('term')
+          .eq('user_id', userId)
+          .maybeSingle();
+      final term = student?['term'] as String?;
+      if (term == null) return [];
+
+      offerings = await SupabaseCore.from('course_offerings')
+          .select('id, courses(code, title), teachers(full_name)')
+          .eq('term', term)
+          .eq('is_active', true);
+    }
 
     final offeringList = (offerings as List).cast<Map<String, dynamic>>();
     if (offeringList.isEmpty) return [];

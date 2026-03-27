@@ -310,12 +310,6 @@ class BackgroundNotificationService {
               title: latestTitle,
               content: latestBody,
             );
-          } else {
-            service.setForegroundNotificationInfo(
-              title: 'KUET CSE',
-              content:
-                  'Synced at ${DateTime.now().toString().substring(11, 16)}',
-            );
           }
         }
       } catch (e) {
