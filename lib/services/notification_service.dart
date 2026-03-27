@@ -433,14 +433,11 @@ class NotificationService {
     final userId = SessionService.currentUserId;
     if (userId == null) return;
 
-    final createdByRole = SessionService.currentRole == 'STUDENT'
-        ? 'STUDENT_CR'
-        : 'TEACHER';
     final normalizedTerm = _cleanText(term);
     if (normalizedTerm == null) return;
 
     final sectionLabel = _formatGeoAttendanceSectionLabel(section);
-    final title = 'Attendance Open — $courseCode$sectionLabel';
+    final title = '📍 Attendance Open — $courseCode$sectionLabel';
     final endHour = endTime.hour.toString().padLeft(2, '0');
     final endMinute = endTime.minute.toString().padLeft(2, '0');
     final body =
@@ -449,70 +446,51 @@ class NotificationService {
       'course_code': courseCode,
       'duration_minutes': durationMinutes,
       'end_time_label': '$endHour:$endMinute',
+      'open_screen': 'student_geo_attendance',
       if (_cleanText(roomNumber) != null) 'room_number': _cleanText(roomNumber),
       if (_cleanText(section) != null) 'geo_room_section': _cleanText(section),
       if (_cleanText(roomId) != null) 'geo_room_id': _cleanText(roomId),
     };
+    final collapseId =
+        _cleanText(roomId) ?? 'geo_attendance_open_${courseCode}_$term';
+    final expiresAt = endTime.toIso8601String();
 
-    try {
-      final recipientIds = await _resolveGeoAttendanceRecipientIds(
-        term: normalizedTerm,
-        section: section,
-      );
-
-      if (recipientIds.isNotEmpty) {
-        final rows = recipientIds
-            .map(
-              (recipientId) => {
-                'type': 'geo_attendance_open',
-                'title': title,
-                'body': body,
-                'target_type': 'USER',
-                'target_value': recipientId,
-                'target_year_term': null,
-                'created_by': userId,
-                'created_by_role': createdByRole,
-                'metadata': metadata,
-                'expires_at': null,
-              },
-            )
-            .toList();
-
-        await SupabaseCore.from('notifications').insert(rows);
-        await PushNotificationService.sendNotificationToUsers(
-          userIds: recipientIds,
-          title: title,
-          body: body,
-          data: {
-            'type': 'geo_attendance_open',
-            'open_screen': 'student_geo_attendance',
-            ...metadata,
-          },
-          collapseId:
-              _cleanText(roomId) ?? 'geo_attendance_open_${courseCode}_$term',
-        );
-        return;
-      }
-
-      await createNotification(
+    // COURSE target → only students enrolled in this course + its teacher(s)
+    // get in-app visibility + push. Same proven pattern as exam & room booking.
+    // Also send a direct USER notification to the teacher who opened the room.
+    final waitResults = await Future.wait<Object?>([
+      // 1. In-app notification for enrolled students (COURSE target)
+      createNotification(
         type: 'geo_attendance_open',
         title: title,
         body: body,
-        targetType: 'YEAR_TERM',
-        targetValue: normalizedTerm,
+        targetType: 'COURSE',
+        targetValue: courseCode,
         metadata: metadata,
-      );
-    } catch (e) {
-      debugPrint('[NotificationService] notifyGeoAttendanceOpened error: $e');
-      await createNotification(
+        expiresAt: expiresAt,
+      ).then((_) => null).onError((e, _) {
+        debugPrint('[NotificationService] geo_attendance COURSE notify error: $e');
+        return null;
+      }),
+      // 2. In-app notification for the teacher who opened the room (USER target)
+      createNotification(
         type: 'geo_attendance_open',
-        title: title,
-        body: body,
-        targetType: 'YEAR_TERM',
-        targetValue: normalizedTerm,
+        title: '📍 Attendance Room Opened — $courseCode$sectionLabel',
+        body: 'You opened attendance for $courseCode. '
+            'Window closes at $endHour:$endMinute ($durationMinutes min).',
+        targetType: 'USER',
+        targetValue: userId,
         metadata: metadata,
-      );
-    }
+        expiresAt: expiresAt,
+      ).then((_) => null).onError((e, _) {
+        debugPrint('[NotificationService] geo_attendance USER notify error: $e');
+        return null;
+      }),
+    ]);
+
+    // Push was already fired by createNotification → _resolveTargetRecipientIds
+    // for both COURSE (students + teacher) and USER (teacher) targets.
+    // No additional manual push needed.
   }
 
   static Future<List<String>> _resolveGeoAttendanceRecipientIds({

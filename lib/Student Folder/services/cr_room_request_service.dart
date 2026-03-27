@@ -5,6 +5,7 @@ import '../../services/notification_service.dart';
 import '../../utils/course_utils.dart';
 import '../../Teacher/Room_info/room_booking_model.dart';
 import '../../Teacher/Room_info/room_model.dart';
+import '../../Teacher/Room_info/room_service.dart';
 import '../models/cr_room_request_model.dart';
 
 /// Service for CR (Class Representative) room request operations.
@@ -130,7 +131,7 @@ class CRRoomRequestService {
         requestDate: requestDate,
       );
 
-      // Fire notification to all students in the section
+      // Send in-app + push notifications for the room booking
       const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
       final dayLabel = dayNames.elementAtOrNull(dayOfWeek) ?? 'Day $dayOfWeek';
       final notifMetadata = {
@@ -139,25 +140,26 @@ class CRRoomRequestService {
         'start_time': startTime,
         'end_time': endTime,
         'request_date': requestDate,
+        'open_screen': 'room_booking',
       };
 
+      // Notify students enrolled in this specific course (COURSE target = precise)
       await NotificationService.createNotification(
         type: 'room_allocated',
-        title: 'Room $roomNumber Booked — $courseCode',
+        title: '🏫 Room $roomNumber Booked — $courseCode',
         body: 'CR booked Room $roomNumber for $courseCode on '
-            '$dayLabel ($startTime–$endTime).',
-        targetType: section != null ? 'SECTION' : 'YEAR_TERM',
-        targetValue: section ?? term,
-        targetYearTerm: section != null ? term : null,
+            '$dayLabel ($requestDate, $startTime–$endTime).',
+        targetType: 'COURSE',
+        targetValue: courseCode,
         metadata: notifMetadata,
       );
 
-      // Also notify the course teacher directly
+      // Also notify the course teacher directly (in-app + push)
       await NotificationService.createNotification(
         type: 'room_allocated',
-        title: 'Room $roomNumber Booked by CR — $courseCode',
+        title: '🏫 Room $roomNumber Booked by CR — $courseCode',
         body: 'CR booked Room $roomNumber for your course $courseCode on '
-            '$dayLabel ($startTime–$endTime).',
+            '$dayLabel ($requestDate, $startTime–$endTime).',
         targetType: 'USER',
         targetValue: teacherUserId,
         metadata: notifMetadata,
@@ -450,6 +452,8 @@ class CRRoomRequestService {
     required String requestDate,
   }) async {
     try {
+      final roomVariants = RoomService.roomNumberVariants(roomNumber);
+
       // 1. Fetch routine slots for the room on this day_of_week
       final routineData = await SupabaseCore.from('routine_slots')
           .select('''
@@ -461,7 +465,7 @@ class CRRoomRequestService {
               teachers ( full_name )
             )
           ''')
-          .eq('room_number', roomNumber)
+          .inFilter('room_number', roomVariants)
           .eq('day_of_week', dayOfWeek)
           .eq('course_offerings.is_active', true);
 
@@ -492,7 +496,7 @@ class CRRoomRequestService {
             course_offerings ( courses ( code, title ) ),
             teachers!rbr_teacher_fkey ( full_name )
           ''')
-          .eq('room_number', roomNumber)
+          .inFilter('room_number', roomVariants)
           .eq('booking_date', requestDate)
           .eq('status', 'approved');
 
@@ -503,7 +507,7 @@ class CRRoomRequestService {
       // 3. Also check cr_room_requests on this date
       final crData = await SupabaseCore.from('cr_room_requests')
           .select('id, start_time, end_time, course_code')
-          .eq('room_number', roomNumber)
+          .inFilter('room_number', roomVariants)
           .eq('request_date', requestDate)
           .eq('status', 'approved');
 
@@ -571,6 +575,7 @@ class CRRoomRequestService {
   }) async {
     final reqStart = _fmt(startTime);
     final reqEnd = _fmt(endTime);
+    final roomVariants = RoomService.roomNumberVariants(roomNumber);
 
     try {
       // 1. Check routine_slots (permanent class schedule valid on this date)
@@ -584,7 +589,7 @@ class CRRoomRequestService {
               teachers ( full_name )
             )
           ''')
-          .eq('room_number', roomNumber)
+          .inFilter('room_number', roomVariants)
           .eq('day_of_week', dayOfWeek)
           .eq('course_offerings.is_active', true);
 
@@ -617,7 +622,7 @@ class CRRoomRequestService {
             course_offerings ( courses ( code, title ) ),
             teachers!rbr_teacher_fkey ( full_name )
           ''')
-          .eq('room_number', roomNumber)
+          .inFilter('room_number', roomVariants)
           .eq('booking_date', requestDate)
           .eq('status', 'approved')
           .order('requested_at', ascending: true);
@@ -642,7 +647,7 @@ class CRRoomRequestService {
             id, course_code, start_time, end_time, created_at,
             teachers!cr_room_requests_teacher_user_id_fkey ( full_name )
           ''')
-          .eq('room_number', roomNumber)
+          .inFilter('room_number', roomVariants)
           .eq('request_date', requestDate)
           .eq('status', 'approved')
           .order('created_at', ascending: true);

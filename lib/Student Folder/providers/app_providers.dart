@@ -116,6 +116,69 @@ Future<List<Notice>> _fetchNotices() async {
       ));
     }
 
+    // Fetch approved CR room bookings for the user's courses (fails gracefully)
+    try {
+      List<dynamic> roomRows;
+      if (isTeacher) {
+        roomRows = await SupabaseCore.from('cr_room_requests')
+            .select()
+            .eq('teacher_user_id', userId)
+            .eq('status', 'approved')
+            .order('created_at', ascending: false)
+            .limit(30);
+      } else {
+        final enrolledCodes = offeringMeta.values
+            .map((m) => m['code']!)
+            .where((c) => c.isNotEmpty)
+            .toList();
+        if (enrolledCodes.isNotEmpty) {
+          roomRows = await SupabaseCore.from('cr_room_requests')
+              .select()
+              .inFilter('course_code', enrolledCodes)
+              .eq('status', 'approved')
+              .order('created_at', ascending: false)
+              .limit(30);
+        } else {
+          roomRows = [];
+        }
+      }
+
+      const roomDayNames = [
+        'Sunday', 'Monday', 'Tuesday', 'Wednesday',
+        'Thursday', 'Friday', 'Saturday',
+      ];
+      for (final row in (roomRows as List)) {
+        final r = Map<String, dynamic>.from(row as Map);
+        final courseCode = r['course_code'] as String? ?? '';
+        final roomNumber = r['room_number'] as String? ?? '';
+        final dayOfWeek = r['day_of_week'] as int? ?? 0;
+        final startTime = r['start_time'] as String? ?? '';
+        final endTime = r['end_time'] as String? ?? '';
+        final requestDate = r['request_date'] as String? ?? '';
+        final createdAt = DateTime.tryParse(r['created_at'] as String? ?? '');
+        final dayLabel = roomDayNames.elementAtOrNull(dayOfWeek) ?? 'Day $dayOfWeek';
+        final dateStr = createdAt != null
+            ? DateFormat('MMMM d, yyyy').format(createdAt)
+            : '';
+
+        final descParts = <String>[
+          if (roomNumber.isNotEmpty) 'Room: $roomNumber',
+          'Day: $dayLabel',
+          if (requestDate.isNotEmpty) 'Date: $requestDate',
+          if (startTime.isNotEmpty) 'Time: $startTime–$endTime',
+        ];
+
+        notices.add(Notice(
+          id: 'room_${r['id'] ?? ''}',
+          title: '🏫 Room Booked — $courseCode',
+          description: descParts.join(' | '),
+          date: dateStr,
+          category: 'Event',
+          isImportant: false,
+        ));
+      }
+    } catch (_) {}
+
     // Also fetch announcements from notifications table (fails gracefully)
     try {
       final now = DateTime.now().toIso8601String();
