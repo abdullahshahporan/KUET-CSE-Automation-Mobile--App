@@ -87,11 +87,10 @@ class NotificationProvider extends ChangeNotifier {
 
       // Build enrolled course codes (for students and teachers)
       List<String> enrolledCodes = [];
-      if (term != null && section != null) {
+      if (term != null) {
         final offerings = await SupabaseCore.from('course_offerings')
             .select('courses!inner(code)')
-            .eq('term', term)
-            .eq('section', section);
+            .eq('term', term);
         enrolledCodes.addAll(
           (offerings as List)
               .map((o) {

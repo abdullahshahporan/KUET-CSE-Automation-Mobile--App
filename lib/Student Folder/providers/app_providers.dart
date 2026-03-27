@@ -1,11 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:kuet_cse_automation/Student%20Folder/models/app_models.dart';
 import 'package:kuet_cse_automation/services/session_service.dart';
 import 'package:kuet_cse_automation/services/supabase_core.dart';
 
-/// Notices Provider — fetches exam-scheduled and announcement notifications
-/// from Supabase and maps them to [Notice] objects.
+/// Notices Provider — reads exam schedules directly from the [exams] table
+/// for the student's enrolled courses. No dependency on the notifications table.
 final noticesProvider = FutureProvider<List<Notice>>((ref) async {
   return _fetchNotices();
 });
@@ -15,86 +16,123 @@ Future<List<Notice>> _fetchNotices() async {
     final userId = SessionService.currentUserId;
     if (userId == null) return [];
 
-    // Get student context for term/section/course filtering
+    // Get student's term
     final student = await SupabaseCore.from('students')
-        .select('term, section')
+        .select('term')
         .eq('user_id', userId)
         .maybeSingle();
     final term = student?['term'] as String?;
-    final section =
-        (student?['section'] as String?)?.trim().toUpperCase();
+    if (term == null) return [];
 
-    // Enrolled course codes for COURSE-targeted notices
-    List<String> enrolledCodes = [];
-    if (term != null) {
-      final offerings = await SupabaseCore.from('course_offerings')
-          .select('courses!inner(code)')
-          .eq('term', term);
-      enrolledCodes = (offerings as List)
-          .map((o) =>
-              ((o['courses'] as Map<String, dynamic>?)?['code'] as String?)
-                  ?.trim()
-                  .toUpperCase())
-          .whereType<String>()
-          .toList();
+    // Get all active course offerings for this term, with course + teacher info
+    final offerings = await SupabaseCore.from('course_offerings')
+        .select('id, courses(code, title), teachers(full_name)')
+        .eq('term', term)
+        .eq('is_active', true);
+
+    final offeringList = (offerings as List).cast<Map<String, dynamic>>();
+    if (offeringList.isEmpty) return [];
+
+    final offeringIds =
+        offeringList.map((o) => o['id']?.toString()).whereType<String>().toList();
+
+    // Build a lookup: offeringId → {courseCode, courseTitle, teacherName}
+    final offeringMeta = <String, Map<String, String>>{};
+    for (final o in offeringList) {
+      final id = o['id']?.toString();
+      if (id == null) continue;
+      final course = o['courses'] as Map<String, dynamic>? ?? {};
+      final teacher = o['teachers'] as Map<String, dynamic>? ?? {};
+      offeringMeta[id] = {
+        'code': course['code'] as String? ?? '',
+        'title': course['title'] as String? ?? '',
+        'teacher': teacher['full_name'] as String? ?? '',
+      };
     }
 
-    // Fetch notifications intended for the notice board
-    final now = DateTime.now().toIso8601String();
-    final data = await SupabaseCore.from('notifications')
+    // Fetch exams for those offerings, most recent first
+    final examsData = await SupabaseCore.from('exams')
         .select()
-        .inFilter('type', ['exam_scheduled', 'exam_notice', 'announcement'])
-        .or('expires_at.is.null,expires_at.gt.$now')
+        .inFilter('offering_id', offeringIds)
         .order('created_at', ascending: false)
-        .limit(100);
+        .limit(60);
 
     final notices = <Notice>[];
-    for (final row in (data as List<dynamic>)) {
-      final m = Map<String, dynamic>.from(row as Map);
-      final targetType =
-          (m['target_type'] as String?)?.toUpperCase().trim() ?? '';
-      final targetValue = (m['target_value'] as String?)?.trim();
-      final targetYearTerm = (m['target_year_term'] as String?)?.trim();
 
-      // Client-side visibility check
-      final visible = switch (targetType) {
-        'ALL' => true,
-        'YEAR_TERM' => targetValue == term,
-        'ROLE' => true,
-        'USER' => targetValue == userId,
-        'SECTION' =>
-          targetValue?.toUpperCase() == section &&
-              (targetYearTerm == null || targetYearTerm == term),
-        'COURSE' =>
-          targetValue?.toUpperCase() != null &&
-              enrolledCodes.contains(targetValue!.toUpperCase()),
-        _ => false,
+    for (final row in (examsData as List)) {
+      final e = Map<String, dynamic>.from(row as Map);
+      final offeringId = e['offering_id']?.toString() ?? '';
+      final meta = offeringMeta[offeringId];
+      if (meta == null) continue;
+
+      final rawType = (e['exam_type'] as String? ?? 'CT').toUpperCase();
+      final typeLabel = switch (rawType) {
+        'CT' || 'CLASS_TEST' => 'Class Test (CT)',
+        'TERM_FINAL' || 'FINAL' => 'Term Final',
+        'QUIZ_VIVA' || 'QUIZ' || 'VIVA' => 'Quiz / Viva',
+        _ => rawType,
       };
-      if (!visible) continue;
+      final courseCode = meta['code']!;
+      final courseTitle = meta['title']!;
+      final teacherName = meta['teacher']!;
+      final examDate = e['exam_date'] as String?;
+      final maxMarks = e['max_marks'];
+      final syllabus = e['syllabus'] as String?;
 
-      final type = (m['type'] as String?) ?? 'announcement';
-      final createdAt = DateTime.tryParse(m['created_at'] as String? ?? '');
+      final createdAt = DateTime.tryParse(e['created_at'] as String? ?? '');
       final dateStr = createdAt != null
           ? DateFormat('MMMM d, yyyy').format(createdAt)
           : '';
 
-      final (category, isImportant) = switch (type) {
-        'exam_scheduled' || 'exam_notice' => ('Exam', true),
-        _ => ('Academic', false),
-      };
+      final descParts = <String>[
+        if (examDate != null && examDate.isNotEmpty) 'Date: $examDate',
+        if (maxMarks != null) 'Max Marks: $maxMarks',
+        if (teacherName.isNotEmpty) 'Teacher: $teacherName',
+        if (syllabus != null && syllabus.isNotEmpty) 'Syllabus: $syllabus',
+      ];
 
       notices.add(Notice(
-        id: m['id']?.toString() ?? '',
-        title: m['title'] as String? ?? '',
-        description: m['body'] as String? ?? '',
+        id: e['id']?.toString() ?? '',
+        title: '📅 $typeLabel — $courseCode',
+        description: descParts.isNotEmpty
+            ? descParts.join(' | ')
+            : '$typeLabel for $courseTitle',
         date: dateStr,
-        category: category,
-        isImportant: isImportant,
+        category: 'Exam',
+        isImportant: true,
       ));
     }
 
+    // Also fetch announcements from notifications table (fails gracefully)
+    try {
+      final now = DateTime.now().toIso8601String();
+      final ann = await SupabaseCore.from('notifications')
+          .select()
+          .inFilter('type', ['announcement', 'exam_notice'])
+          .or('expires_at.is.null,expires_at.gt.$now')
+          .order('created_at', ascending: false)
+          .limit(20);
+
+      for (final row in (ann as List)) {
+        final m = Map<String, dynamic>.from(row as Map);
+        final createdAt =
+            DateTime.tryParse(m['created_at'] as String? ?? '');
+        notices.add(Notice(
+          id: m['id']?.toString() ?? '',
+          title: m['title'] as String? ?? '',
+          description: m['body'] as String? ?? '',
+          date: createdAt != null
+              ? DateFormat('MMMM d, yyyy').format(createdAt)
+              : '',
+          category: 'Academic',
+          isImportant: false,
+        ));
+      }
+    } catch (_) {}
+
     return notices;
-  } catch (_) {
+  } catch (e) {
+    debugPrint('[noticesProvider] error: $e');
     return [];
   }
 }

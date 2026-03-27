@@ -199,49 +199,50 @@ class CRExamService {
         'created_by_student_user_id': userId,
       }).select().single();
 
-      final examId = (result['id'] ?? '').toString();
-
-      // 1. Notify the dedicated/selected teacher directly
-      final typeLabel = _formatExamType(examType);
-      final dateLabel = examDate ?? 'TBA';
-      final roomLabel =
-          roomNumbers.isNotEmpty ? roomNumbers.join(', ') : 'TBA';
-      if (teacherUserId.isNotEmpty) {
-        await NotificationService.createNotification(
-          type: 'exam_scheduled',
-          title: '📋 $typeLabel Scheduled — $courseCode',
-          body:
-              '$courseName $typeLabel on $dateLabel'
-              '${roomNumbers.isNotEmpty ? ' in $roomLabel' : ''}.'
-              ' Max marks: ${maxMarks.toStringAsFixed(maxMarks % 1 == 0 ? 0 : 1)}.',
-          targetType: 'USER',
-          targetValue: teacherUserId,
-          metadata: {
-            'exam_id': examId,
-            'exam_type': examType,
-            'course_code': courseCode,
-            'open_screen': 'exam_schedule',
-          },
-        );
-      }
-
-      // 2. Notify all students enrolled in this course
-      await NotificationService.createNotification(
-        type: 'exam_scheduled',
-        title: '📅 $typeLabel — $courseCode',
-        body:
-            '$typeLabel for $courseName on $dateLabel'
-            '${roomLabel != 'TBA' ? ', Room: $roomLabel' : ''}.'
-            '${teacherName.isNotEmpty ? ' Teacher: $teacherName.' : ''}',
-        targetType: 'COURSE',
-        targetValue: courseCode,
-        metadata: {
-          'exam_id': examId,
+      // ── Send in-app + push notifications (fire-and-forget) ─
+      try {
+        final typeLabel = switch (examType.toUpperCase()) {
+          'CT' || 'CLASS_TEST' => 'Class Test (CT)',
+          'TERM_FINAL' || 'FINAL' => 'Term Final',
+          'QUIZ_VIVA' || 'QUIZ' || 'VIVA' => 'Quiz / Viva',
+          _ => examType,
+        };
+        final dateLabel = (examDate != null && examDate.isNotEmpty)
+            ? examDate
+            : 'TBA';
+        final meta = {
+          'exam_id': result['id']?.toString() ?? '',
           'exam_type': examType,
           'course_code': courseCode,
           'open_screen': 'exam_schedule',
-        },
-      );
+        };
+
+        // Notify teacher (USER target)
+        if (teacherUserId.isNotEmpty) {
+          await NotificationService.createNotification(
+            type: 'exam_scheduled',
+            title: '📋 $typeLabel Scheduled — $courseCode',
+            body: '$courseName $typeLabel on $dateLabel.'
+                '${maxMarks > 0 ? ' Max marks: ${maxMarks.toStringAsFixed(0)}.' : ''}',
+            targetType: 'USER',
+            targetValue: teacherUserId,
+            metadata: meta,
+          );
+        }
+
+        // Notify all classmates (COURSE target)
+        await NotificationService.createNotification(
+          type: 'exam_scheduled',
+          title: '📅 $typeLabel — $courseCode',
+          body: '$typeLabel for $courseName on $dateLabel.'
+              '${teacherName.isNotEmpty ? ' Teacher: $teacherName.' : ''}',
+          targetType: 'COURSE',
+          targetValue: courseCode,
+          metadata: meta,
+        );
+      } catch (e) {
+        debugPrint('[CRExamService] notification send error (exam saved OK): $e');
+      }
 
       return (success: true, message: 'Exam scheduled successfully!');
     } catch (e) {

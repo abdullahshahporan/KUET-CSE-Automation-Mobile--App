@@ -128,18 +128,22 @@ class NotificationService {
 
       // Build enrolled course codes for COURSE-targeted notifications
       List<String> enrolledCodes = [];
-      if (term != null && section != null) {
-        final offerings = await SupabaseCore.from(
-          'course_offerings',
-        ).select('courses!inner(code)').eq('term', term).eq('section', section);
+      if (term != null) {
+        try {
+          final offerings = await SupabaseCore.from(
+            'course_offerings',
+          ).select('courses!inner(code)').eq('term', term);
 
-        enrolledCodes = (offerings as List)
-            .map((o) {
-              final courses = o['courses'] as Map<String, dynamic>?;
-              return courses?['code'] as String?;
-            })
-            .whereType<String>()
-            .toList();
+          enrolledCodes = (offerings as List)
+              .map((o) {
+                final courses = o['courses'] as Map<String, dynamic>?;
+                return courses?['code'] as String?;
+              })
+              .whereType<String>()
+              .toList();
+        } catch (e) {
+          debugPrint('[NotificationService] enrolledCodes error: $e');
+        }
       }
 
       // Fetch read receipt IDs
@@ -670,13 +674,11 @@ class NotificationService {
 
     final offeringsData = await SupabaseCore.from('course_offerings').select('''
           term,
-          section,
           teacher_user_id,
           courses ( code )
         ''');
 
     final termWideTerms = <String>{};
-    final sectionsByTerm = <String, Set<String>>{};
     final teacherIds = <String>{};
 
     for (final row in List<Map<String, dynamic>>.from(offeringsData as List)) {
@@ -691,22 +693,17 @@ class NotificationService {
       final term = _cleanText(row['term']?.toString());
       if (term == null) continue;
 
-      final section = _cleanText(row['section']?.toString())?.toUpperCase();
-      if (section == null || section.isEmpty) {
-        termWideTerms.add(term);
-      } else {
-        sectionsByTerm.putIfAbsent(term, () => <String>{}).add(section);
-      }
+      termWideTerms.add(term);
     }
 
-    if (termWideTerms.isEmpty && sectionsByTerm.isEmpty) {
+    if (termWideTerms.isEmpty) {
       // No student targets, but still return any matched teachers
       return teacherIds.toList();
     }
 
     final studentData = await SupabaseCore.from(
       'students',
-    ).select('user_id, term, section');
+    ).select('user_id, term');
 
     final recipients = <String>{};
     // Include course teachers
@@ -715,12 +712,9 @@ class NotificationService {
     for (final row in List<Map<String, dynamic>>.from(studentData as List)) {
       final userId = _cleanText(row['user_id']?.toString());
       final term = _cleanText(row['term']?.toString());
-      final section = _cleanText(row['section']?.toString())?.toUpperCase();
       if (userId == null || term == null) continue;
 
-      if (termWideTerms.contains(term) ||
-          (section != null &&
-              (sectionsByTerm[term]?.contains(section) ?? false))) {
+      if (termWideTerms.contains(term)) {
         recipients.add(userId);
       }
     }
