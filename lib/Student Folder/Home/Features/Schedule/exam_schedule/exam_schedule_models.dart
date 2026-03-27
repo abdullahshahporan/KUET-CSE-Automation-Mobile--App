@@ -100,6 +100,9 @@ class ExamSchedule {
       roomStr = roomNumbers.join(', ');
     }
 
+    // Read dedicated syllabus column; fall back to exam name for legacy rows
+    final syllabusText = (json['syllabus'] as String?) ?? examName;
+
     return ExamSchedule(
       id: (json['id'] ?? '').toString(),
       courseName: course['title'] as String? ?? 'Unknown Course',
@@ -109,7 +112,7 @@ class ExamSchedule {
       date: formattedDate,
       time: formattedTime,
       room: roomStr,
-      syllabus: examName,
+      syllabus: syllabusText,
       maxMarks: maxMarks,
       durationMinutes: durationMinutes,
     );

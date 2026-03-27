@@ -9,7 +9,7 @@ class NoticeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final notices = ref.watch(noticesProvider);
+    final noticesAsync = ref.watch(noticesProvider);
 
     return Scaffold(
       backgroundColor: isDarkMode
@@ -89,16 +89,20 @@ class NoticeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: notices.isEmpty
-          ? _buildEmptyState(isDarkMode)
-          : ListView.builder(
-              padding: const EdgeInsets.all(20),
-              itemCount: notices.length,
-              itemBuilder: (context, index) {
-                final notice = notices[index];
-                return _buildNoticeCard(notice, isDarkMode, index);
-              },
-            ),
+      body: noticesAsync.when(
+        data: (notices) => notices.isEmpty
+            ? _buildEmptyState(isDarkMode)
+            : ListView.builder(
+                padding: const EdgeInsets.all(20),
+                itemCount: notices.length,
+                itemBuilder: (context, index) {
+                  final notice = notices[index];
+                  return _buildNoticeCard(notice, isDarkMode, index);
+                },
+              ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, __) => _buildEmptyState(isDarkMode),
+      ),
     );
   }
 

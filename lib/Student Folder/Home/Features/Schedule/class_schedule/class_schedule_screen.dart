@@ -326,7 +326,7 @@ class ClassScheduleScreen extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      '${groupedClasses[currentDay]!.length} Classes',
+                      '${groupedClasses[currentDay]!.length} Item${groupedClasses[currentDay]!.length == 1 ? '' : 's'}',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -455,6 +455,9 @@ class ClassScheduleScreen extends ConsumerWidget {
     bool isDarkMode, {
     bool isToday = false,
   }) {
+    if (classItem.isExam == true) {
+      return _buildExamAlertCard(classItem, isDarkMode, isToday: isToday);
+    }
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -622,4 +625,225 @@ class ClassScheduleScreen extends ConsumerWidget {
       ],
     );
   }
+
+  /// Distinct card rendered for exam/CT entries merged into the schedule.
+  Widget _buildExamAlertCard(
+    dynamic exam,
+    bool isDarkMode, {
+    bool isToday = false,
+  }) {
+    final typeLabel = exam.examTypeLabel as String? ?? 'Exam';
+    const typeColors = <String, List<Color>>{
+      'CT': [Color(0xFFF97316), Color(0xFFFB923C)],
+      'Term Final': [Color(0xFFDC2626), Color(0xFFF87171)],
+      'Quiz/Viva': [Color(0xFF9333EA), Color(0xFFC084FC)],
+    };
+    final gradColors = typeColors[typeLabel] ??
+        [const Color(0xFFF59E0B), const Color(0xFFFBBF24)];
+    final accentColor = gradColors[0];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accentColor.withOpacity(0.5), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withOpacity(0.18),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Row(
+          children: [
+            // Accent bar with gradient
+            Container(
+              width: 6,
+              height: 140,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: gradColors,
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        // Exam type badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(colors: gradColors),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.description_rounded,
+                                  size: 12, color: Colors.white),
+                              const SizedBox(width: 4),
+                              Text(
+                                typeLabel,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  letterSpacing: 0.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Course code badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: accentColor.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                                color: accentColor.withOpacity(0.3)),
+                          ),
+                          child: Text(
+                            exam.courseCode as String? ?? '',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: accentColor,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        if (isToday)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.circle,
+                                    size: 8, color: Colors.green[600]),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Today',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      exam.courseName as String? ?? 'Exam',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? Colors.white : Colors.black87,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    // Date row (shows actual date, not just day name)
+                    if ((exam.examDateFormatted as String?)?.isNotEmpty == true)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 5),
+                        child: _buildInfoRow(
+                          icon: Icons.calendar_today_rounded,
+                          text: exam.examDateFormatted as String,
+                          isDarkMode: isDarkMode,
+                        ),
+                      ),
+                    if ((exam.time as String?) != 'TBA')
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 5),
+                        child: _buildInfoRow(
+                          icon: Icons.access_time_rounded,
+                          text: exam.time as String,
+                          isDarkMode: isDarkMode,
+                        ),
+                      ),
+                    _buildInfoRow(
+                      icon: Icons.location_on_outlined,
+                      text: exam.room as String,
+                      isDarkMode: isDarkMode,
+                    ),
+                    if ((exam.examMaxMarks as double?) != null) ...[  
+                      const SizedBox(height: 5),
+                      _buildInfoRow(
+                        icon: Icons.star_rounded,
+                        text: '${(exam.examMaxMarks as double).toStringAsFixed((exam.examMaxMarks as double) % 1 == 0 ? 0 : 1)} marks',
+                        isDarkMode: isDarkMode,
+                      ),
+                    ],
+                    if ((exam.examSyllabus as String?)?.isNotEmpty == true) ...[  
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: accentColor.withOpacity(0.07),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: accentColor.withOpacity(0.2)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Syllabus',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: accentColor,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              exam.examSyllabus as String,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDarkMode
+                                    ? Colors.grey[300]
+                                    : Colors.grey[700],
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Home/Features/Notice/Notice_Screen.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Home/Features/RoomRequest/cr_room_request_screen.dart';
+import 'package:kuet_cse_automation/Student%20Folder/Home/Features/ExamManage/cr_exam_screen.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Home/Features/Schedule/unified_schedule_screen.dart';
 import 'package:kuet_cse_automation/theme/app_colors.dart';
 
@@ -101,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            _isCR ? '6 Items' : '5 Items',
+                            _isCR ? '7 Items' : '5 Items',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -211,6 +212,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => const CRRoomRequestScreen(),
+                        ),
+                      ),
+                    ),
+                  if (_isCR)
+                    _buildFeatureCard(
+                      context: context,
+                      icon: Icons.edit_calendar_rounded,
+                      title: 'Manage Exams',
+                      subtitle: 'Add CT & exams',
+                      gradient: const [Color(0xFF7C3AED), Color(0xFF6D28D9)],
+                      isDarkMode: isDarkMode,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CRExamScreen(),
                         ),
                       ),
                     ),

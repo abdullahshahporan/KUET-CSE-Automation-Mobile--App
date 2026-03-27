@@ -1,17 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Home/Features/Schedule/exam_schedule/exam_schedule_providers.dart';
+import 'package:kuet_cse_automation/Student%20Folder/Home/Features/ExamManage/cr_exam_screen.dart';
+import 'package:kuet_cse_automation/Student%20Folder/services/cr_room_request_service.dart';
 
-class ExamScheduleScreen extends ConsumerWidget {
+class ExamScheduleScreen extends ConsumerStatefulWidget {
   const ExamScheduleScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ExamScheduleScreen> createState() =>
+      _ExamScheduleScreenState();
+}
+
+class _ExamScheduleScreenState extends ConsumerState<ExamScheduleScreen> {
+  bool _isCR = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkCRStatus();
+  }
+
+  Future<void> _checkCRStatus() async {
+    final isCR = await CRRoomRequestService.checkIsCR();
+    if (mounted) setState(() => _isCR = isCR);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final selectedCategory = ref.watch(selectedExamCategoryProvider);
     final asyncExams = ref.watch(examScheduleProvider);
 
-    return asyncExams.when(
+    return Stack(
+      children: [
+        asyncExams.when(
       loading: () => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -74,6 +97,28 @@ class ExamScheduleScreen extends ConsumerWidget {
           filteredExams: filteredExams,
         );
       },
+        ),
+        if (_isCR)
+          Positioned(
+            bottom: 20,
+            right: 20,
+            child: FloatingActionButton.extended(
+              heroTag: 'cr_exam_fab',
+              onPressed: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const CRExamScreen(),
+                  ),
+                );
+                ref.invalidate(examScheduleProvider);
+              },
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Add Exam'),
+              backgroundColor: Colors.deepPurple,
+              foregroundColor: Colors.white,
+            ),
+          ),
+      ],
     );
   }
 
@@ -397,13 +442,60 @@ class ExamScheduleScreen extends ConsumerWidget {
                   color: color,
                 ),
                 const SizedBox(height: 12),
-                _buildInfoRow(
-                  icon: Icons.menu_book_rounded,
-                  label: 'Syllabus',
-                  value: exam.syllabus,
-                  isDarkMode: isDarkMode,
-                  color: color,
-                ),
+                if (exam.maxMarks > 0) ...[  
+                  const SizedBox(height: 12),
+                  _buildInfoRow(
+                    icon: Icons.star_rounded,
+                    label: 'Marks',
+                    value: exam.maxMarks % 1 == 0
+                        ? '${exam.maxMarks.toInt()} marks'
+                        : '${exam.maxMarks} marks',
+                    isDarkMode: isDarkMode,
+                    color: color,
+                  ),
+                ],
+                if (exam.syllabus.isNotEmpty) ...[  
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.07),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: color.withOpacity(0.25)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.menu_book_rounded, size: 16, color: color),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Syllabus',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: color,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          exam.syllabus,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

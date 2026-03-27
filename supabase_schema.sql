@@ -109,6 +109,21 @@ CREATE TABLE public.curriculum (
   CONSTRAINT curriculum_pkey PRIMARY KEY (id),
   CONSTRAINT curriculum_course_id_fkey FOREIGN KEY (course_id) REFERENCES public.courses(id)
 );
+CREATE TABLE public.device_push_tokens (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  platform text NOT NULL CHECK (platform = ANY (ARRAY['android'::text, 'ios'::text, 'web'::text])),
+  provider text NOT NULL DEFAULT 'onesignal'::text,
+  token text NOT NULL,
+  app_version text,
+  device_info jsonb NOT NULL DEFAULT '{}'::jsonb,
+  is_active boolean NOT NULL DEFAULT true,
+  last_seen_at timestamp with time zone NOT NULL DEFAULT now(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT device_push_tokens_pkey PRIMARY KEY (id),
+  CONSTRAINT device_push_tokens_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(user_id)
+);
 CREATE TABLE public.enrollments (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   offering_id uuid NOT NULL,
@@ -141,8 +156,12 @@ CREATE TABLE public.exams (
   duration_minutes integer,
   room_numbers ARRAY,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
+  syllabus text,
+  section text,
+  created_by_student_user_id uuid,
   CONSTRAINT exams_pkey PRIMARY KEY (id),
-  CONSTRAINT exams_offering_id_fkey FOREIGN KEY (offering_id) REFERENCES public.course_offerings(id)
+  CONSTRAINT exams_offering_id_fkey FOREIGN KEY (offering_id) REFERENCES public.course_offerings(id),
+  CONSTRAINT exams_created_by_student_user_id_fkey FOREIGN KEY (created_by_student_user_id) REFERENCES public.profiles(user_id)
 );
 CREATE TABLE public.geo_attendance_logs (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -190,6 +209,43 @@ CREATE TABLE public.notices (
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT notices_pkey PRIMARY KEY (id),
   CONSTRAINT notices_author_user_id_fkey FOREIGN KEY (author_user_id) REFERENCES public.profiles(user_id)
+);
+CREATE TABLE public.notification_push_outbox (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  notification_id uuid NOT NULL UNIQUE,
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'processing'::text, 'sent'::text, 'failed'::text])),
+  attempts integer NOT NULL DEFAULT 0,
+  next_attempt_at timestamp with time zone NOT NULL DEFAULT now(),
+  last_error text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT notification_push_outbox_pkey PRIMARY KEY (id),
+  CONSTRAINT notification_push_outbox_notification_id_fkey FOREIGN KEY (notification_id) REFERENCES public.notifications(id)
+);
+CREATE TABLE public.notification_reads (
+  notification_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  read_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT notification_reads_pkey PRIMARY KEY (notification_id, user_id),
+  CONSTRAINT notification_reads_notification_id_fkey FOREIGN KEY (notification_id) REFERENCES public.notifications(id),
+  CONSTRAINT notification_reads_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(user_id)
+);
+CREATE TABLE public.notifications (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  type text NOT NULL,
+  title text NOT NULL,
+  body text NOT NULL,
+  icon text,
+  target_type text NOT NULL DEFAULT 'USER'::text,
+  target_value text,
+  target_year_term text,
+  created_by uuid,
+  created_by_role text,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  expires_at timestamp with time zone,
+  CONSTRAINT notifications_pkey PRIMARY KEY (id),
+  CONSTRAINT notifications_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(user_id)
 );
 CREATE TABLE public.optional_course_assignments (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
