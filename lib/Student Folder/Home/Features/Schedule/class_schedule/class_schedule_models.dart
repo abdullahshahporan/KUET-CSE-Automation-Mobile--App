@@ -1,6 +1,7 @@
 import '../../../../../utils/time_utils.dart';
 
-/// Model for a class schedule slot fetched from Supabase routine_slots
+/// Model for a class schedule slot fetched from Supabase routine_slots,
+/// or an upcoming exam injected from the exams table.
 class ClassSchedule {
   final String id;
   final String courseName;
@@ -14,6 +15,13 @@ class ClassSchedule {
   final int dayOfWeek;
   final String? section;
 
+  // Exam-specific fields (only set when isExam == true)
+  final bool isExam;
+  final String? examTypeLabel; // 'CT', 'Term Final', 'Quiz/Viva'
+  final double? examMaxMarks;
+  final String? examSyllabus;
+  final String? examDateFormatted; // e.g. "Fri, Mar 28"
+
   ClassSchedule({
     this.id = '',
     required this.courseName,
@@ -26,6 +34,11 @@ class ClassSchedule {
     this.endTime = '',
     this.dayOfWeek = 0,
     this.section,
+    this.isExam = false,
+    this.examTypeLabel,
+    this.examMaxMarks,
+    this.examSyllabus,
+    this.examDateFormatted,
   });
 
   /// Create from Supabase routine_slots joined data

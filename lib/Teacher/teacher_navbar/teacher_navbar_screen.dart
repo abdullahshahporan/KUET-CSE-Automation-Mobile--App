@@ -5,10 +5,10 @@ import '../../services/push_notification_service.dart';
 import '../../theme/app_colors.dart';
 import '../teacher_home_content.dart';
 import '../Schedule/teacher_schedule_screen.dart';
-import '../Room_info/room_info_screen.dart';
 import '../Teacher_Profile/teacher_profile.dart';
 import '../Fab_Menu/fab_menu_widget.dart';
 import '../../shared/notification_bell.dart';
+import '../../Student Folder/Home/Features/Notice/Notice_Screen.dart';
 
 /// Main Teacher Navigation Screen with Bottom Navbar
 class TeacherMainScreen extends StatefulWidget {
@@ -35,7 +35,7 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
   final List<Widget> _screens = const [
     TeacherHomeContent(),
     TeacherScheduleScreen(),
-    RoomInfoScreen(),
+    NoticeScreen(),
     TeacherProfileScreen(),
   ];
 
@@ -142,9 +142,9 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
               ),
               _buildNavItem(
                 2,
-                Icons.meeting_room_outlined,
-                Icons.meeting_room,
-                'Room Info',
+                Icons.campaign_outlined,
+                Icons.campaign_rounded,
+                'Notices',
                 isDarkMode,
               ),
               _buildNavItem(

@@ -128,18 +128,22 @@ class NotificationService {
 
       // Build enrolled course codes for COURSE-targeted notifications
       List<String> enrolledCodes = [];
-      if (term != null && section != null) {
-        final offerings = await SupabaseCore.from(
-          'course_offerings',
-        ).select('courses!inner(code)').eq('term', term).eq('section', section);
+      if (term != null) {
+        try {
+          final offerings = await SupabaseCore.from(
+            'course_offerings',
+          ).select('courses!inner(code)').eq('term', term);
 
-        enrolledCodes = (offerings as List)
-            .map((o) {
-              final courses = o['courses'] as Map<String, dynamic>?;
-              return courses?['code'] as String?;
-            })
-            .whereType<String>()
-            .toList();
+          enrolledCodes = (offerings as List)
+              .map((o) {
+                final courses = o['courses'] as Map<String, dynamic>?;
+                return courses?['code'] as String?;
+              })
+              .whereType<String>()
+              .toList();
+        } catch (e) {
+          debugPrint('[NotificationService] enrolledCodes error: $e');
+        }
       }
 
       // Fetch read receipt IDs
@@ -429,14 +433,11 @@ class NotificationService {
     final userId = SessionService.currentUserId;
     if (userId == null) return;
 
-    final createdByRole = SessionService.currentRole == 'STUDENT'
-        ? 'STUDENT_CR'
-        : 'TEACHER';
     final normalizedTerm = _cleanText(term);
     if (normalizedTerm == null) return;
 
     final sectionLabel = _formatGeoAttendanceSectionLabel(section);
-    final title = 'Attendance Open — $courseCode$sectionLabel';
+    final title = '📍 Attendance Open — $courseCode$sectionLabel';
     final endHour = endTime.hour.toString().padLeft(2, '0');
     final endMinute = endTime.minute.toString().padLeft(2, '0');
     final body =
@@ -445,70 +446,51 @@ class NotificationService {
       'course_code': courseCode,
       'duration_minutes': durationMinutes,
       'end_time_label': '$endHour:$endMinute',
+      'open_screen': 'student_geo_attendance',
       if (_cleanText(roomNumber) != null) 'room_number': _cleanText(roomNumber),
       if (_cleanText(section) != null) 'geo_room_section': _cleanText(section),
       if (_cleanText(roomId) != null) 'geo_room_id': _cleanText(roomId),
     };
+    final collapseId =
+        _cleanText(roomId) ?? 'geo_attendance_open_${courseCode}_$term';
+    final expiresAt = endTime.toIso8601String();
 
-    try {
-      final recipientIds = await _resolveGeoAttendanceRecipientIds(
-        term: normalizedTerm,
-        section: section,
-      );
-
-      if (recipientIds.isNotEmpty) {
-        final rows = recipientIds
-            .map(
-              (recipientId) => {
-                'type': 'geo_attendance_open',
-                'title': title,
-                'body': body,
-                'target_type': 'USER',
-                'target_value': recipientId,
-                'target_year_term': null,
-                'created_by': userId,
-                'created_by_role': createdByRole,
-                'metadata': metadata,
-                'expires_at': null,
-              },
-            )
-            .toList();
-
-        await SupabaseCore.from('notifications').insert(rows);
-        await PushNotificationService.sendNotificationToUsers(
-          userIds: recipientIds,
-          title: title,
-          body: body,
-          data: {
-            'type': 'geo_attendance_open',
-            'open_screen': 'student_geo_attendance',
-            ...metadata,
-          },
-          collapseId:
-              _cleanText(roomId) ?? 'geo_attendance_open_${courseCode}_$term',
-        );
-        return;
-      }
-
-      await createNotification(
+    // COURSE target → only students enrolled in this course + its teacher(s)
+    // get in-app visibility + push. Same proven pattern as exam & room booking.
+    // Also send a direct USER notification to the teacher who opened the room.
+    final waitResults = await Future.wait<Object?>([
+      // 1. In-app notification for enrolled students (COURSE target)
+      createNotification(
         type: 'geo_attendance_open',
         title: title,
         body: body,
-        targetType: 'YEAR_TERM',
-        targetValue: normalizedTerm,
+        targetType: 'COURSE',
+        targetValue: courseCode,
         metadata: metadata,
-      );
-    } catch (e) {
-      debugPrint('[NotificationService] notifyGeoAttendanceOpened error: $e');
-      await createNotification(
+        expiresAt: expiresAt,
+      ).then((_) => null).onError((e, _) {
+        debugPrint('[NotificationService] geo_attendance COURSE notify error: $e');
+        return null;
+      }),
+      // 2. In-app notification for the teacher who opened the room (USER target)
+      createNotification(
         type: 'geo_attendance_open',
-        title: title,
-        body: body,
-        targetType: 'YEAR_TERM',
-        targetValue: normalizedTerm,
+        title: '📍 Attendance Room Opened — $courseCode$sectionLabel',
+        body: 'You opened attendance for $courseCode. '
+            'Window closes at $endHour:$endMinute ($durationMinutes min).',
+        targetType: 'USER',
+        targetValue: userId,
         metadata: metadata,
-      );
-    }
+        expiresAt: expiresAt,
+      ).then((_) => null).onError((e, _) {
+        debugPrint('[NotificationService] geo_attendance USER notify error: $e');
+        return null;
+      }),
+    ]);
+
+    // Push was already fired by createNotification → _resolveTargetRecipientIds
+    // for both COURSE (students + teacher) and USER (teacher) targets.
+    // No additional manual push needed.
   }
 
   static Future<List<String>> _resolveGeoAttendanceRecipientIds({
@@ -670,45 +652,47 @@ class NotificationService {
 
     final offeringsData = await SupabaseCore.from('course_offerings').select('''
           term,
-          section,
+          teacher_user_id,
           courses ( code )
         ''');
 
     final termWideTerms = <String>{};
-    final sectionsByTerm = <String, Set<String>>{};
+    final teacherIds = <String>{};
 
     for (final row in List<Map<String, dynamic>>.from(offeringsData as List)) {
       final course = row['courses'] as Map<String, dynamic>?;
       final code = _cleanText(course?['code']?.toString())?.toUpperCase();
       if (code != normalizedCode) continue;
 
+      // Collect the teacher assigned to this course offering
+      final teacherId = _cleanText(row['teacher_user_id']?.toString());
+      if (teacherId != null) teacherIds.add(teacherId);
+
       final term = _cleanText(row['term']?.toString());
       if (term == null) continue;
 
-      final section = _cleanText(row['section']?.toString())?.toUpperCase();
-      if (section == null || section.isEmpty) {
-        termWideTerms.add(term);
-      } else {
-        sectionsByTerm.putIfAbsent(term, () => <String>{}).add(section);
-      }
+      termWideTerms.add(term);
     }
 
-    if (termWideTerms.isEmpty && sectionsByTerm.isEmpty) return [];
+    if (termWideTerms.isEmpty) {
+      // No student targets, but still return any matched teachers
+      return teacherIds.toList();
+    }
 
     final studentData = await SupabaseCore.from(
       'students',
-    ).select('user_id, term, section');
+    ).select('user_id, term');
 
     final recipients = <String>{};
+    // Include course teachers
+    recipients.addAll(teacherIds);
+
     for (final row in List<Map<String, dynamic>>.from(studentData as List)) {
       final userId = _cleanText(row['user_id']?.toString());
       final term = _cleanText(row['term']?.toString());
-      final section = _cleanText(row['section']?.toString())?.toUpperCase();
       if (userId == null || term == null) continue;
 
-      if (termWideTerms.contains(term) ||
-          (section != null &&
-              (sectionsByTerm[term]?.contains(section) ?? false))) {
+      if (termWideTerms.contains(term)) {
         recipients.add(userId);
       }
     }

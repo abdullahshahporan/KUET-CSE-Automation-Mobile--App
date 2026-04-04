@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../../Student Folder/models/course_model.dart';
@@ -40,7 +38,6 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
   String _teacherUserId = '';
   List<Map<String, dynamic>> _activeRooms = [];
   List<Map<String, dynamic>> _recentRooms = [];
-  Timer? _autoRefreshTimer;
 
   // Geo room location selection
   List<Map<String, dynamic>> _geoRoomLocations = [];
@@ -61,16 +58,10 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
     super.initState();
     _selectedCourse = widget.preSelectedCourse;
     _initData();
-    // Auto-refresh every 15 seconds so expired rooms move to recent
-    _autoRefreshTimer = Timer.periodic(
-      const Duration(seconds: 15),
-      (_) => _loadRooms(),
-    );
   }
 
   @override
   void dispose() {
-    _autoRefreshTimer?.cancel();
     super.dispose();
   }
 

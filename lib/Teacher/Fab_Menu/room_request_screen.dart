@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
-import '../../shared/ui_helpers.dart';
+//import '../../services/supabase_service.dart';
 import '../../theme/app_colors.dart';
+import '../Room_info/room_info_screen.dart';
+import '../Room_info/room_model.dart';
+import '../Room_info/room_schedule_screen.dart';
+import '../Room_info/room_service.dart';
+import '../Room_info/slot_booking_dialog.dart';
+import '../Room_info/room_booking_service.dart';
 
-/// Room Request Screen - Request a room for class or meeting
+/// Teacher Room Request Screen — real room booking with conflict detection.
+///
+/// Flow: select course offering → select date → pick from available rooms →
+/// [SlotBookingDialog] for period selection → [RoomBookingService.submitBookingRequest].
+/// Enrolled students are notified by [RoomBookingService._notifyStudentsRoomBooked].
 class RoomRequestScreen extends StatefulWidget {
   const RoomRequestScreen({super.key});
 
@@ -11,38 +21,23 @@ class RoomRequestScreen extends StatefulWidget {
 }
 
 class _RoomRequestScreenState extends State<RoomRequestScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _purposeController = TextEditingController();
-
-  String? _selectedRoom;
-  String? _selectedTimeSlot;
-  DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
-  bool _isLoading = false;
-
-  final List<Map<String, dynamic>> availableRooms = [
-    {'name': 'Room 301', 'capacity': 60, 'type': 'Classroom'},
-    {'name': 'Room 401', 'capacity': 80, 'type': 'Classroom'},
-    {'name': 'Room 501', 'capacity': 100, 'type': 'Seminar Hall'},
-    {'name': 'Lab 201', 'capacity': 30, 'type': 'Computer Lab'},
-    {'name': 'Lab 203', 'capacity': 30, 'type': 'Computer Lab'},
-    {'name': 'Research Lab', 'capacity': 15, 'type': 'Research'},
-  ];
-
-  final List<String> timeSlots = [
-    '08:00 - 09:00',
-    '09:00 - 10:00',
-    '10:00 - 11:00',
-    '11:00 - 12:00',
-    '12:00 - 01:00',
-    '02:00 - 03:00',
-    '03:00 - 04:00',
-    '04:00 - 05:00',
-  ];
+  bool _isLoadingRooms = true;
+  List<Room> _rooms = [];
+  String? _error;
 
   @override
-  void dispose() {
-    _purposeController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _loadRooms();
+  }
+
+  Future<void> _loadRooms() async {
+    try {
+      final rooms = await RoomService.fetchAllRooms();
+      if (mounted) setState(() { _rooms = rooms; _isLoadingRooms = false; });
+    } catch (e) {
+      if (mounted) setState(() { _error = e.toString(); _isLoadingRooms = false; });
+    }
   }
 
   @override
@@ -52,305 +47,147 @@ class _RoomRequestScreenState extends State<RoomRequestScreen> {
     return Scaffold(
       backgroundColor: AppColors.background(isDarkMode),
       appBar: AppBar(
-        title: const Text('Room Request'),
+        title: const Text('Book a Room'),
         backgroundColor: AppColors.surface(isDarkMode),
         elevation: 0,
         leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: AppColors.textPrimary(isDarkMode),
-          ),
+          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(isDarkMode)),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          TextButton.icon(
+            onPressed: () => Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const RoomInfoScreen()),
+            ),
+            icon: Icon(Icons.grid_view, size: 18, color: AppColors.primary),
+            label: Text('Room Grid', style: TextStyle(color: AppColors.primary, fontSize: 13)),
+          ),
+        ],
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.orange[600]!, Colors.deepOrange[500]!],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+      body: _isLoadingRooms
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.error_outline, color: AppColors.danger, size: 48),
+                      const SizedBox(height: 12),
+                      Text('Failed to load rooms', style: TextStyle(color: AppColors.textPrimary(isDarkMode))),
+                      const SizedBox(height: 8),
+                      ElevatedButton(onPressed: _loadRooms, child: const Text('Retry')),
+                    ],
                   ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
+                )
+              : _buildRoomList(isDarkMode),
+    );
+  }
+
+  Widget _buildRoomList(bool isDarkMode) {
+    final classrooms = _rooms.where((r) => r.roomType.toLowerCase() != 'lab').toList();
+    final labs = _rooms.where((r) => r.roomType.toLowerCase() == 'lab').toList();
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Header banner
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.orange[600]!, Colors.deepOrange[500]!],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.meeting_room, color: Colors.white, size: 32),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
-                      Icons.meeting_room,
-                      color: Colors.white,
-                      size: 32,
-                    ),
-                    const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Request a Room',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          'Book for class, meeting, or event',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
+                    const Text('Book a Room', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text(
+                      'Tap a room to see its schedule & book a period',
+                      style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
-
-              // Select Room
-              _buildLabel('Select Room', isDarkMode),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: AppColors.surface(isDarkMode),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border(isDarkMode)),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _selectedRoom,
-                    isExpanded: true,
-                    hint: Text(
-                      'Choose a room',
-                      style: TextStyle(
-                        color: AppColors.textSecondary(isDarkMode),
-                      ),
-                    ),
-                    dropdownColor: AppColors.surface(isDarkMode),
-                    items: availableRooms.map((room) {
-                      return DropdownMenuItem(
-                        value: room['name'] as String,
-                        child: Row(
-                          children: [
-                            Icon(
-                              room['type'] == 'Computer Lab'
-                                  ? Icons.computer
-                                  : Icons.meeting_room,
-                              size: 18,
-                              color: AppColors.textSecondary(isDarkMode),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '${room['name']} (${room['capacity']} seats)',
-                              style: TextStyle(
-                                color: AppColors.textPrimary(isDarkMode),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (value) => setState(() => _selectedRoom = value),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Select Date
-              _buildLabel('Select Date', isDarkMode),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: () async {
-                  final date = await showDatePicker(
-                    context: context,
-                    initialDate: _selectedDate,
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 30)),
-                  );
-                  if (date != null) {
-                    setState(() => _selectedDate = date);
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface(isDarkMode),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.border(isDarkMode)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.calendar_today, color: AppColors.primary),
-                      const SizedBox(width: 12),
-                      Text(
-                        '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                        style: TextStyle(
-                          color: AppColors.textPrimary(isDarkMode),
-                          fontSize: 15,
-                        ),
-                      ),
-                      const Spacer(),
-                      Icon(
-                        Icons.arrow_drop_down,
-                        color: AppColors.textSecondary(isDarkMode),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Select Time Slot
-              _buildLabel('Select Time Slot', isDarkMode),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: timeSlots.map((slot) {
-                  final isSelected = _selectedTimeSlot == slot;
-                  return GestureDetector(
-                    onTap: () => setState(() => _selectedTimeSlot = slot),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.primary
-                            : AppColors.surface(isDarkMode),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.primary
-                              : AppColors.border(isDarkMode),
-                        ),
-                      ),
-                      child: Text(
-                        slot,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: isSelected
-                              ? Colors.white
-                              : AppColors.textPrimary(isDarkMode),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 20),
-
-              // Purpose
-              _buildLabel('Purpose', isDarkMode),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _purposeController,
-                style: TextStyle(color: AppColors.textPrimary(isDarkMode)),
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText:
-                      'e.g., Extra class for CSE 3201, Meeting with students...',
-                  hintStyle: TextStyle(
-                    color: AppColors.textSecondary(isDarkMode),
-                  ),
-                  filled: true,
-                  fillColor: AppColors.surface(isDarkMode),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.border(isDarkMode)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.border(isDarkMode)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.primary, width: 2),
-                  ),
-                ),
-                validator: (value) =>
-                    value?.isEmpty ?? true ? 'Purpose is required' : null,
-              ),
-              const SizedBox(height: 32),
-
-              // Submit Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _submitRequest,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange[600],
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                          ),
-                        )
-                      : const Text(
-                          'Submit Request',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                ),
-              ),
-              const SizedBox(height: 24),
             ],
           ),
         ),
+        const SizedBox(height: 20),
+
+        if (classrooms.isNotEmpty) ...[
+          _buildSectionLabel('Classrooms', isDarkMode),
+          const SizedBox(height: 10),
+          ...classrooms.map((r) => _buildRoomCard(r, isDarkMode)),
+          const SizedBox(height: 16),
+        ],
+
+        if (labs.isNotEmpty) ...[
+          _buildSectionLabel('Labs', isDarkMode),
+          const SizedBox(height: 10),
+          ...labs.map((r) => _buildRoomCard(r, isDarkMode)),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSectionLabel(String label, bool isDarkMode) {
+    return Text(
+      label,
+      style: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+        color: AppColors.textSecondary(isDarkMode),
+        letterSpacing: 0.5,
       ),
     );
   }
 
-  Widget _buildLabel(String text, bool isDarkMode) =>
-      FormSectionLabel(text: text, isDarkMode: isDarkMode);
-
-  void _submitRequest() {
-    if (!_formKey.currentState!.validate()) return;
-
-    if (_selectedRoom == null) {
-      showAppSnackBar(context, message: 'Please select a room', isSuccess: false);
-      return;
-    }
-
-    if (_selectedTimeSlot == null) {
-      showAppSnackBar(context, message: 'Please select a time slot', isSuccess: false);
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    // Simulate request submission
-    Future.delayed(const Duration(seconds: 2), () {
-      setState(() => _isLoading = false);
-
-      showAppSnackBar(context, message: 'Room request for $_selectedRoom submitted!');
-
-      Navigator.pop(context);
-    });
+  Widget _buildRoomCard(Room room, bool isDarkMode) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      color: AppColors.surface(isDarkMode),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 1,
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.orange.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            room.roomType.toLowerCase() == 'lab' ? Icons.computer : Icons.meeting_room,
+            color: Colors.orange[700],
+            size: 22,
+          ),
+        ),
+        title: Text(
+          room.roomNumber,
+          style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary(isDarkMode)),
+        ),
+        subtitle: Text(
+          room.roomType,
+          style: TextStyle(color: AppColors.textSecondary(isDarkMode), fontSize: 12),
+        ),
+        trailing: Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textSecondary(isDarkMode)),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => RoomScheduleScreen(room: room)),
+        ).then((_) {
+          // Navigate back-and-out after a successful booking
+          if (mounted) Navigator.of(context).maybePop();
+        }),
+      ),
+    );
   }
 }

@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:bcrypt/bcrypt.dart';
 
 import '../config/push_config.dart';
+import 'background_notification_service.dart';
 import 'push_notification_service.dart';
 import 'session_service.dart';
 import 'supabase_core.dart';
@@ -22,7 +25,8 @@ class AuthService {
       final response = await SupabaseCore.from('profiles')
           .select('user_id, email, password_hash, role, is_active')
           .eq('email', email.trim().toLowerCase())
-          .maybeSingle();
+          .maybeSingle()
+          .timeout(const Duration(seconds: 15));
 
       if (response == null) {
         return {'success': false, 'message': 'Invalid email or password'};
@@ -50,15 +54,21 @@ class AuthService {
         userId: userId,
         email: userEmail,
         role: role,
-      );
+      ).timeout(const Duration(seconds: 5));
       PushConfig.loginUser(userId);
-      await PushNotificationService.syncUserIdentity();
+      // Keep login responsive even if OneSignal is slow/unavailable.
+      unawaited(
+        PushNotificationService.syncUserIdentity()
+            .timeout(const Duration(seconds: 5))
+            .catchError((_) {}),
+      );
 
       // Update last_login (non-critical)
       try {
         await SupabaseCore.from('profiles')
             .update({'last_login': DateTime.now().toUtc().toIso8601String()})
-            .eq('user_id', userId);
+          .eq('user_id', userId)
+          .timeout(const Duration(seconds: 5));
       } catch (_) {}
 
       return {
@@ -67,6 +77,11 @@ class AuthService {
         'role': role,
         'email': userEmail,
       };
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Sign in timed out. Please check your connection and try again.',
+      };
     } catch (e) {
       return {'success': false, 'message': 'Connection error: ${e.toString()}'};
     }
@@ -74,6 +89,7 @@ class AuthService {
 
   /// Sign out – clears saved session.
   static Future<void> signOut() async {
+    await BackgroundNotificationService.stop();
     PushConfig.logoutUser();
     await PushNotificationService.clearUserIdentity();
     await SessionService.clearSession();

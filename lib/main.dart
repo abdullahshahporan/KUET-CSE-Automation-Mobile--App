@@ -3,8 +3,8 @@ import 'package:kuet_cse_automation/app.dart';
 
 import 'config/push_config.dart';
 import 'config/supabase_config.dart';
+import 'services/background_notification_service.dart';
 import 'services/local_notification_service.dart';
-import 'services/session_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/supabase_service.dart';
 
@@ -21,12 +21,10 @@ void main() async {
   await LocalNotificationService.initialize();
   await LocalNotificationService.requestPermission();
   await PushConfig.initialize();
-
-  final currentUserId = SessionService.currentUserId;
-  if (currentUserId != null && currentUserId.trim().isNotEmpty) {
-    PushConfig.loginUser(currentUserId);
-  }
   await PushNotificationService.initialize();
+
+  // Configure background notification polling service (started on login)
+  await BackgroundNotificationService.initialize();
 
   runApp(CSEApp());
 }

@@ -12,6 +12,10 @@ class ClassReminderService {
   static const _leadMinutesKey = 'class_reminder_lead_minutes';
   static const int defaultLeadMinutes = 10;
 
+  // Schedule reminders for today + the next 6 days so they survive
+  // without the app being opened daily.
+  static const int _scheduleDays = 7;
+
   static Future<int> getLeadMinutes() async {
     final prefs = await SupabaseCore.ensurePrefs();
     return prefs.getInt(_leadMinutesKey) ?? defaultLeadMinutes;
@@ -44,28 +48,32 @@ class ClassReminderService {
   static Future<void> _scheduleStudentToday(int leadMinutes) async {
     try {
       final now = DateTime.now();
-      final todayDow = now.weekday % 7; // Sun=0..Sat=6
 
       final result = await ScheduleService.fetchClassSchedule();
       final schedules = result['schedules'] as List<ClassSchedule>? ?? [];
 
-      for (final slot in schedules) {
-        if (slot.dayOfWeek != todayDow) continue;
+      for (int offset = 0; offset < _scheduleDays; offset++) {
+        final date = now.add(Duration(days: offset));
+        final dow = date.weekday % 7; // Sun=0..Sat=6
 
-        final classStartAt = _dateWithTime(now, slot.startTime);
-        if (!classStartAt.isAfter(now)) continue;
+        for (final slot in schedules) {
+          if (slot.dayOfWeek != dow) continue;
 
-        final reminderKey = 'student|${slot.id}|${_dateKey(now)}';
-        await LocalNotificationService.scheduleClassReminder(
-          reminderKey: reminderKey,
-          classStartAt: classStartAt,
-          leadMinutes: leadMinutes,
-          courseCode: slot.courseCode,
-          courseTitle: slot.courseName,
-          room: slot.room,
-          isTeacher: false,
-          section: slot.section,
-        );
+          final classStartAt = _dateWithTime(date, slot.startTime);
+          if (!classStartAt.isAfter(now)) continue;
+
+          final reminderKey = 'student|${slot.id}|${_dateKey(date)}';
+          await LocalNotificationService.scheduleClassReminder(
+            reminderKey: reminderKey,
+            classStartAt: classStartAt,
+            leadMinutes: leadMinutes,
+            courseCode: slot.courseCode,
+            courseTitle: slot.courseName,
+            room: slot.room,
+            isTeacher: false,
+            section: slot.section,
+          );
+        }
       }
     } catch (e) {
       debugPrint('[ClassReminderService] _scheduleStudentToday error: $e');
@@ -75,23 +83,28 @@ class ClassReminderService {
   static Future<void> _scheduleTeacherToday(int leadMinutes) async {
     try {
       final now = DateTime.now();
-      final slots = await TeacherScheduleService.fetchEffectiveScheduleForDate(now);
 
-      for (final slot in slots) {
-        final classStartAt = _dateWithTime(now, slot.startTime);
-        if (!classStartAt.isAfter(now)) continue;
+      for (int offset = 0; offset < _scheduleDays; offset++) {
+        final date = now.add(Duration(days: offset));
+        final slots =
+            await TeacherScheduleService.fetchEffectiveScheduleForDate(date);
 
-        final reminderKey = 'teacher|${slot.id}|${_dateKey(now)}';
-        await LocalNotificationService.scheduleClassReminder(
-          reminderKey: reminderKey,
-          classStartAt: classStartAt,
-          leadMinutes: leadMinutes,
-          courseCode: slot.courseCode,
-          courseTitle: slot.courseTitle,
-          room: slot.displayRoomNumber,
-          isTeacher: true,
-          section: slot.section,
-        );
+        for (final slot in slots) {
+          final classStartAt = _dateWithTime(date, slot.startTime);
+          if (!classStartAt.isAfter(now)) continue;
+
+          final reminderKey = 'teacher|${slot.id}|${_dateKey(date)}';
+          await LocalNotificationService.scheduleClassReminder(
+            reminderKey: reminderKey,
+            classStartAt: classStartAt,
+            leadMinutes: leadMinutes,
+            courseCode: slot.courseCode,
+            courseTitle: slot.courseTitle,
+            room: slot.displayRoomNumber,
+            isTeacher: true,
+            section: slot.section,
+          );
+        }
       }
     } catch (e) {
       debugPrint('[ClassReminderService] _scheduleTeacherToday error: $e');

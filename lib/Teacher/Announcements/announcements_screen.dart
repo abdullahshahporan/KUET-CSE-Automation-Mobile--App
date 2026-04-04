@@ -3,6 +3,7 @@ import '../models/teacher_course.dart';
 import '../../shared/ui_helpers.dart';
 import '../../theme/app_colors.dart';
 import '../../services/notification_service.dart';
+import '../../services/supabase_service.dart';
 
 /// Course-specific Announcements Screen
 class AnnouncementsScreen extends StatefulWidget {
@@ -338,9 +339,24 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       if (titleController.text.isNotEmpty &&
                           contentController.text.isNotEmpty) {
+                        // Save to announcements table
+                        try {
+                          await SupabaseService.from('announcements').insert({
+                            'title': titleController.text,
+                            'content': contentController.text,
+                            'type': selectedType.toLowerCase().replaceAll(' ', '-'),
+                            'course_code': course.code,
+                            'priority': selectedType == 'Class Test' || selectedType == 'Quiz' ? 'high' : 'medium',
+                            'created_by': SupabaseService.currentUserId,
+                            'is_active': true,
+                          });
+                        } catch (e) {
+                          debugPrint('[AnnouncementsScreen] save error: $e');
+                        }
+
                         setState(() {
                           _announcements.insert(0, {
                             'type': selectedType,
@@ -349,14 +365,14 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                             'date': 'Just now',
                           });
                         });
-                        // Fire notification so all enrolled students get it
+                        // Fire push + in-app notification to enrolled students
                         final typeMap = {
                           'Class Test': 'exam_scheduled',
                           'Assignment': 'assignment_due',
                           'Quiz': 'exam_scheduled',
                           'Notice': 'notice_posted',
                         };
-                        NotificationService.createNotification(
+                        await NotificationService.createNotification(
                           type: typeMap[selectedType] ?? 'announcement',
                           title: '[${course.code}] ${titleController.text}',
                           body: contentController.text,
@@ -367,8 +383,10 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                             'announcement_type': selectedType,
                           },
                         );
-                        Navigator.pop(context);
-                        showAppSnackBar(context, message: 'Announcement posted!');
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          showAppSnackBar(context, message: 'Announcement posted!');
+                        }
                       }
                     },
                     style: ElevatedButton.styleFrom(

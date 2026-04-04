@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -17,11 +18,31 @@ class LocalNotificationService {
   static const _classReminderPayloadPrefix = 'class_reminder|';
   static const _examReminderPayloadPrefix = 'exam_reminder|';
 
+  // High-priority channel — used for all in-app alerts
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
     'kuet_notifications',
     'KUET Notifications',
     description: 'Real-time department updates and alerts',
     importance: Importance.high,
+    enableVibration: true,
+    enableLights: true,
+    ledColor: Color(0xFF6366F1), // indigo — matches app primary
+    playSound: true,
+    showBadge: true,
+  );
+
+  // Reminder-specific channel (lower priority)
+  static const AndroidNotificationChannel _reminderChannel =
+      AndroidNotificationChannel(
+    'kuet_reminders',
+    'Class & Exam Reminders',
+    description: 'Scheduled class and exam reminders',
+    importance: Importance.high,
+    enableVibration: true,
+    enableLights: true,
+    ledColor: Color(0xFF0EA5E9), // cyan
+    playSound: true,
+    showBadge: true,
   );
 
   static Future<void> initialize() async {
@@ -51,6 +72,7 @@ class LocalNotificationService {
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
     await androidImpl?.createNotificationChannel(_channel);
+    await androidImpl?.createNotificationChannel(_reminderChannel);
 
     _initialized = true;
   }
@@ -86,8 +108,22 @@ class LocalNotificationService {
           channelDescription: _channel.description,
           importance: Importance.high,
           priority: Priority.high,
+          enableVibration: true,
+          enableLights: true,
+          ledColor: const Color(0xFF6366F1),
+          ledOnMs: 1000,
+          ledOffMs: 500,
+          color: const Color(0xFF6366F1),
+          playSound: true,
+          // Show heads-up notification even on lock screen
+          fullScreenIntent: true,
+          visibility: NotificationVisibility.public,
         ),
-        iOS: const DarwinNotificationDetails(),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
       );
 
       final id = Random().nextInt(1 << 31);
@@ -157,13 +193,25 @@ class LocalNotificationService {
 
       final details = NotificationDetails(
         android: AndroidNotificationDetails(
-          _channel.id,
-          _channel.name,
-          channelDescription: _channel.description,
+          _reminderChannel.id,
+          _reminderChannel.name,
+          channelDescription: _reminderChannel.description,
           importance: Importance.high,
           priority: Priority.high,
+          enableVibration: true,
+          enableLights: true,
+          ledColor: const Color(0xFF0EA5E9),
+          ledOnMs: 1000,
+          ledOffMs: 500,
+          color: const Color(0xFF6366F1),
+          playSound: true,
+          visibility: NotificationVisibility.public,
         ),
-        iOS: const DarwinNotificationDetails(),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
       );
 
       await _plugin.zonedSchedule(
@@ -172,7 +220,7 @@ class LocalNotificationService {
         '$courseTitle at $classTime, Room $room$sectionText',
         tz.TZDateTime.from(reminderAt, tz.local),
         details,
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         payload: '$_classReminderPayloadPrefix$reminderKey',
@@ -205,13 +253,25 @@ class LocalNotificationService {
           '${examStartsAt.hour.toString().padLeft(2, '0')}:${examStartsAt.minute.toString().padLeft(2, '0')}';
       final details = NotificationDetails(
         android: AndroidNotificationDetails(
-          _channel.id,
-          _channel.name,
-          channelDescription: _channel.description,
+          _reminderChannel.id,
+          _reminderChannel.name,
+          channelDescription: _reminderChannel.description,
           importance: Importance.high,
           priority: Priority.high,
+          enableVibration: true,
+          enableLights: true,
+          ledColor: const Color(0xFF0EA5E9),
+          ledOnMs: 1000,
+          ledOffMs: 500,
+          color: const Color(0xFF6366F1),
+          playSound: true,
+          visibility: NotificationVisibility.public,
         ),
-        iOS: const DarwinNotificationDetails(),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
       );
 
       await _plugin.zonedSchedule(
@@ -220,7 +280,7 @@ class LocalNotificationService {
         '$examLabel at $examTime, Room $room',
         tz.TZDateTime.from(reminderAt, tz.local),
         details,
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         payload: '$_examReminderPayloadPrefix$reminderKey',

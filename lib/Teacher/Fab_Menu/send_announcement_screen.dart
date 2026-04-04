@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/notification_service.dart';
 import '../../shared/ui_helpers.dart';
 import '../../theme/app_colors.dart';
 import '../services/teacher_course_service.dart';
@@ -393,6 +394,22 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
     }
   }
 
+  /// Map announcement type to notification type used in the notifications table.
+  String _toNotificationType(AnnouncementType type) {
+    switch (type) {
+      case AnnouncementType.classTest:
+      case AnnouncementType.labTest:
+      case AnnouncementType.quiz:
+        return 'exam_scheduled';
+      case AnnouncementType.assignment:
+        return 'assignment_due';
+      case AnnouncementType.notice:
+        return 'notice_posted';
+      case AnnouncementType.other:
+        return 'announcement';
+    }
+  }
+
   Future<void> _sendAnnouncement() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -423,6 +440,26 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
         targetSession: null,
         priority: priority,
       );
+
+      if (success) {
+        // Fire push + in-app notification to all students enrolled in the
+        // selected course (or all students if no course is selected).
+        final notifType = _toNotificationType(_selectedType);
+        final courseCode = _selectedCourse;
+        await NotificationService.createNotification(
+          type: notifType,
+          title: title,
+          body: _contentController.text,
+          targetType: courseCode != null ? 'COURSE' : 'ROLE',
+          targetValue: courseCode ?? 'STUDENT',
+          metadata: {
+            if (courseCode != null) 'course_code': courseCode,
+            'announcement_type': typeName,
+            if (_scheduledDate != null)
+              'scheduled_date': _scheduledDate!.toIso8601String(),
+          },
+        );
+      }
 
       if (mounted) {
         setState(() => _isLoading = false);

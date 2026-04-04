@@ -22,3 +22,15 @@
 -dontwarn com.fasterxml.jackson.core.JsonFactory
 -dontwarn com.fasterxml.jackson.core.JsonGenerator
 -dontwarn com.google.auto.value.AutoValue$CopyAnnotations
+
+# OneSignal — keep all SDK classes so background push works in release builds
+-keep class com.onesignal.** { *; }
+-dontwarn com.onesignal.**
+-keep class androidx.work.** { *; }
+-dontwarn androidx.work.**
+-keep class com.google.android.gms.** { *; }
+-dontwarn com.google.android.gms.**
+
+# flutter_background_service — keep background service classes for R8
+-keep class id.flutter.flutter_background_service.** { *; }
+-dontwarn id.flutter.flutter_background_service.**

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show TimeOfDay;
+import '../../services/notification_service.dart';
 import '../../services/supabase_service.dart';
 import 'room_booking_model.dart';
 import 'room_model.dart';
@@ -138,6 +139,16 @@ class RoomBookingService {
         section: section,
       );
 
+      // Fire-and-forget: notify students of the booked room
+      _notifyStudentsRoomBooked(
+        offeringId: offeringId,
+        roomNumber: roomNumber,
+        startTime: '${fromPeriod.start}:00',
+        endTime: '${toPeriod.end}:00',
+        bookingDate: bookingDate,
+        section: section,
+      );
+
       return const BookingResult(
         success: true,
         message: 'Slot booked successfully!',
@@ -230,6 +241,16 @@ class RoomBookingService {
         offeringId: offeringId,
         roomNumber: roomNumber,
         dayOfWeek: dayOfWeek,
+        startTime: '$startStr:00',
+        endTime: '$endStr:00',
+        bookingDate: bookingDate,
+        section: section,
+      );
+
+      // Fire-and-forget: notify students of the booked room
+      _notifyStudentsRoomBooked(
+        offeringId: offeringId,
+        roomNumber: roomNumber,
         startTime: '$startStr:00',
         endTime: '$endStr:00',
         bookingDate: bookingDate,
@@ -503,6 +524,63 @@ class RoomBookingService {
     final month = date.month.toString().padLeft(2, '0');
     final day = date.day.toString().padLeft(2, '0');
     return '${date.year}-$month-$day';
+  }
+
+  // ─── Notify students when teacher books a room ───────────────────────────
+  /// Fire-and-forget: resolves course/term/section from offeringId and sends
+  /// both a Supabase notification row and OneSignal push to enrolled students.
+  static void _notifyStudentsRoomBooked({
+    required String offeringId,
+    required String roomNumber,
+    required String startTime,
+    required String endTime,
+    required String bookingDate,
+    String? section,
+  }) {
+    Future(() async {
+      try {
+        final offeringData = await SupabaseService.client
+            .from('course_offerings')
+            .select('term, section, courses(code)')
+            .eq('id', offeringId)
+            .maybeSingle();
+
+        if (offeringData == null) return;
+
+        final course = offeringData['courses'] as Map<String, dynamic>?;
+        final courseCode =
+            (course?['code'] as String?)?.trim();
+        if (courseCode == null || courseCode.isEmpty) return;
+
+        final term = (offeringData['term'] as String?)?.trim();
+        final effectiveSection =
+            section?.trim().isEmpty ?? true ? null : section?.trim();
+
+        final start = _fmt(startTime);
+        final end = _fmt(endTime);
+
+        final targetType = effectiveSection != null ? 'SECTION' : (term != null ? 'YEAR_TERM' : 'COURSE');
+        final targetValue = effectiveSection ?? term ?? courseCode;
+
+        await NotificationService.createNotification(
+          type: 'room_allocated',
+          title: 'Room $roomNumber Booked — $courseCode',
+          body: 'Class on $bookingDate, $start–$end has been assigned Room $roomNumber.',
+          targetType: targetType,
+          targetValue: targetValue,
+          targetYearTerm: effectiveSection != null ? term : null,
+          metadata: {
+            'course_code': courseCode,
+            'room_number': roomNumber,
+            'booking_date': bookingDate,
+            'start_time': start,
+            'end_time': end,
+          },
+        );
+      } catch (e) {
+        debugPrint('[RoomBookingService] _notifyStudentsRoomBooked error: $e');
+      }
+    });
   }
 }
 

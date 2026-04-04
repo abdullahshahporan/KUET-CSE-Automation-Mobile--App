@@ -120,6 +120,8 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                 }),
                 const Divider(height: 1),
                 buildDarkModeToggle(isDarkMode, themeProvider.toggleTheme),
+                const Divider(height: 1),
+                buildTestNotificationTile(context, isDarkMode),
               ]),
               const SizedBox(height: 16),
 

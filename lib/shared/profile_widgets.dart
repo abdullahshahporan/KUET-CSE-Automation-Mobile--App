@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../Auth/Sign_In_Screen.dart';
+import '../services/local_notification_service.dart';
+import '../services/notification_service.dart';
+import '../services/session_service.dart';
 import '../services/supabase_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/time_utils.dart';
@@ -393,3 +396,121 @@ void showResultSnackBar(BuildContext context, {required bool success, required S
 
 /// @deprecated Use [TimeUtils.formatDate] from `time_utils.dart` instead.
 String formatDate(String date) => TimeUtils.formatDate(date);
+
+// ── TEST NOTIFICATION ─────────────────────────────────────────────────────────
+
+Widget buildTestNotificationTile(BuildContext context, bool isDarkMode) {
+  return _TestNotificationTile(isDarkMode: isDarkMode);
+}
+
+class _TestNotificationTile extends StatefulWidget {
+  final bool isDarkMode;
+  const _TestNotificationTile({required this.isDarkMode});
+
+  @override
+  State<_TestNotificationTile> createState() => _TestNotificationTileState();
+}
+
+class _TestNotificationTileState extends State<_TestNotificationTile> {
+  bool _isSending = false;
+
+  Future<void> _sendTestNotification() async {
+    final userId = SessionService.currentUserId;
+    if (userId == null) {
+      if (mounted) {
+        showAppSnackBar(context, message: 'Not logged in', isSuccess: false);
+      }
+      return;
+    }
+
+    setState(() => _isSending = true);
+
+    try {
+      // 1) Fire immediate local notification to verify local push works
+      await LocalNotificationService.show(
+        title: 'Test Notification',
+        body: 'If you see this, local notifications are working!',
+        payload: 'test_notification',
+      );
+
+      // 2) Create a real notification in Supabase targeting self
+      //    This tests the full pipeline: DB insert → push outbox → OneSignal
+      await NotificationService.createNotification(
+        type: 'test_notification',
+        title: 'Test Push Notification',
+        body:
+            'This test notification was sent at ${TimeOfDay.now().format(context)}. '
+            'If you see this in the notification tray, push delivery is working!',
+        targetType: 'USER',
+        targetValue: userId,
+        metadata: {
+          'test': true,
+          'sent_at': DateTime.now().toIso8601String(),
+        },
+      );
+
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          message: 'Test notification sent! Check your notification tray.',
+          isSuccess: true,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          message: 'Failed to send test notification: $e',
+          isSuccess: false,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: _isSending ? null : _sendTestNotification,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: _isSending
+                  ? const Padding(
+                      padding: EdgeInsets.all(10),
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(
+                      Icons.notifications_active_outlined,
+                      size: 18,
+                      color: Colors.orange,
+                    ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                'Send Test Notification',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textPrimary(widget.isDarkMode),
+                ),
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios_rounded,
+                size: 16, color: AppColors.textMuted),
+          ],
+        ),
+      ),
+    );
+  }
+}

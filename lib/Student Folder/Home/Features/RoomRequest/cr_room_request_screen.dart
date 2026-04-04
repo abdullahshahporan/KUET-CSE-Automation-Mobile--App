@@ -642,31 +642,26 @@ class _CRRoomRequestScreenState extends State<CRRoomRequestScreen> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: _periodStatuses.map((ps) {
-              final isFree = ps.state == PeriodState.free;
+            children: freeSlots.map((ps) {
               final isStart = _selectedStartTime == '${ps.period.start}:00';
               final isEnd = _selectedEndTime == '${ps.period.end}:00';
               final isInRange = _isInSelectedRange(ps.period);
               final isSelected = isStart || isEnd || isInRange;
 
               return GestureDetector(
-                onTap: isFree ? () => _onSlotTapped(ps) : null,
+                onTap: () => _onSlotTapped(ps),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 10, vertical: 8),
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppColors.primary
-                        : isFree
-                            ? AppColors.success.withValues(alpha: 0.15)
-                            : AppColors.danger.withValues(alpha: 0.15),
+                        : AppColors.success.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: isSelected
                           ? AppColors.primary
-                          : isFree
-                              ? AppColors.success.withValues(alpha: 0.4)
-                              : AppColors.danger.withValues(alpha: 0.4),
+                          : AppColors.success.withValues(alpha: 0.4),
                     ),
                   ),
                   child: Column(
@@ -679,9 +674,7 @@ class _CRRoomRequestScreenState extends State<CRRoomRequestScreen> {
                           fontWeight: FontWeight.w700,
                           color: isSelected
                               ? Colors.white
-                              : isFree
-                                  ? AppColors.success
-                                  : AppColors.danger,
+                              : AppColors.success,
                         ),
                       ),
                       Text(
@@ -690,19 +683,9 @@ class _CRRoomRequestScreenState extends State<CRRoomRequestScreen> {
                           fontSize: 10,
                           color: isSelected
                               ? Colors.white.withValues(alpha: 0.9)
-                              : isFree
-                                  ? AppColors.textSecondary(isDarkMode)
-                                  : AppColors.danger.withValues(alpha: 0.7),
+                              : AppColors.textSecondary(isDarkMode),
                         ),
                       ),
-                      if (!isFree && ps.courseCode != null)
-                        Text(
-                          ps.courseCode!,
-                          style: TextStyle(
-                            fontSize: 9,
-                            color: AppColors.danger.withValues(alpha: 0.7),
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -746,8 +729,6 @@ class _CRRoomRequestScreenState extends State<CRRoomRequestScreen> {
         Row(
           children: [
             _buildLegendDot(AppColors.success, 'Free', isDarkMode),
-            const SizedBox(width: 16),
-            _buildLegendDot(AppColors.danger, 'Occupied', isDarkMode),
             const SizedBox(width: 16),
             _buildLegendDot(AppColors.primary, 'Selected', isDarkMode),
           ],
