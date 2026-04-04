@@ -1,12 +1,13 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+
+import '../../Student Folder/models/course_model.dart';
 import '../../services/geo_attendance_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/supabase_service.dart';
-import '../../Student Folder/models/course_model.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/course_utils.dart';
-
 import '../models/teacher_course.dart';
 
 /// Teacher screen to open/close geo-attendance rooms.
@@ -40,6 +41,11 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
   List<Map<String, dynamic>> _activeRooms = [];
   List<Map<String, dynamic>> _recentRooms = [];
   Timer? _autoRefreshTimer;
+
+  // Geo room location selection
+  List<Map<String, dynamic>> _geoRoomLocations = [];
+  Map<String, dynamic>? _selectedGeoRoom;
+  int _rangeMeters = 30;
 
   /// Whether the screen was opened from a specific course
   bool get _isCourseScoped => widget.preSelectedCourse != null;
@@ -78,6 +84,9 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
     } else {
       await _loadCourses();
     }
+
+    // Load geo room locations for the room dropdown
+    _geoRoomLocations = await GeoAttendanceService.getGeoRoomLocations();
 
     await _loadRooms();
   }
@@ -150,8 +159,10 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
         teacherUserId: _teacherUserId,
         startTime: now,
         endTime: endTime,
-        roomNumber: _roomNumber.isNotEmpty ? _roomNumber : null,
+        roomNumber: _roomNumber.isNotEmpty ? _roomNumber : (_selectedGeoRoom?['room_name'] as String?),
         section: _selectedSection,
+        geoRoomLocationId: _selectedGeoRoom?['id'] as String?,
+        rangeMeters: _rangeMeters,
       );
 
       if (mounted) {
@@ -165,7 +176,7 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Room opened for $courseCode$sectionLabel! Students within 200m can submit attendance.',
+              'Room opened for $courseCode$sectionLabel! Students within ${_rangeMeters}m can submit attendance.',
             ),
             backgroundColor: AppColors.success,
           ),
@@ -182,6 +193,8 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
         if (!_isCourseScoped) _selectedCourse = null;
         _selectedSection = null;
         _roomNumber = '';
+        _selectedGeoRoom = null;
+        _rangeMeters = 30;
         await _loadRooms();
       }
     } catch (e) {
@@ -531,7 +544,7 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                       ),
                     ),
                     Text(
-                      'Students must be within 200m of CSE Building to submit',
+                      'Students must be within ${_rangeMeters}m of the selected room to submit',
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary(isDarkMode),
@@ -863,6 +876,104 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
             const SizedBox(height: 14),
           ],
 
+          // Room location dropdown
+          if (_geoRoomLocations.isNotEmpty) ...[
+            Text(
+              'Select Room Location',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary(isDarkMode),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: AppColors.background(isDarkMode),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.border(isDarkMode)),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  isExpanded: true,
+                  value: _selectedGeoRoom?['id'] as String?,
+                  hint: Text(
+                    'Choose a room',
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+                  ),
+                  items: _geoRoomLocations.map((loc) {
+                    final name = loc['room_name'] as String? ?? '';
+                    final floor = loc['floor_number'] as String? ?? '';
+                    final plusCode = loc['plus_code'] as String? ?? '';
+                    return DropdownMenuItem(
+                      value: loc['id'] as String,
+                      child: Text(
+                        '$name${floor.isNotEmpty ? ' ($floor floor)' : ''}${plusCode.isNotEmpty ? ' — $plusCode' : ''}',
+                        style: const TextStyle(fontSize: 14),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    setState(() {
+                      if (val == null) {
+                        _selectedGeoRoom = null;
+                      } else {
+                        _selectedGeoRoom = _geoRoomLocations.firstWhere(
+                          (loc) => loc['id'] == val,
+                        );
+                        // Auto-fill room number from location name
+                        _roomNumber = _selectedGeoRoom?['room_name'] as String? ?? '';
+                      }
+                    });
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
+
+          // Range slider
+          Text(
+            'Attendance Range: ${_rangeMeters}m',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary(isDarkMode),
+            ),
+          ),
+          const SizedBox(height: 4),
+          SliderTheme(
+            data: SliderThemeData(
+              activeTrackColor: const Color(0xFF0D9488),
+              inactiveTrackColor: AppColors.border(isDarkMode),
+              thumbColor: const Color(0xFF0D9488),
+              overlayColor: const Color(0xFF0D9488).withOpacity(0.15),
+              valueIndicatorColor: const Color(0xFF0D9488),
+              showValueIndicator: ShowValueIndicator.always,
+            ),
+            child: Slider(
+              value: _rangeMeters.toDouble(),
+              min: 10,
+              max: 200,
+              divisions: 19,
+              label: '${_rangeMeters}m',
+              onChanged: (v) {
+                setState(() => _rangeMeters = v.round());
+              },
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('10m', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+              Text('Default: 30m', style: TextStyle(fontSize: 11, color: AppColors.textSecondary(isDarkMode))),
+              Text('200m', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+            ],
+          ),
+          const SizedBox(height: 14),
+
           // Room number + Duration
           Row(
             children: [
@@ -880,6 +991,7 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                     ),
                     const SizedBox(height: 6),
                     TextField(
+                      controller: TextEditingController(text: _roomNumber),
                       onChanged: (v) => _roomNumber = v,
                       decoration: InputDecoration(
                         hintText: 'e.g. 301',
