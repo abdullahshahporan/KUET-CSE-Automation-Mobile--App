@@ -147,6 +147,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               buildProfileSection(isDarkMode, 'Settings', Icons.settings_outlined, [
                 buildDarkModeToggle(isDarkMode, themeProvider.toggleTheme),
                 const Divider(height: 1),
+                buildReminderTimeTile(context, isDarkMode),
+                const Divider(height: 1),
                 buildActionTile(Icons.lock_outline, 'Change Password', isDarkMode, () {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen()));
                 }),

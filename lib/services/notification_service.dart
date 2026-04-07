@@ -454,11 +454,14 @@ class NotificationService {
     final collapseId =
         _cleanText(roomId) ?? 'geo_attendance_open_${courseCode}_$term';
     final expiresAt = endTime.toIso8601String();
+    // collapseId is reserved for future push collapse; suppress lint
+    // ignore: unused_local_variable
+    final _ = collapseId;
 
     // COURSE target → only students enrolled in this course + its teacher(s)
     // get in-app visibility + push. Same proven pattern as exam & room booking.
     // Also send a direct USER notification to the teacher who opened the room.
-    final waitResults = await Future.wait<Object?>([
+    await Future.wait<Object?>([
       // 1. In-app notification for enrolled students (COURSE target)
       createNotification(
         type: 'geo_attendance_open',
@@ -491,46 +494,6 @@ class NotificationService {
     // Push was already fired by createNotification → _resolveTargetRecipientIds
     // for both COURSE (students + teacher) and USER (teacher) targets.
     // No additional manual push needed.
-  }
-
-  static Future<List<String>> _resolveGeoAttendanceRecipientIds({
-    required String term,
-    String? section,
-  }) async {
-    final normalizedSection = _normalizeGeoAttendanceSection(section);
-    final range = _getGeoAttendanceRollRange(section);
-
-    final data = await SupabaseCore.from(
-      'students',
-    ).select('user_id, roll_no, section').eq('term', term);
-
-    final recipients = <String>{};
-    for (final row in List<Map<String, dynamic>>.from(data as List)) {
-      final userId = _cleanText(row['user_id']?.toString());
-      if (userId == null) continue;
-
-      if (normalizedSection == null) {
-        recipients.add(userId);
-        continue;
-      }
-
-      final studentSection = _cleanText(
-        row['section']?.toString(),
-      )?.toUpperCase();
-      final sectionMatched = studentSection == normalizedSection;
-      final rollMatched = () {
-        if (range == null) return false;
-        final rollSuffix = _extractRollSuffix(row['roll_no']?.toString());
-        if (rollSuffix == null) return false;
-        return rollSuffix >= range.min && rollSuffix <= range.max;
-      }();
-
-      if (sectionMatched || rollMatched) {
-        recipients.add(userId);
-      }
-    }
-
-    return recipients.toList();
   }
 
   static Future<List<String>> _resolveTargetRecipientIds({
@@ -724,35 +687,6 @@ class NotificationService {
     }
 
     return normalized;
-  }
-
-  static _RollRange? _getGeoAttendanceRollRange(String? section) {
-    switch (_normalizeGeoAttendanceSection(section)) {
-      case 'A':
-        return const _RollRange(1, 60);
-      case 'B':
-        return const _RollRange(61, 120);
-      case 'A1':
-        return const _RollRange(1, 30);
-      case 'A2':
-        return const _RollRange(31, 60);
-      case 'B1':
-        return const _RollRange(61, 90);
-      case 'B2':
-        return const _RollRange(91, 120);
-      default:
-        return null;
-    }
-  }
-
-  static int? _extractRollSuffix(String? rollNo) {
-    final digits = (rollNo ?? '').replaceAll(RegExp(r'\D'), '');
-    if (digits.isEmpty) return null;
-
-    final suffix = digits.length <= 3
-        ? digits
-        : digits.substring(digits.length - 3);
-    return int.tryParse(suffix);
   }
 
   static String _formatGeoAttendanceSectionLabel(String? section) {

@@ -30,7 +30,7 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
   TeacherCourse? _selectedCourse;
   String? _selectedSection;
   int _durationMinutes = 50;
-  String _roomNumber = '';
+  Map<String, dynamic>? _selectedRoom;
   bool _isOpening = false;
   bool _isLoading = true;
 
@@ -38,6 +38,7 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
   String _teacherUserId = '';
   List<Map<String, dynamic>> _activeRooms = [];
   List<Map<String, dynamic>> _recentRooms = [];
+  List<Map<String, dynamic>> _allRooms = [];
 
   /// Whether the screen was opened from a specific course
   bool get _isCourseScoped => widget.preSelectedCourse != null;
@@ -71,7 +72,7 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
       await _loadCourses();
     }
 
-    await _loadRooms();
+    await Future.wait([_loadRooms(), _loadAllRooms()]);
   }
 
   Future<void> _loadCourses() async {
@@ -108,6 +109,20 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
     } catch (_) {}
   }
 
+  Future<void> _loadAllRooms() async {
+    try {
+      final data = await SupabaseService.from('rooms')
+          .select('room_number, building_name, latitude, longitude')
+          .eq('is_active', true)
+          .order('room_number');
+      if (mounted) {
+        setState(() {
+          _allRooms = List<Map<String, dynamic>>.from(data as List);
+        });
+      }
+    } catch (_) {}
+  }
+
   Future<void> _loadRooms() async {
     setState(() => _isLoading = true);
     try {
@@ -137,12 +152,16 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
       final now = DateTime.now();
       final endTime = now.add(Duration(minutes: _durationMinutes));
 
+      final roomNo = _selectedRoom?['room_number'] as String? ?? '';
+      final hasCoords = _selectedRoom?['latitude'] != null &&
+          _selectedRoom?['longitude'] != null;
+
       final roomData = await GeoAttendanceService.openRoom(
         offeringId: _selectedCourse!.offeringId!,
         teacherUserId: _teacherUserId,
         startTime: now,
         endTime: endTime,
-        roomNumber: _roomNumber.isNotEmpty ? _roomNumber : null,
+        roomNumber: roomNo.isNotEmpty ? roomNo : null,
         section: _selectedSection,
       );
 
@@ -151,13 +170,13 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
         final courseCode = _selectedCourse!.code;
         final term = _selectedCourse!.shortSemester; // e.g., "3-2"
         final section = _selectedSection;
-        final roomNo = _roomNumber;
         final durationMin = _durationMinutes;
         final sectionLabel = section != null ? ' ($section)' : '';
+        final distLabel = hasCoords ? '30m of room $roomNo' : '100m of CSE Building';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Room opened for $courseCode$sectionLabel! Students within 200m can submit attendance.',
+              'Room opened for $courseCode$sectionLabel! Students within $distLabel can submit attendance.',
             ),
             backgroundColor: AppColors.success,
           ),
@@ -173,7 +192,7 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
         );
         if (!_isCourseScoped) _selectedCourse = null;
         _selectedSection = null;
-        _roomNumber = '';
+        _selectedRoom = null;
         await _loadRooms();
       }
     } catch (e) {
@@ -334,7 +353,7 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                                             ),
                                           ),
                                           Text(
-                                            '${dist}m from building • ${time != null ? _formatTime(time) : ""}',
+                                            '${dist}m away • ${time != null ? _formatTime(time) : ""}',
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: AppColors.textSecondary(
@@ -523,7 +542,7 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                       ),
                     ),
                     Text(
-                      'Students must be within 200m of CSE Building to submit',
+                      'Students must be within 30m of the selected room to submit',
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary(isDarkMode),
@@ -855,100 +874,131 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
             const SizedBox(height: 14),
           ],
 
-          // Room number + Duration
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Room (optional)',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary(isDarkMode),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    TextField(
-                      onChanged: (v) => _roomNumber = v,
-                      decoration: InputDecoration(
-                        hintText: 'e.g. 301',
-                        hintStyle: TextStyle(color: AppColors.textMuted),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: AppColors.border(isDarkMode),
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: AppColors.border(isDarkMode),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+          // Room selector
+          Text(
+            'Select Room',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary(isDarkMode),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: AppColors.background(isDarkMode),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.border(isDarkMode)),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                isExpanded: true,
+                value: _selectedRoom?['room_number'] as String?,
+                hint: Text(
+                  'Choose a room',
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 14),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Duration',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary(isDarkMode),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.border(isDarkMode)),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<int>(
-                          isExpanded: true,
-                          value: _durationMinutes,
-                          items: const [
-                            DropdownMenuItem(value: 30, child: Text('30 min')),
-                            DropdownMenuItem(
-                              value: 50,
-                              child: Text('50 min (1 period)'),
-                            ),
-                            DropdownMenuItem(value: 80, child: Text('80 min')),
-                            DropdownMenuItem(
-                              value: 100,
-                              child: Text('100 min (2 periods)'),
-                            ),
-                            DropdownMenuItem(
-                              value: 150,
-                              child: Text('150 min (3 periods)'),
-                            ),
-                          ],
-                          onChanged: (v) {
-                            if (v != null) {
-                              setState(() => _durationMinutes = v);
-                            }
-                          },
+                items: _allRooms.map((room) {
+                  final roomNum = room['room_number'] as String? ?? '';
+                  final building = room['building_name'] as String? ?? '';
+                  final hasCoords = room['latitude'] != null &&
+                      room['longitude'] != null;
+                  return DropdownMenuItem(
+                    value: roomNum,
+                    child: Row(
+                      children: [
+                        Icon(
+                          hasCoords ? Icons.gps_fixed : Icons.gps_off,
+                          size: 16,
+                          color: hasCoords ? AppColors.success : AppColors.textMuted,
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '$roomNum${building.isNotEmpty ? ' — $building' : ''}',
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                        if (hasCoords) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 5, vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.success.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '30m',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.success,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                  ],
-                ),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  setState(() {
+                    _selectedRoom = val == null
+                        ? null
+                        : _allRooms.firstWhere(
+                            (r) => r['room_number'] == val,
+                          );
+                  });
+                },
               ),
-            ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Duration
+          Text(
+            'Duration',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary(isDarkMode),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.border(isDarkMode)),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<int>(
+                isExpanded: true,
+                value: _durationMinutes,
+                items: const [
+                  DropdownMenuItem(value: 30, child: Text('30 min')),
+                  DropdownMenuItem(
+                    value: 50,
+                    child: Text('50 min (1 period)'),
+                  ),
+                  DropdownMenuItem(value: 80, child: Text('80 min')),
+                  DropdownMenuItem(
+                    value: 100,
+                    child: Text('100 min (2 periods)'),
+                  ),
+                  DropdownMenuItem(
+                    value: 150,
+                    child: Text('150 min (3 periods)'),
+                  ),
+                ],
+                onChanged: (v) {
+                  if (v != null) {
+                    setState(() => _durationMinutes = v);
+                  }
+                },
+              ),
+            ),
           ),
 
           const SizedBox(height: 18),

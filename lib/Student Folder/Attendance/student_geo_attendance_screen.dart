@@ -160,7 +160,7 @@ class _StudentGeoAttendanceScreenState extends State<StudentGeoAttendanceScreen>
         position.longitude,
       );
 
-      if (distance > GeoAttendanceService.maxDistanceMeters) {
+      if (distance > GeoAttendanceService.buildingMaxDistanceMeters) {
         if (mounted) {
           setState(() => _submittingRoomId = null);
           _showDistanceAlert(distance);
@@ -181,7 +181,7 @@ class _StudentGeoAttendanceScreenState extends State<StudentGeoAttendanceScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Attendance recorded! You are ${dist}m from the building.',
+              'Attendance recorded! You are ${dist}m from the room.',
             ),
             backgroundColor: AppColors.success,
             duration: const Duration(seconds: 3),
@@ -253,7 +253,7 @@ class _StudentGeoAttendanceScreenState extends State<StudentGeoAttendanceScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                'Please go near the CSE Building.\nYou must be within 200m to submit attendance.',
+                'Please go near the room.\nYou must be within 30m to submit attendance.',
                 style: TextStyle(
                   fontSize: 14,
                   color: AppColors.textSecondary(isDarkMode),
@@ -471,7 +471,7 @@ class _StudentGeoAttendanceScreenState extends State<StudentGeoAttendanceScreen>
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'You must be within 200m of the CSE Building to submit attendance.',
+              'You must be within 30m of the room to submit attendance.',
               style: TextStyle(
                 fontSize: 13,
                 color: AppColors.textPrimary(isDarkMode),
@@ -736,7 +736,7 @@ class _StudentGeoAttendanceScreenState extends State<StudentGeoAttendanceScreen>
     final start = DateTime.tryParse(startIso);
     final end = DateTime.tryParse(endIso);
     if (start == null || end == null) return '';
-    return '${_formatTime(start)} - ${_formatTime(end)}';
+    return '${_formatTime(start.toLocal())} - ${_formatTime(end.toLocal())}';
   }
 
   String _formatTime(DateTime dt) {
