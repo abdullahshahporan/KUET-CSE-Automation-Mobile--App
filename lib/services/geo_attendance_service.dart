@@ -1,35 +1,17 @@
 import 'dart:math' show pi, sin, cos, sqrt, atan2;
-
 import 'package:flutter/foundation.dart';
-
 import 'supabase_service.dart';
 
 /// Service for geo-attendance room management and attendance submission.
 ///
-/// KUET CSE Building fallback: 22.8993°N, 89.5023°E
-/// Default range: 30 meters (per room, configurable by teacher)
+/// KUET CSE Building: 22.8993°N, 89.5023°E
+/// Radius: 200 meters
 class GeoAttendanceService {
   static const double buildingLat = 22.8993;
   static const double buildingLng = 89.5023;
-  static const double defaultRangeMeters = 30;
-  static const double maxDistanceMeters = 200; // kept as absolute fallback
+  static const double maxDistanceMeters = 200;
   static const int maxTheoryRooms = 2;
   static const int maxLabRooms = 4;
-
-  // ── Fetch admin-managed room locations ────────────────
-
-  static Future<List<Map<String, dynamic>>> getGeoRoomLocations() async {
-    try {
-      final data = await SupabaseService.from('geo_room_locations')
-          .select('*')
-          .eq('is_active', true)
-          .order('room_name');
-      return List<Map<String, dynamic>>.from(data as List);
-    } catch (e) {
-      debugPrint('Error fetching geo room locations: $e');
-      return [];
-    }
-  }
 
   // ── Teacher: Open a geo-attendance room ──────────────────
 
@@ -40,8 +22,6 @@ class GeoAttendanceService {
     required DateTime endTime,
     String? roomNumber,
     String? section,
-    String? geoRoomLocationId,
-    int rangeMeters = 30,
   }) async {
     try {
       // Auto-close expired rooms first
@@ -105,10 +85,6 @@ class GeoAttendanceService {
       if (section != null && section.isNotEmpty) {
         roomInsert['section'] = section;
       }
-      if (geoRoomLocationId != null && geoRoomLocationId.isNotEmpty) {
-        roomInsert['geo_room_location_id'] = geoRoomLocationId;
-      }
-      roomInsert['range_meters'] = rangeMeters;
 
       final data = await SupabaseService.from('geo_attendance_rooms')
           .insert(roomInsert)
@@ -238,8 +214,7 @@ class GeoAttendanceService {
               id, term,
               courses ( code, title, course_type ),
               teachers ( full_name )
-            ),
-            geo_room_locations (*)
+            )
           ''')
           .eq('is_active', true)
           .order('start_time', ascending: true);
@@ -324,9 +299,9 @@ class GeoAttendanceService {
     required double latitude,
     required double longitude,
   }) async {
-    // 1. Check room is active and get room location info
+    // 1. Check room is active
     final roomData = await SupabaseService.from('geo_attendance_rooms')
-        .select('*, course_offerings(id, term, courses(code)), geo_room_locations(*)')
+        .select('*, course_offerings(id, term, courses(code))')
         .eq('id', geoRoomId)
         .single();
 
@@ -342,26 +317,19 @@ class GeoAttendanceService {
       throw Exception('This attendance room has expired');
     }
 
-    // 2. Determine target coordinates and range from room location if available
-    final geoLocation = roomData['geo_room_locations'] as Map<String, dynamic>?;
-    final targetLat = (geoLocation?['latitude'] as num?)?.toDouble() ?? buildingLat;
-    final targetLng = (geoLocation?['longitude'] as num?)?.toDouble() ?? buildingLng;
-    final rangeMeters = (roomData['range_meters'] as num?)?.toDouble() ?? defaultRangeMeters;
-    final roomName = geoLocation?['room_name'] as String? ?? 'building';
-
-    // 3. Calculate distance to room coordinate
+    // 2. Calculate distance
     final distance = _haversineDistance(
-      latitude, longitude, targetLat, targetLng,
+      latitude, longitude, buildingLat, buildingLng,
     );
 
-    if (distance > rangeMeters) {
+    if (distance > maxDistanceMeters) {
       throw GeoDistanceException(
-        'You are ${distance.round()}m from $roomName. Must be within ${rangeMeters.round()}m.',
+        'You are ${distance.round()}m from the building. Must be within ${maxDistanceMeters.round()}m.',
         distance,
       );
     }
 
-    // 4. Check for duplicate submission
+    // 3. Check for duplicate submission
     final existing = await SupabaseService.from('geo_attendance_logs')
         .select('id')
         .eq('geo_room_id', geoRoomId)
@@ -372,7 +340,7 @@ class GeoAttendanceService {
       throw Exception('You have already submitted attendance for this session');
     }
 
-    // 5. Ensure enrollment exists
+    // 4. Ensure enrollment exists
     String? enrollmentId;
     final enrollmentData = await SupabaseService.from('enrollments')
         .select('id')
@@ -395,7 +363,7 @@ class GeoAttendanceService {
       enrollmentId = newEnrollment['id'] as String;
     }
 
-    // 6. Save geo-attendance log
+    // 5. Save geo-attendance log
     await SupabaseService.from('geo_attendance_logs').insert({
       'geo_room_id': geoRoomId,
       'student_user_id': studentUserId,
@@ -405,7 +373,7 @@ class GeoAttendanceService {
       'status': 'PRESENT',
     });
 
-    // 7. Save to main attendance_records
+    // 6. Save to main attendance_records
     try {
       await SupabaseService.from('attendance_records').upsert({
         'session_id': roomData['session_id'],
@@ -418,7 +386,7 @@ class GeoAttendanceService {
       debugPrint('Warning: Could not save attendance_record: $e');
     }
 
-    // 8. Save to flat `attendance` table (same as manual/CSV attendance)
+    // 7. Save to flat `attendance` table (same as manual/CSV attendance)
     try {
       final offering = roomData['course_offerings'] as Map<String, dynamic>?;
       final courseCode =
@@ -456,10 +424,9 @@ class GeoAttendanceService {
 
   // ── Haversine formula ────────────────────────────────────
 
-  /// Calculate distance from given coordinates to a target (defaults to KUET CSE Building).
-  static double calculateDistance(double latitude, double longitude,
-      [double targetLat = buildingLat, double targetLng = buildingLng]) {
-    return _haversineDistance(latitude, longitude, targetLat, targetLng);
+  /// Calculate distance from given coordinates to the KUET CSE Building.
+  static double calculateDistance(double latitude, double longitude) {
+    return _haversineDistance(latitude, longitude, buildingLat, buildingLng);
   }
 
   static double _haversineDistance(

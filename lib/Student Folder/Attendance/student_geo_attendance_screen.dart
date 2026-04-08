@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
 import '../../services/geo_attendance_service.dart';
 import '../../services/supabase_service.dart';
 import '../../theme/app_colors.dart';
@@ -156,27 +155,12 @@ class _StudentGeoAttendanceScreenState extends State<StudentGeoAttendanceScreen>
       }
 
       // Check distance first before submitting
-      // Use room-specific coordinates if available, otherwise fall back to building center
-      final geoLocation = _openRooms.firstWhere(
-        (r) => r['id'] == roomId,
-        orElse: () => <String, dynamic>{},
-      )['geo_room_locations'] as Map<String, dynamic>?;
-      final targetLat = (geoLocation?['latitude'] as num?)?.toDouble() ?? GeoAttendanceService.buildingLat;
-      final targetLng = (geoLocation?['longitude'] as num?)?.toDouble() ?? GeoAttendanceService.buildingLng;
-      final rangeMeters = (_openRooms.firstWhere(
-        (r) => r['id'] == roomId,
-        orElse: () => <String, dynamic>{},
-      )['range_meters'] as num?)?.toDouble() ?? GeoAttendanceService.defaultRangeMeters;
-      final roomName = geoLocation?['room_name'] as String? ?? 'building';
-
       final distance = GeoAttendanceService.calculateDistance(
         position.latitude,
         position.longitude,
-        targetLat,
-        targetLng,
       );
 
-      if (distance > rangeMeters) {
+      if (distance > GeoAttendanceService.maxDistanceMeters) {
         if (mounted) {
           setState(() => _submittingRoomId = null);
           _showDistanceAlert(distance);
@@ -197,7 +181,7 @@ class _StudentGeoAttendanceScreenState extends State<StudentGeoAttendanceScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Attendance recorded! You are ${dist}m from $roomName.',
+              'Attendance recorded! You are ${dist}m from the building.',
             ),
             backgroundColor: AppColors.success,
             duration: const Duration(seconds: 3),
