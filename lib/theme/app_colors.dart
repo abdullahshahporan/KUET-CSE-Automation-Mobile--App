@@ -9,35 +9,35 @@ class AppColors {
   // ============================================
 
   /// Rich dark background
-  static const Color darkBackground = Color(0xFF0A0A0F);
+  static const Color darkBackground = Color(0xFF111111);
 
   /// Dark surface for cards
-  static const Color darkSurface = Color(0xFF12121A);
+  static const Color darkSurface = Color(0xFF1A1A1A);
 
   /// Elevated surface for cards
-  static const Color darkSurfaceElevated = Color(0xFF1C1C28);
+  static const Color darkSurfaceElevated = Color(0xFF222222);
 
-  /// Dark border color with subtle glow
-  static const Color darkBorder = Color(0xFF2D2D3A);
+  /// Dark border color
+  static const Color darkBorder = Color(0xFF2A2A2A);
 
   /// Primary text color
-  static const Color darkTextPrimary = Color(0xFFF8F8FC);
+  static const Color darkTextPrimary = Color(0xFFF5F5F5);
 
   /// Secondary text color
-  static const Color darkTextSecondary = Color(0xFF9CA3AF);
+  static const Color darkTextSecondary = Color(0xFFA1A1AA);
 
   /// Muted text color
-  static const Color darkTextMuted = Color(0xFF6B7280);
+  static const Color darkTextMuted = Color(0xFF71717A);
 
   /// Shadow color for dark mode
-  static const Color darkShadow = Color(0xFF1A1A24);
+  static const Color darkShadow = Color(0xFF0A0A0A);
 
   // ============================================
   // LIGHT MODE COLORS
   // ============================================
 
   /// Light background
-  static const Color lightBackground = Color(0xFFF8FAFC);
+  static const Color lightBackground = Color(0xFFF8F8F8);
 
   /// Light surface for cards
   static const Color lightSurface = Colors.white;
@@ -46,7 +46,7 @@ class AppColors {
   static const Color lightSurfaceElevated = Colors.white;
 
   /// Light border color
-  static const Color lightBorder = Color(0xFFE2E8F0);
+  static const Color lightBorder = Color(0xFFEBEBEB);
 
   /// Light text primary
   static const Color lightTextPrimary = Color(0xFF0F172A);
@@ -61,35 +61,41 @@ class AppColors {
   // PREMIUM ACCENT COLORS
   // ============================================
 
-  /// Primary - Royal Blue
-  static const Color primary = Color(0xFF6366F1);
+  /// Primary - Teal 700
+  static const Color primary = Color(0xFF0D9488);
 
-  /// Info - Ocean Cyan
-  static const Color info = Color(0xFF0EA5E9);
+  /// Primary dark - darker teal for gradients
+  static const Color primaryDark = Color(0xFF0B7A71);
 
-  /// Success - Emerald Green
-  static const Color success = Color(0xFF10B981);
+  /// Terminal green - for splash screen accent
+  static const Color terminalGreen = Color(0xFF00FFC2);
 
-  /// Warning - Golden Amber
+  /// Info — remapped to primary teal
+  static const Color info = primary;
+
+  /// Success - Emerald Green (status use only)
+  static const Color success = Color(0xFF22C55E);
+
+  /// Warning - Amber (status use only)
   static const Color warning = Color(0xFFF59E0B);
 
-  /// Danger - Ruby Red
+  /// Danger - Red (status use only)
   static const Color danger = Color(0xFFEF4444);
 
-  /// Accent - Violet Purple
-  static const Color accent = Color(0xFF8B5CF6);
+  /// Accent — remapped to primary teal
+  static const Color accent = primary;
 
-  /// Teal - Aqua
-  static const Color teal = Color(0xFF14B8A6);
+  /// Teal — remapped to primary
+  static const Color teal = primary;
 
-  /// Indigo - Deep Indigo
-  static const Color indigo = Color(0xFF4F46E5);
+  /// Indigo — remapped to primary teal
+  static const Color indigo = primary;
 
-  /// Gold - Premium Gold
-  static const Color gold = Color(0xFFD4AF37);
+  /// Gold — remapped to primary teal
+  static const Color gold = primary;
 
-  /// Rose - Elegant Rose
-  static const Color rose = Color(0xFFF43F5E);
+  /// Rose — remapped to danger
+  static const Color rose = danger;
 
   // ============================================
   // ATTENDANCE STATUS COLORS
@@ -108,12 +114,12 @@ class AppColors {
   // FEATURE COLORS
   // ============================================
 
-  static const Color attendance = Color(0xFF10B981);
-  static const Color grading = Color(0xFF3B82F6);
-  static const Color schedule = Color(0xFFFBBF24);
-  static const Color announcements = Color(0xFFEF4444);
-  static const Color students = Color(0xFF8B5CF6);
-  static const Color courses = Color(0xFF06B6D4);
+  static const Color attendance = primary;
+  static const Color grading = primary;
+  static const Color schedule = primary;
+  static const Color announcements = primary;
+  static const Color students = primary;
+  static const Color courses = primary;
 
   // ============================================
   // MUTED TEXT (static for compatibility)
@@ -157,7 +163,7 @@ class AppColors {
 
   /// Get shadow color based on theme (grey for dark mode)
   static Color shadow(bool isDarkMode) {
-    return isDarkMode ? darkShadow : Colors.black.withOpacity(0.1);
+    return isDarkMode ? darkShadow : Colors.black.withValues(alpha: 0.1);
   }
 
   /// Card decoration with optional accent border
@@ -166,14 +172,14 @@ class AppColors {
       color: isDarkMode ? darkSurfaceElevated : lightSurface,
       borderRadius: BorderRadius.circular(16),
       border: Border.all(
-        color: accentColor?.withOpacity(0.3) ?? border(isDarkMode),
+        color: accentColor?.withValues(alpha: 0.3) ?? border(isDarkMode),
         width: accentColor != null ? 1.5 : 1,
       ),
       boxShadow: [
         BoxShadow(
           color: isDarkMode
-              ? darkShadow.withOpacity(0.3) // Grey shadow for dark mode
-              : Colors.black.withOpacity(0.05),
+              ? darkShadow.withValues(alpha: 0.3)
+              : Colors.black.withValues(alpha: 0.05),
           blurRadius: 10,
           offset: const Offset(0, 4),
         ),
@@ -192,8 +198,8 @@ class AppColors {
     }
     return LinearGradient(
       colors: isDarkMode
-          ? [const Color(0xFF1A1A2E), const Color(0xFF16213E)]
-          : [primary, info],
+          ? [darkSurface, darkSurfaceElevated]
+          : [primary, primaryDark],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     );

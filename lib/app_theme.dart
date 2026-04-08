@@ -1,23 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import 'theme/app_colors.dart';
 
-/// Premium Theme Configuration for KUET CSE Automation App
+/// Design System Theme for KUET CSE Automation App
 class AppTheme {
+  // ── Mono text styles for data labels (course codes, times, room numbers) ──
+  static TextStyle get monoStyle => GoogleFonts.ibmPlexMono(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 0.3,
+      );
+
+  static TextStyle get monoLarge => GoogleFonts.ibmPlexMono(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 0.3,
+      );
+
   // Light Theme - Clean and modern
   static ThemeData lightTheme = ThemeData(
     brightness: Brightness.light,
-    primarySwatch: Colors.blue,
+    primarySwatch: Colors.teal,
     scaffoldBackgroundColor: AppColors.lightBackground,
     appBarTheme: AppBarTheme(
       backgroundColor: AppColors.lightSurface,
       elevation: 0,
       systemOverlayStyle: SystemUiOverlayStyle.dark,
       iconTheme: const IconThemeData(color: Colors.black87),
-      titleTextStyle: const TextStyle(
+      titleTextStyle: GoogleFonts.ibmPlexSans(
         color: Colors.black87,
         fontSize: 18,
-        fontWeight: FontWeight.bold,
+        fontWeight: FontWeight.w600,
       ),
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
@@ -31,32 +46,25 @@ class AppTheme {
       color: AppColors.lightSurface,
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(10),
         side: BorderSide(color: AppColors.lightBorder),
       ),
     ),
-    textTheme: const TextTheme(
-      displayLarge: TextStyle(
-        color: Colors.black87,
-        fontWeight: FontWeight.bold,
+    textTheme: GoogleFonts.ibmPlexSansTextTheme(
+      const TextTheme(
+        displayLarge: TextStyle(color: Color(0xFF1C1C1E), fontWeight: FontWeight.bold),
+        displayMedium: TextStyle(color: Color(0xFF1C1C1E), fontWeight: FontWeight.bold),
+        displaySmall: TextStyle(color: Color(0xFF1C1C1E), fontWeight: FontWeight.bold),
+        bodyLarge: TextStyle(color: Color(0xFF1C1C1E)),
+        bodyMedium: TextStyle(color: Color(0xFF1C1C1E)),
+        bodySmall: TextStyle(color: Color(0xFF71717A)),
       ),
-      displayMedium: TextStyle(
-        color: Colors.black87,
-        fontWeight: FontWeight.bold,
-      ),
-      displaySmall: TextStyle(
-        color: Colors.black87,
-        fontWeight: FontWeight.bold,
-      ),
-      bodyLarge: TextStyle(color: Colors.black87),
-      bodyMedium: TextStyle(color: Colors.black87),
-      bodySmall: TextStyle(color: Colors.black54),
     ),
     iconTheme: const IconThemeData(color: Colors.black87),
     dividerColor: AppColors.lightBorder,
     colorScheme: ColorScheme.light(
       primary: AppColors.primary,
-      secondary: AppColors.info,
+      secondary: AppColors.primary,
       surface: AppColors.lightSurface,
       error: AppColors.danger,
     ),
@@ -65,17 +73,17 @@ class AppTheme {
   // Dark Theme - Pitch black with grey shadows
   static ThemeData darkTheme = ThemeData(
     brightness: Brightness.dark,
-    primarySwatch: Colors.blue,
-    scaffoldBackgroundColor: AppColors.darkBackground, // Pure black #000000
+    primarySwatch: Colors.teal,
+    scaffoldBackgroundColor: AppColors.darkBackground,
     appBarTheme: AppBarTheme(
-      backgroundColor: AppColors.darkSurface, // #121212
+      backgroundColor: AppColors.darkSurface,
       elevation: 0,
       systemOverlayStyle: SystemUiOverlayStyle.light,
       iconTheme: const IconThemeData(color: Colors.white),
-      titleTextStyle: const TextStyle(
+      titleTextStyle: GoogleFonts.ibmPlexSans(
         color: Colors.white,
         fontSize: 18,
-        fontWeight: FontWeight.bold,
+        fontWeight: FontWeight.w600,
       ),
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
@@ -89,32 +97,25 @@ class AppTheme {
       color: AppColors.darkSurfaceElevated,
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(10),
         side: BorderSide(color: AppColors.darkBorder),
       ),
     ),
-    textTheme: TextTheme(
-      displayLarge: const TextStyle(
-        color: Colors.white,
-        fontWeight: FontWeight.bold,
+    textTheme: GoogleFonts.ibmPlexSansTextTheme(
+      const TextTheme(
+        displayLarge: TextStyle(color: Color(0xFFF5F5F5), fontWeight: FontWeight.bold),
+        displayMedium: TextStyle(color: Color(0xFFF5F5F5), fontWeight: FontWeight.bold),
+        displaySmall: TextStyle(color: Color(0xFFF5F5F5), fontWeight: FontWeight.bold),
+        bodyLarge: TextStyle(color: Color(0xFFF5F5F5)),
+        bodyMedium: TextStyle(color: Color(0xFFF5F5F5)),
+        bodySmall: TextStyle(color: Color(0xFFA1A1AA)),
       ),
-      displayMedium: const TextStyle(
-        color: Colors.white,
-        fontWeight: FontWeight.bold,
-      ),
-      displaySmall: const TextStyle(
-        color: Colors.white,
-        fontWeight: FontWeight.bold,
-      ),
-      bodyLarge: const TextStyle(color: Colors.white),
-      bodyMedium: const TextStyle(color: Colors.white),
-      bodySmall: TextStyle(color: AppColors.darkTextSecondary),
     ),
     iconTheme: const IconThemeData(color: Colors.white),
     dividerColor: AppColors.darkBorder,
     colorScheme: ColorScheme.dark(
       primary: AppColors.primary,
-      secondary: AppColors.info,
+      secondary: AppColors.primary,
       surface: AppColors.darkSurface,
       error: AppColors.danger,
     ),
@@ -123,7 +124,7 @@ class AppTheme {
 
 /// Theme Provider for managing app theme state
 class ThemeProvider extends ChangeNotifier {
-  bool _isDarkMode = true; // Default to dark mode
+  bool _isDarkMode = false; // Default to light mode
 
   bool get isDarkMode => _isDarkMode;
 
