@@ -79,7 +79,7 @@ class _MainBottomNavBarScreenState extends State<MainBottomNavBarScreen> {
       ),
       body: Stack(
         children: [
-          IndexedStack(index: _currentIndex, children: _screens),
+          _FadeIndexedStack(index: _currentIndex, children: _screens),
           const Positioned(
             left: 0,
             right: 0,
@@ -193,6 +193,40 @@ class _MainBottomNavBarScreenState extends State<MainBottomNavBarScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Fade-switching IndexedStack ──────────────────────────────────────────────
+// Keeps all screens alive (no rebuild on tab switch) while fading the active
+// screen in and the previous one out over 120 ms — imperceptibly fast but
+// removes the jarring instant swap of a bare IndexedStack.
+class _FadeIndexedStack extends StatelessWidget {
+  final int index;
+  final List<Widget> children;
+
+  const _FadeIndexedStack({
+    required this.index,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: children.indexed.map((entry) {
+        final i = entry.$1;
+        final child = entry.$2;
+        return IgnorePointer(
+          ignoring: i != index,
+          child: AnimatedOpacity(
+            opacity: i == index ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 120),
+            curve: Curves.easeOut,
+            child: child,
+          ),
+        );
+      }).toList(),
     );
   }
 }
