@@ -46,78 +46,21 @@ class SessionHistoryList extends StatelessWidget {
             ),
           ),
         ),
-        ...sorted.map((s) => _buildRow(s, isDarkMode)),
+        ...sorted.indexed.map((entry) {
+          final i = entry.$1;
+          final s = entry.$2;
+          return _TimelineRow(
+            entry: s,
+            isFirst: i == 0,
+            isLast: i == sorted.length - 1,
+            isDarkMode: isDarkMode,
+          );
+        }),
       ],
     );
   }
 
-  Widget _buildRow(SessionAttendanceEntry entry, bool isDarkMode) {
-    final statusColor = _statusColor(entry.status);
-    final statusIcon = _statusIcon(entry.status);
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          // Status dot
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(statusIcon, size: 16, color: statusColor),
-          ),
-          const SizedBox(width: 12),
-          // Date & topic
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _formatDate(entry.date),
-                  style: AppTheme.monoStyle.copyWith(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textPrimary(isDarkMode),
-                  ),
-                ),
-                if (entry.topic != null && entry.topic!.isNotEmpty)
-                  Text(
-                    entry.topic!,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textSecondary(isDarkMode),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-              ],
-            ),
-          ),
-          // Status badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              entry.displayStatus,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: statusColor,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static Color _statusColor(String status) {
+  static Color _dotColor(String status) {
     switch (status) {
       case 'PRESENT':
         return AppColors.success;
@@ -131,13 +74,128 @@ class SessionHistoryList extends StatelessWidget {
   static IconData _statusIcon(String status) {
     switch (status) {
       case 'PRESENT':
-        return Icons.check_circle_rounded;
+        return Icons.check_rounded;
       case 'LATE':
         return Icons.access_time_rounded;
       default:
-        return Icons.cancel_rounded;
+        return Icons.close_rounded;
     }
   }
 
   static String _formatDate(DateTime d) => TimeUtils.formatDateTimeUS(d);
 }
+
+// ── Timeline row ─────────────────────────────────────────────────────────────
+class _TimelineRow extends StatelessWidget {
+  final SessionAttendanceEntry entry;
+  final bool isFirst;
+  final bool isLast;
+  final bool isDarkMode;
+
+  const _TimelineRow({
+    required this.entry,
+    required this.isFirst,
+    required this.isLast,
+    required this.isDarkMode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final dotColor = SessionHistoryList._dotColor(entry.status);
+    final icon = SessionHistoryList._statusIcon(entry.status);
+    final lineColor = AppColors.primary.withValues(alpha: 0.2);
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Left: vertical line + dot ──────────────────────────
+          SizedBox(
+            width: 24,
+            child: Column(
+              children: [
+                // Top connector (transparent for first row, colored for rest)
+                Expanded(
+                  child: Center(
+                    child: Container(
+                      width: 2,
+                      color: isFirst ? Colors.transparent : lineColor,
+                    ),
+                  ),
+                ),
+                // Dot with embedded icon
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: dotColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    Icon(icon, size: 6, color: Colors.white),
+                  ],
+                ),
+                // Bottom connector (hidden for last row)
+                Expanded(
+                  child: Center(
+                    child: Container(
+                      width: 2,
+                      color: isLast ? Colors.transparent : lineColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Right: content ──────────────────────────────────────
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(left: 12, top: 2, bottom: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    SessionHistoryList._formatDate(entry.date),
+                    style: AppTheme.monoStyle.copyWith(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textPrimary(isDarkMode),
+                    ),
+                  ),
+                  if (entry.topic != null && entry.topic!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        entry.topic!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondary(isDarkMode),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  if (entry.roomNumber != null &&
+                      entry.roomNumber!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        entry.roomNumber!,
+                        style: AppTheme.monoStyle.copyWith(
+                          fontSize: 11,
+                          color: AppColors.textSecondary(isDarkMode),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
