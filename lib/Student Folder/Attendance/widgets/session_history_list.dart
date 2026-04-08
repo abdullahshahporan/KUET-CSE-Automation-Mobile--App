@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kuet_cse_automation/app_theme.dart';
 import '../../../utils/time_utils.dart';
 import '../../models/student_attendance_data.dart';
 import '../../../theme/app_colors.dart';
@@ -76,7 +77,7 @@ class SessionHistoryList extends StatelessWidget {
               children: [
                 Text(
                   _formatDate(entry.date),
-                  style: TextStyle(
+                  style: AppTheme.monoStyle.copyWith(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                     color: AppColors.textPrimary(isDarkMode),
