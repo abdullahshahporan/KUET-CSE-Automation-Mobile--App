@@ -382,13 +382,6 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
 
   // ── Helpers: unique courses and teachers from offerings ────
 
-  /// Returns true if the course code ends in an odd digit (Theory courses).
-  bool _isOddCourse(String code) {
-    final digits = code.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digits.isEmpty) return true;
-    return int.parse(digits[digits.length - 1]) % 2 != 0;
-  }
-
   List<Map<String, dynamic>> _uniqueCourses() {
     final seen = <String>{};
     final result = <Map<String, dynamic>>[];

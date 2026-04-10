@@ -43,7 +43,7 @@ Future<List<Notice>> _fetchNotices() async {
           .eq('is_active', true);
     }
 
-    final offeringList = (offerings as List).cast<Map<String, dynamic>>();
+    final offeringList = offerings.cast<Map<String, dynamic>>();
     if (offeringList.isEmpty) return [];
 
     final offeringIds =
@@ -147,7 +147,7 @@ Future<List<Notice>> _fetchNotices() async {
         'Sunday', 'Monday', 'Tuesday', 'Wednesday',
         'Thursday', 'Friday', 'Saturday',
       ];
-      for (final row in (roomRows as List)) {
+      for (final row in roomRows) {
         final r = Map<String, dynamic>.from(row as Map);
         final courseCode = r['course_code'] as String? ?? '';
         final roomNumber = r['room_number'] as String? ?? '';

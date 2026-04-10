@@ -351,24 +351,4 @@ class CRExamService {
         return raw;
     }
   }
-
-  static String _formatExamType(String type) {
-    switch (type.toUpperCase()) {
-      case 'CT':
-      case 'CLASS_TEST':
-        return 'Class Test (CT)';
-      case 'MID':
-      case 'MIDTERM':
-        return 'Mid Term';
-      case 'FINAL':
-      case 'TERM_FINAL':
-        return 'Term Final';
-      case 'QUIZ':
-      case 'VIVA':
-      case 'QUIZ_VIVA':
-        return 'Quiz/Viva';
-      default:
-        return type;
-    }
-  }
 }

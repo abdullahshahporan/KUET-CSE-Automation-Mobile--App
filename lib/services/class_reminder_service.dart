@@ -57,6 +57,7 @@ class ClassReminderService {
         final dow = date.weekday % 7; // Sun=0..Sat=6
 
         for (final slot in schedules) {
+          if (slot.isExam) continue; // handled by ExamReminderService
           if (slot.dayOfWeek != dow) continue;
 
           final classStartAt = _dateWithTime(date, slot.startTime);

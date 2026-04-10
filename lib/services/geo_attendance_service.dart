@@ -4,12 +4,15 @@ import 'supabase_service.dart';
 
 /// Service for geo-attendance room management and attendance submission.
 ///
-/// KUET CSE Building: 22.8993°N, 89.5023°E
-/// Radius: 200 meters
+/// Distance check uses each room's stored GPS coordinates (30 m radius).
+/// Falls back to the KUET CSE building centre (100 m) when a room has no coordinates.
 class GeoAttendanceService {
   static const double buildingLat = 22.8993;
   static const double buildingLng = 89.5023;
-  static const double maxDistanceMeters = 200;
+  /// Radius when the room has its own stored coordinates.
+  static const double roomMaxDistanceMeters = 30;
+  /// Fallback radius when a room has no stored coordinates.
+  static const double buildingMaxDistanceMeters = 100;
   static const int maxTheoryRooms = 2;
   static const int maxLabRooms = 4;
 
@@ -317,14 +320,32 @@ class GeoAttendanceService {
       throw Exception('This attendance room has expired');
     }
 
-    // 2. Calculate distance
-    final distance = _haversineDistance(
-      latitude, longitude, buildingLat, buildingLng,
-    );
+    // 2. Calculate distance – prefer room-specific coordinates, fallback to building
+    double targetLat = buildingLat;
+    double targetLng = buildingLng;
+    double maxDist = buildingMaxDistanceMeters;
 
-    if (distance > maxDistanceMeters) {
+    final roomNumber = roomData['room_number'] as String?;
+    if (roomNumber != null && roomNumber.isNotEmpty) {
+      final roomRow = await SupabaseService.from('rooms')
+          .select('latitude, longitude')
+          .eq('room_number', roomNumber)
+          .maybeSingle();
+      final roomLat = (roomRow?['latitude'] as num?)?.toDouble();
+      final roomLng = (roomRow?['longitude'] as num?)?.toDouble();
+      if (roomLat != null && roomLng != null) {
+        targetLat = roomLat;
+        targetLng = roomLng;
+        maxDist = roomMaxDistanceMeters;
+      }
+    }
+
+    final distance = _haversineDistance(latitude, longitude, targetLat, targetLng);
+
+    if (distance > maxDist) {
+      final label = maxDist == roomMaxDistanceMeters ? 'room' : 'building';
       throw GeoDistanceException(
-        'You are ${distance.round()}m from the building. Must be within ${maxDistanceMeters.round()}m.',
+        'You are ${distance.round()}m from the $label. Must be within ${maxDist.round()}m.',
         distance,
       );
     }
@@ -380,7 +401,7 @@ class GeoAttendanceService {
         'enrollment_id': enrollmentId,
         'status': 'PRESENT',
         'marked_by_teacher_user_id': roomData['teacher_user_id'],
-        'remarks': 'Geo-attendance: ${distance.round()}m from building',
+        'remarks': 'Geo-attendance: ${distance.round()}m',
       });
     } catch (e) {
       debugPrint('Warning: Could not save attendance_record: $e');

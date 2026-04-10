@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../Auth/Sign_In_Screen.dart';
+import '../services/class_reminder_service.dart';
 import '../services/local_notification_service.dart';
 import '../services/notification_service.dart';
 import '../services/session_service.dart';
@@ -504,6 +505,169 @@ class _TestNotificationTileState extends State<_TestNotificationTile> {
                   fontWeight: FontWeight.w500,
                   color: AppColors.textPrimary(widget.isDarkMode),
                 ),
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios_rounded,
+                size: 16, color: AppColors.textMuted),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── CLASS REMINDER TIME SETTING ───────────────────────────────────────────────
+
+Widget buildReminderTimeTile(BuildContext context, bool isDarkMode) {
+  return _ReminderTimeTile(isDarkMode: isDarkMode);
+}
+
+class _ReminderTimeTile extends StatefulWidget {
+  final bool isDarkMode;
+  const _ReminderTimeTile({required this.isDarkMode});
+
+  @override
+  State<_ReminderTimeTile> createState() => _ReminderTimeTileState();
+}
+
+class _ReminderTimeTileState extends State<_ReminderTimeTile> {
+  int _leadMinutes = ClassReminderService.defaultLeadMinutes;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadValue();
+  }
+
+  Future<void> _loadValue() async {
+    final val = await ClassReminderService.getLeadMinutes();
+    if (mounted) setState(() => _leadMinutes = val);
+  }
+
+  Future<void> _showPicker() async {
+    final options = [5, 10, 15, 20, 30, 45, 60];
+    final picked = await showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: AppColors.surface(widget.isDarkMode),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border(widget.isDarkMode),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Reminder Before Class',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary(widget.isDarkMode),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Get notified before each class starts',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary(widget.isDarkMode),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...options.map((min) {
+                final isSelected = min == _leadMinutes;
+                return ListTile(
+                  leading: Icon(
+                    isSelected
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
+                    color: isSelected ? AppColors.primary : AppColors.textMuted,
+                  ),
+                  title: Text(
+                    '$min minutes before',
+                    style: TextStyle(
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: AppColors.textPrimary(widget.isDarkMode),
+                    ),
+                  ),
+                  onTap: () => Navigator.pop(ctx, min),
+                );
+              }),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (picked != null && picked != _leadMinutes) {
+      setState(() => _leadMinutes = picked);
+      await ClassReminderService.setLeadMinutes(picked);
+      // Re-schedule all reminders with new lead time
+      await ClassReminderService.syncTodayReminders();
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          message: 'Reminder set to $picked minutes before class',
+          isSuccess: true,
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: _showPicker,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppColors.teal.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.alarm,
+                size: 18,
+                color: AppColors.teal,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Class Reminder',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textPrimary(widget.isDarkMode),
+                    ),
+                  ),
+                  Text(
+                    '$_leadMinutes min before class',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary(widget.isDarkMode),
+                    ),
+                  ),
+                ],
               ),
             ),
             Icon(Icons.arrow_forward_ios_rounded,
