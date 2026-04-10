@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../models/student_attendance_data.dart';
+
 import '../../../theme/app_colors.dart';
+import '../../models/student_attendance_data.dart';
 import 'session_history_list.dart';
 
 /// Card widget displaying attendance for a single course.

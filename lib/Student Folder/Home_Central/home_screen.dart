@@ -407,7 +407,7 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                   borderRadius: BorderRadius.circular(9),
                 ),
-                child: Icon(icon, size: 20, color: Colors.white),
+                child: Icon(icon, size: 26, color: Colors.white),
               ),
               // Labels
               Column(
