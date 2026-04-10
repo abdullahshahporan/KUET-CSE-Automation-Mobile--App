@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../app_theme.dart';
 import '../../../theme/app_colors.dart';
 import '../../../utils/course_utils.dart';
 import '../services/upcoming_schedule_service.dart';
@@ -361,8 +363,8 @@ class _ClassCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   '${item.room} • ${item.teacher}',
-                  style: TextStyle(
-                    fontSize: 12,
+                  style: AppTheme.monoStyle.copyWith(
+                    fontSize: 11,
                     color: AppColors.textSecondary(isDark),
                   ),
                   maxLines: 1,
@@ -381,7 +383,7 @@ class _ClassCard extends StatelessWidget {
             ),
             child: Text(
               _shortTime(item.time),
-              style: TextStyle(
+              style: AppTheme.monoStyle.copyWith(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 color: color,
@@ -401,19 +403,9 @@ class _ClassCard extends StatelessWidget {
     return fullTime;
   }
 
-  /// Picks a hue based on course code hash.
+  /// Picks a hue based on course code hash — monochromatic primary palette.
   Color _courseColor(String code) {
-    const palette = [
-      Color(0xFF6366F1), // indigo
-      Color(0xFF10B981), // emerald
-      Color(0xFF8B5CF6), // violet
-      Color(0xFF14B8A6), // teal
-      Color(0xFFEF4444), // red
-      Color(0xFFF59E0B), // amber
-      Color(0xFF3B82F6), // blue
-      Color(0xFFEC4899), // pink
-    ];
-    return palette[code.hashCode.abs() % palette.length];
+    return code.hashCode.isEven ? AppColors.primary : AppColors.primaryDark;
   }
 
   bool _isLab(String code) {

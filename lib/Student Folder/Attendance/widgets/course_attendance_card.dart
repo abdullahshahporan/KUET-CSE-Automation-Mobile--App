@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../models/student_attendance_data.dart';
 import '../../../theme/app_colors.dart';
 import 'session_history_list.dart';
@@ -170,6 +171,7 @@ class _CourseAttendanceCardState extends State<CourseAttendanceCard>
             fontWeight: FontWeight.w600,
             color: _colors[0],
             letterSpacing: 0.5,
+            fontFamily: GoogleFonts.ibmPlexMono().fontFamily,
           ),
         ),
         const SizedBox(height: 2),

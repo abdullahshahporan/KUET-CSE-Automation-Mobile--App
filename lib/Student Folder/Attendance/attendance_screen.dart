@@ -17,6 +17,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   List<CourseAttendanceSummary> _courses = [];
   bool _isLoading = true;
   String? _error;
+  String _selectedType = 'All'; // 'All' | 'Theory' | 'Lab'
+
+  List<CourseAttendanceSummary> get _filteredCourses {
+    if (_selectedType == 'All') return _courses;
+    return _courses
+        .where((c) =>
+            c.courseType.toLowerCase() == _selectedType.toLowerCase())
+        .toList();
+  }
 
   @override
   void initState() {
@@ -108,7 +117,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
-                                    '${_courses.length} Courses',
+                                    '${_filteredCourses.length} Courses',
                                     style: TextStyle(
                                         fontSize: 12,
                                         color: AppColors.primary),
@@ -116,10 +125,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                 ),
                               ],
                             ),
+                            const SizedBox(height: 12),
+
+                            // Segmented pill filter
+                            _buildSegmentedControl(isDarkMode),
                             const SizedBox(height: 16),
 
-                            // Course attendance cards
-                            ..._courses.map(
+                            // Course attendance cards (filtered)
+                            ..._filteredCourses.map(
                               (summary) =>
                                   CourseAttendanceCard(summary: summary),
                             ),
@@ -131,6 +144,55 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                         ),
                       ),
                     ),
+    );
+  }
+
+  Widget _buildSegmentedControl(bool isDarkMode) {
+    const segments = ['All', 'Theory', 'Lab'];
+    final surface = isDarkMode ? AppColors.darkSurface : AppColors.lightSurface;
+    final border = isDarkMode ? AppColors.darkBorder : AppColors.lightBorder;
+
+    return Container(
+      height: 36,
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        children: segments.map((seg) {
+          final isActive = _selectedType == seg;
+          final isFirst = seg == segments.first;
+          final isLast = seg == segments.last;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _selectedType = seg),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOut,
+                decoration: BoxDecoration(
+                  color: isActive ? AppColors.primary : Colors.transparent,
+                  borderRadius: BorderRadius.horizontal(
+                    left: isFirst ? const Radius.circular(18) : Radius.zero,
+                    right: isLast ? const Radius.circular(18) : Radius.zero,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  seg,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isActive
+                        ? Colors.white
+                        : AppColors.textSecondary(isDarkMode),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 

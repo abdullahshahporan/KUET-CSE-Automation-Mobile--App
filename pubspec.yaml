@@ -41,6 +41,9 @@ dependencies:
   # Supabase for backend (PostgreSQL + Auth)
   supabase_flutter: ^2.12.0
   
+  # Fonts
+  google_fonts: ^6.2.1
+
   # Bcrypt password verification (client-side)
   bcrypt: ^1.2.0
   
