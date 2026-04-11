@@ -403,10 +403,8 @@ class _ClassCard extends StatelessWidget {
     return fullTime;
   }
 
-  /// Picks a hue based on course code hash — monochromatic primary palette.
-  Color _courseColor(String code) {
-    return code.hashCode.isEven ? AppColors.primary : AppColors.primaryDark;
-  }
+  /// Returns theory (purple) or lab (teal-slate) color based on last digit of code.
+  Color _courseColor(String code) => AppColors.courseColor(code);
 
   bool _isLab(String code) {
     final digits = CourseUtils.extractDigits(code);

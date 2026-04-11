@@ -73,7 +73,7 @@ class AppTheme {
   // Dark Theme - Pitch black with grey shadows
   static ThemeData darkTheme = ThemeData(
     brightness: Brightness.dark,
-    primarySwatch: Colors.teal,
+    primarySwatch: Colors.blueGrey,
     scaffoldBackgroundColor: AppColors.darkBackground,
     appBarTheme: AppBarTheme(
       backgroundColor: AppColors.darkSurface,

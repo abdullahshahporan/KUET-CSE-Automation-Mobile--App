@@ -8,17 +8,17 @@ class AppColors {
   // DARK MODE COLORS (Premium Dark Theme)
   // ============================================
 
-  /// Rich dark background
-  static const Color darkBackground = Color(0xFF111111);
+  /// Rich dark background — palette 2 deep purple-dark
+  static const Color darkBackground = Color(0xFF18122B);
 
-  /// Dark surface for cards
-  static const Color darkSurface = Color(0xFF1A1A1A);
+  /// Dark surface for cards — palette 1 dark slate
+  static const Color darkSurface = Color(0xFF35374B);
 
-  /// Elevated surface for cards
-  static const Color darkSurfaceElevated = Color(0xFF222222);
+  /// Elevated surface for cards — palette 3 dark slate
+  static const Color darkSurfaceElevated = Color(0xFF404258);
 
-  /// Dark border color
-  static const Color darkBorder = Color(0xFF2A2A2A);
+  /// Dark border color — palette 3 mid slate
+  static const Color darkBorder = Color(0xFF474E68);
 
   /// Primary text color
   static const Color darkTextPrimary = Color(0xFFF5F5F5);
@@ -61,11 +61,23 @@ class AppColors {
   // PREMIUM ACCENT COLORS
   // ============================================
 
-  /// Primary - Teal 700
-  static const Color primary = Color(0xFF0D9488);
+  /// Primary - Slate blue (palette 3)
+  static const Color primary = Color(0xFF6B728E);
 
-  /// Primary dark - darker teal for gradients
-  static const Color primaryDark = Color(0xFF0B7A71);
+  /// Primary dark - deeper slate for gradients (palette 3)
+  static const Color primaryDark = Color(0xFF50577A);
+
+  /// Theory course color — purple (palette 2, odd-digit course codes)
+  static const Color theoryColor = Color(0xFF635985);
+
+  /// Theory course dark — deep purple (palette 2)
+  static const Color theoryColorDark = Color(0xFF443C68);
+
+  /// Lab course color — muted teal-slate (palette 1, even-digit course codes)
+  static const Color labColor = Color(0xFF50727B);
+
+  /// Lab course dark — dark teal-slate (palette 1)
+  static const Color labColorDark = Color(0xFF344955);
 
   /// Terminal green - for splash screen accent
   static const Color terminalGreen = Color(0xFF00FFC2);
@@ -185,6 +197,26 @@ class AppColors {
         ),
       ],
     );
+  }
+
+  /// Returns the accent color for a course based on its last digit.
+  /// Odd last digit = theory (purple), even last digit = lab (teal-slate).
+  static Color courseColor(String courseCode) {
+    final digits = courseCode.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) return theoryColor;
+    final lastDigit = int.tryParse(digits[digits.length - 1]) ?? 1;
+    return lastDigit.isEven ? labColor : theoryColor;
+  }
+
+  /// Returns a two-stop gradient for a course card.
+  /// Odd last digit = theory (purple gradient), even = lab (teal-slate gradient).
+  static List<Color> courseGradient(String courseCode) {
+    final digits = courseCode.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) return [theoryColor, theoryColorDark];
+    final lastDigit = int.tryParse(digits[digits.length - 1]) ?? 1;
+    return lastDigit.isEven
+        ? [labColor, labColorDark]
+        : [theoryColor, theoryColorDark];
   }
 
   /// Gradient for header cards
