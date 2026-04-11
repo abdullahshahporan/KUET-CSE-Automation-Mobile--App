@@ -175,7 +175,7 @@ class _MainBottomNavBarScreenState extends State<MainBottomNavBarScreen> {
               color: isSelected
                   ? AppColors.primary
                   : (isDarkMode
-                        ? AppColors.darkTextMuted
+                        ? AppColors.darkNavUnselected
                         : AppColors.lightTextSecondary),
               size: 24,
             ),

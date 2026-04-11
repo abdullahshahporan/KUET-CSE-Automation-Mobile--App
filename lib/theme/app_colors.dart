@@ -5,20 +5,23 @@ import 'package:flutter/material.dart';
 /// Light Mode: Clean whites with sophisticated accents
 class AppColors {
   // ============================================
-  // DARK MODE COLORS (Premium Dark Theme)
+  // DARK MODE COLORS (Deep Teal Dark Theme — from image palette)
   // ============================================
 
-  /// Rich dark background — palette 2 deep purple-dark
-  static const Color darkBackground = Color(0xFF18122B);
+  /// Rich dark background — deep teal-black (from dark palette image)
+  static const Color darkBackground = Color(0xFF081414);
 
-  /// Dark surface for cards — palette 1 dark slate
-  static const Color darkSurface = Color(0xFF35374B);
+  /// Dark surface for cards — dark teal
+  static const Color darkSurface = Color(0xFF0F2624);
 
-  /// Elevated surface for cards — palette 3 dark slate
-  static const Color darkSurfaceElevated = Color(0xFF404258);
+  /// Elevated surface for cards — slightly lighter dark teal
+  static const Color darkSurfaceElevated = Color(0xFF163D3A);
 
-  /// Dark border color — palette 3 mid slate
-  static const Color darkBorder = Color(0xFF474E68);
+  /// Dark border color — dark teal border
+  static const Color darkBorder = Color(0xFF1C5450);
+
+  /// Dark nav unselected icon — clearly visible on dark teal surface
+  static const Color darkNavUnselected = Color(0xFFB0D4D2);
 
   /// Primary text color
   static const Color darkTextPrimary = Color(0xFFF5F5F5);
@@ -36,8 +39,8 @@ class AppColors {
   // LIGHT MODE COLORS
   // ============================================
 
-  /// Light background
-  static const Color lightBackground = Color(0xFFF8F8F8);
+  /// Light background — faint teal tint (from teal palette image)
+  static const Color lightBackground = Color(0xFFF0FAFA);
 
   /// Light surface for cards
   static const Color lightSurface = Colors.white;
@@ -45,8 +48,8 @@ class AppColors {
   /// Light surface elevated
   static const Color lightSurfaceElevated = Colors.white;
 
-  /// Light border color
-  static const Color lightBorder = Color(0xFFEBEBEB);
+  /// Light border color — light teal tint
+  static const Color lightBorder = Color(0xFFD0E8E7);
 
   /// Light text primary
   static const Color lightTextPrimary = Color(0xFF0F172A);
@@ -61,11 +64,11 @@ class AppColors {
   // PREMIUM ACCENT COLORS
   // ============================================
 
-  /// Primary - Slate blue (palette 3)
-  static const Color primary = Color(0xFF6B728E);
+  /// Primary — Teal (from image palette, Material Teal 500)
+  static const Color primary = Color(0xFF009688);
 
-  /// Primary dark - deeper slate for gradients (palette 3)
-  static const Color primaryDark = Color(0xFF50577A);
+  /// Primary dark — deeper teal for gradients (Material Teal 700)
+  static const Color primaryDark = Color(0xFF00796B);
 
   /// Theory course color — purple (palette 2, odd-digit course codes)
   static const Color theoryColor = Color(0xFF635985);
