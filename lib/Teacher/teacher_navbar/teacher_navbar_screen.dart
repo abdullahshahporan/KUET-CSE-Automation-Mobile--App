@@ -171,7 +171,7 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
     final isSelected = _currentIndex == index;
     final color = isSelected
         ? AppColors.primary
-        : AppColors.textSecondary(isDarkMode);
+        : (isDarkMode ? AppColors.darkNavUnselected : AppColors.textSecondary(isDarkMode));
 
     return GestureDetector(
       onTap: () => setState(() => _currentIndex = index),

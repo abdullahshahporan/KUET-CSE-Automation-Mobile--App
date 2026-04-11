@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Home/Features/Schedule/class_schedule/class_schedule_providers.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Home/Features/Schedule/class_schedule/class_schedule_models.dart';
+import 'package:kuet_cse_automation/theme/app_colors.dart';
 import 'package:intl/intl.dart';
 
 class ClassScheduleScreen extends ConsumerWidget {
@@ -96,7 +97,7 @@ class ClassScheduleScreen extends ConsumerWidget {
               icon: const Icon(Icons.refresh, size: 18),
               label: const Text('Retry'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue[600],
+                backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -213,21 +214,8 @@ class ClassScheduleScreen extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            gradient: selected
-                ? LinearGradient(
-                    colors: [Colors.blue[600]!, Colors.cyan[500]!],
-                  )
-                : null,
+            color: selected ? AppColors.primary : null,
             borderRadius: BorderRadius.circular(10),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: Colors.blue.withOpacity(0.3),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : null,
           ),
           alignment: Alignment.center,
           child: Text(
@@ -264,14 +252,14 @@ class ClassScheduleScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.green[600]!, Colors.teal[500]!],
+                  colors: [AppColors.theoryColor, AppColors.labColor],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.green.withOpacity(0.3),
+                    color: AppColors.theoryColor.withOpacity(0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -398,15 +386,6 @@ class ClassScheduleScreen extends ConsumerWidget {
                       ),
                       child: Row(
                         children: [
-                          Container(
-                            width: 4,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              color: Colors.blue[600],
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
                           Text(
                             entry.key,
                             style: TextStyle(
@@ -422,7 +401,7 @@ class ClassScheduleScreen extends ConsumerWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.1),
+                              color: AppColors.primary.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -430,7 +409,7 @@ class ClassScheduleScreen extends ConsumerWidget {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.blue[700],
+                                color: AppColors.primary,
                               ),
                             ),
                           ),
@@ -458,20 +437,22 @@ class ClassScheduleScreen extends ConsumerWidget {
     if (classItem.isExam == true) {
       return _buildExamAlertCard(classItem, isDarkMode, isToday: isToday);
     }
+    final courseColor = AppColors.courseColor(classItem.courseCode as String? ?? '');
+    final courseGradient = AppColors.courseGradient(classItem.courseCode as String? ?? '');
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: isToday
-            ? Border.all(color: Colors.green.withOpacity(0.5), width: 2)
+            ? Border.all(color: courseColor.withOpacity(0.5), width: 2)
             : Border.all(
                 color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
               ),
         boxShadow: [
           BoxShadow(
             color: isToday
-                ? Colors.green.withOpacity(0.15)
+                ? courseColor.withOpacity(0.15)
                 : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
@@ -480,119 +461,103 @@ class ClassScheduleScreen extends ConsumerWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: Row(
-          children: [
-            Container(
-              width: 6,
-              height: 120,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: isToday
-                      ? [Colors.green[600]!, Colors.teal[500]!]
-                      : [Colors.blue[600]!, Colors.cyan[500]!],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Colors.blue[600]!, Colors.cyan[500]!],
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            classItem.courseCode,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: courseGradient,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      classItem.courseCode,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  if (isToday) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: Colors.green.withOpacity(0.3),
                         ),
-                        if (isToday) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: Colors.green.withOpacity(0.3),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.circle,
-                                  size: 8,
-                                  color: Colors.green[600],
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Today',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green[700],
-                                  ),
-                                ),
-                              ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.circle,
+                            size: 8,
+                            color: Colors.green[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Today',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green[700],
                             ),
                           ),
                         ],
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      classItem.courseName,
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: isDarkMode ? Colors.white : Colors.black87,
-                        height: 1.2,
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    _buildInfoRow(
-                      icon: Icons.access_time_rounded,
-                      text: classItem.time,
-                      isDarkMode: isDarkMode,
-                    ),
-                    const SizedBox(height: 6),
-                    _buildInfoRow(
-                      icon: Icons.person_outline_rounded,
-                      text: classItem.teacher,
-                      isDarkMode: isDarkMode,
-                    ),
-                    const SizedBox(height: 6),
-                    _buildInfoRow(
-                      icon: Icons.location_on_outlined,
-                      text: classItem.room,
-                      isDarkMode: isDarkMode,
-                    ),
                   ],
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                classItem.courseName,
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white : Colors.black87,
+                  height: 1.2,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              _buildInfoRow(
+                icon: Icons.access_time_rounded,
+                text: classItem.time,
+                isDarkMode: isDarkMode,
+              ),
+              const SizedBox(height: 6),
+              _buildInfoRow(
+                icon: Icons.person_outline_rounded,
+                text: classItem.teacher,
+                isDarkMode: isDarkMode,
+              ),
+              const SizedBox(height: 6),
+              _buildInfoRow(
+                icon: Icons.location_on_outlined,
+                text: classItem.room,
+                isDarkMode: isDarkMode,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -658,189 +623,171 @@ class ClassScheduleScreen extends ConsumerWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: Row(
-          children: [
-            // Accent bar with gradient
-            Container(
-              width: 6,
-              height: 140,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: gradColors,
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  // Exam type badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: gradColors),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Exam type badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(colors: gradColors),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.description_rounded,
-                                  size: 12, color: Colors.white),
-                              const SizedBox(width: 4),
-                              Text(
-                                typeLabel,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  letterSpacing: 0.4,
-                                ),
-                              ),
-                            ],
+                        const Icon(Icons.description_rounded,
+                            size: 12, color: Colors.white),
+                        const SizedBox(width: 4),
+                        Text(
+                          typeLabel,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 0.4,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        // Course code badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: accentColor.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                                color: accentColor.withOpacity(0.3)),
-                          ),
-                          child: Text(
-                            exam.courseCode as String? ?? '',
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Course code badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: accentColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: accentColor.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      exam.courseCode as String? ?? '',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: accentColor,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  if (isToday)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.circle,
+                              size: 8, color: Colors.green[600]),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Today',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: accentColor,
-                              letterSpacing: 0.4,
+                              color: Colors.green[700],
                             ),
                           ),
-                        ),
-                        const Spacer(),
-                        if (isToday)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.circle,
-                                    size: 8, color: Colors.green[600]),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Today',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green[700],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      exam.courseName as String? ?? 'Exam',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: isDarkMode ? Colors.white : Colors.black87,
-                        height: 1.2,
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    // Date row (shows actual date, not just day name)
-                    if ((exam.examDateFormatted as String?)?.isNotEmpty == true)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 5),
-                        child: _buildInfoRow(
-                          icon: Icons.calendar_today_rounded,
-                          text: exam.examDateFormatted as String,
-                          isDarkMode: isDarkMode,
-                        ),
-                      ),
-                    if ((exam.time as String?) != 'TBA')
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 5),
-                        child: _buildInfoRow(
-                          icon: Icons.access_time_rounded,
-                          text: exam.time as String,
-                          isDarkMode: isDarkMode,
-                        ),
-                      ),
-                    _buildInfoRow(
-                      icon: Icons.location_on_outlined,
-                      text: exam.room as String,
-                      isDarkMode: isDarkMode,
-                    ),
-                    if ((exam.examMaxMarks as double?) != null) ...[  
-                      const SizedBox(height: 5),
-                      _buildInfoRow(
-                        icon: Icons.star_rounded,
-                        text: '${(exam.examMaxMarks as double).toStringAsFixed((exam.examMaxMarks as double) % 1 == 0 ? 0 : 1)} marks',
-                        isDarkMode: isDarkMode,
-                      ),
-                    ],
-                    if ((exam.examSyllabus as String?)?.isNotEmpty == true) ...[  
-                      const SizedBox(height: 8),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: accentColor.withOpacity(0.07),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                              color: accentColor.withOpacity(0.2)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Syllabus',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: accentColor,
-                                letterSpacing: 0.4,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              exam.examSyllabus as String,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: isDarkMode
-                                    ? Colors.grey[300]
-                                    : Colors.grey[700],
-                                height: 1.4,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                exam.courseName as String? ?? 'Exam',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white : Colors.black87,
+                  height: 1.2,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 10),
+              // Date row (shows actual date, not just day name)
+              if ((exam.examDateFormatted as String?)?.isNotEmpty == true)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 5),
+                  child: _buildInfoRow(
+                    icon: Icons.calendar_today_rounded,
+                    text: exam.examDateFormatted as String,
+                    isDarkMode: isDarkMode,
+                  ),
+                ),
+              if ((exam.time as String?) != 'TBA')
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 5),
+                  child: _buildInfoRow(
+                    icon: Icons.access_time_rounded,
+                    text: exam.time as String,
+                    isDarkMode: isDarkMode,
+                  ),
+                ),
+              _buildInfoRow(
+                icon: Icons.location_on_outlined,
+                text: exam.room as String,
+                isDarkMode: isDarkMode,
+              ),
+              if ((exam.examMaxMarks as double?) != null) ...[
+                const SizedBox(height: 5),
+                _buildInfoRow(
+                  icon: Icons.star_rounded,
+                  text: '${(exam.examMaxMarks as double).toStringAsFixed((exam.examMaxMarks as double) % 1 == 0 ? 0 : 1)} marks',
+                  isDarkMode: isDarkMode,
+                ),
+              ],
+              if ((exam.examSyllabus as String?)?.isNotEmpty == true) ...[
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: accentColor.withOpacity(0.07),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: accentColor.withOpacity(0.2)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Syllabus',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: accentColor,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        exam.examSyllabus as String,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDarkMode
+                              ? Colors.grey[300]
+                              : Colors.grey[700],
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

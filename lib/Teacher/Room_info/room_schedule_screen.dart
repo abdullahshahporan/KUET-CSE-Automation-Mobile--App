@@ -557,7 +557,7 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
     final isLab =
         slot.courseType.toLowerCase().contains('lab') ||
         slot.courseType.toLowerCase().contains('sessional');
-    final color = isLab ? AppColors.accent : AppColors.primary;
+    final color = isLab ? AppColors.labColor : AppColors.theoryColor;
     final selectedDateStr = _selectedDate != null
         ? DateFormat('yyyy-MM-dd').format(_selectedDate!)
         : null;
@@ -632,14 +632,14 @@ class _RoomScheduleScreenState extends State<RoomScheduleScreen>
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.accent.withValues(alpha: 0.1),
+                          color: AppColors.labColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: const Text(
                           'Lab',
                           style: TextStyle(
                             fontSize: 9,
-                            color: AppColors.accent,
+                            color: AppColors.labColor,
                             fontWeight: FontWeight.w600,
                           ),
                         ),

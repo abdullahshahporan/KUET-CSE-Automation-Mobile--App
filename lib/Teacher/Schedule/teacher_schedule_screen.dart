@@ -343,7 +343,7 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
     final isLab =
         slot.courseType.toLowerCase().contains('lab') ||
         slot.courseType.toLowerCase().contains('sessional');
-    final stripColor = isLab ? AppColors.accent : AppColors.primary;
+    final stripColor = isLab ? AppColors.labColor : AppColors.theoryColor;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

@@ -187,7 +187,7 @@ class _HomeScreenState extends State<HomeScreen>
                       crossAxisCount: 2,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
-                      childAspectRatio: 1.1,
+                      childAspectRatio: 1.0,
                     ),
                     delegate: SliverChildListDelegate(
                       _buildBentoTiles(isDark),
@@ -398,16 +398,16 @@ class _HomeScreenState extends State<HomeScreen>
             children: [
               // Icon box — monochromatic teal
               Container(
-                padding: const EdgeInsets.all(9),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [AppColors.primary, AppColors.primaryDark],
                   ),
-                  borderRadius: BorderRadius.circular(9),
+                  borderRadius: BorderRadius.circular(11),
                 ),
-                child: Icon(icon, size: 20, color: Colors.white),
+                child: Icon(icon, size: 32, color: Colors.white),
               ),
               // Labels
               Column(

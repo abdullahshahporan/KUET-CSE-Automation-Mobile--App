@@ -33,7 +33,7 @@ class ResourcesScreen extends StatelessWidget {
                   _buildResourceCard(
                     'Lecture Notes',
                     Icons.description,
-                    AppColors.primary,
+                    AppColors.primary, // teal — white icon on teal
                     isDarkMode,
                   ),
                   _buildResourceCard(
@@ -57,13 +57,13 @@ class ResourcesScreen extends StatelessWidget {
                   _buildResourceCard(
                     'Assignments',
                     Icons.assignment,
-                    AppColors.accent,
+                    const Color(0xFF1565C0), // bright blue
                     isDarkMode,
                   ),
                   _buildResourceCard(
                     'Lab Manuals',
                     Icons.science,
-                    AppColors.info,
+                    const Color(0xFFE91E63), // pink
                     isDarkMode,
                   ),
                 ],
@@ -100,10 +100,10 @@ class ResourcesScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color, // solid color background
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 40, color: color),
+            child: Icon(icon, size: 40, color: Colors.white),
           ),
           const SizedBox(height: 12),
           Text(

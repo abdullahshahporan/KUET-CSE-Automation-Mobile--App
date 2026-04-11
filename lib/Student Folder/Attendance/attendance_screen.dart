@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import '../services/student_attendance_service.dart';
+
+import '../../theme/app_colors.dart';
 import '../models/student_attendance_data.dart';
+import '../services/student_attendance_service.dart';
 import 'widgets/course_attendance_card.dart';
 import 'widgets/overall_attendance_summary.dart';
-import '../../theme/app_colors.dart';
 
 /// Main Attendance Tracker screen — fetches real data from Supabase.
 class AttendanceScreen extends StatefulWidget {

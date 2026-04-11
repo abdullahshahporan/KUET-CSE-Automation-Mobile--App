@@ -38,7 +38,7 @@ class AppTheme {
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       backgroundColor: AppColors.lightSurface,
       selectedItemColor: AppColors.primary,
-      unselectedItemColor: Colors.grey[500],
+      unselectedItemColor: Color(0xFF78909C),
       elevation: 0,
       type: BottomNavigationBarType.fixed,
     ),
@@ -64,7 +64,7 @@ class AppTheme {
     dividerColor: AppColors.lightBorder,
     colorScheme: ColorScheme.light(
       primary: AppColors.primary,
-      secondary: AppColors.primary,
+      secondary: AppColors.primaryDark,
       surface: AppColors.lightSurface,
       error: AppColors.danger,
     ),
@@ -73,7 +73,7 @@ class AppTheme {
   // Dark Theme - Pitch black with grey shadows
   static ThemeData darkTheme = ThemeData(
     brightness: Brightness.dark,
-    primarySwatch: Colors.teal,
+    primarySwatch: Colors.blueGrey,
     scaffoldBackgroundColor: AppColors.darkBackground,
     appBarTheme: AppBarTheme(
       backgroundColor: AppColors.darkSurface,
@@ -88,8 +88,8 @@ class AppTheme {
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       backgroundColor: AppColors.darkSurface,
-      selectedItemColor: Colors.white,
-      unselectedItemColor: AppColors.darkTextMuted,
+      selectedItemColor: AppColors.primary,
+      unselectedItemColor: AppColors.darkNavUnselected,
       elevation: 0,
       type: BottomNavigationBarType.fixed,
     ),

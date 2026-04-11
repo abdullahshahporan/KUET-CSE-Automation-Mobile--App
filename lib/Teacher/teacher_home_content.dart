@@ -444,8 +444,8 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
   }
 
   Widget _buildScheduleCard(TeacherSlot slot, bool isDarkMode) {
-    final isTheory = slot.courseType.toLowerCase() == 'theory';
-    final color = isTheory ? AppColors.primary : AppColors.accent;
+    final isLab = slot.courseType.toLowerCase() != 'theory';
+    final color = AppColors.courseColor(slot.courseCode);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -568,7 +568,7 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
-              isTheory ? Icons.book : Icons.science,
+              isLab ? Icons.science : Icons.book,
               color: color,
               size: 20,
             ),
@@ -646,9 +646,7 @@ class _TeacherHomeContentState extends State<TeacherHomeContent> {
   }
 
   Widget _buildCourseCard(TeacherCourse course, bool isDarkMode) {
-    final color = course.type == CourseType.theory
-        ? AppColors.primary
-        : AppColors.accent;
+    final color = AppColors.courseColor(course.code);
 
     return GestureDetector(
       onTap: () {
