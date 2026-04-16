@@ -153,7 +153,8 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
       final endTime = now.add(Duration(minutes: _durationMinutes));
 
       final roomNo = _selectedRoom?['room_number'] as String? ?? '';
-      final hasCoords = _selectedRoom?['latitude'] != null &&
+      final hasCoords =
+          _selectedRoom?['latitude'] != null &&
           _selectedRoom?['longitude'] != null;
 
       final roomData = await GeoAttendanceService.openRoom(
@@ -172,7 +173,9 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
         final section = _selectedSection;
         final durationMin = _durationMinutes;
         final sectionLabel = section != null ? ' ($section)' : '';
-        final distLabel = hasCoords ? '30m of room $roomNo' : '100m of CSE Building';
+        final distLabel = hasCoords
+            ? '30m of room $roomNo'
+            : '100m of CSE Building';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -234,13 +237,19 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
   }
 
   Future<void> _showAttendanceLogs(
-    String roomId,
+    Map<String, dynamic> room,
     String courseCode,
     bool isDarkMode,
   ) async {
-    final logs = await GeoAttendanceService.getRoomAttendanceLogs(roomId);
+    final roomId = room['id'] as String;
+    final logs = (await GeoAttendanceService.getRoomAttendanceLogs(
+      roomId,
+    )).map((log) => Map<String, dynamic>.from(log)).toList();
 
     if (!mounted) return;
+
+    final canEdit = _canEditAttendanceLogs(room);
+    String? updatingStudentId;
 
     showModalBottomSheet(
       context: context,
@@ -249,149 +258,293 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       isScrollControlled: true,
-      builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.5,
-          maxChildSize: 0.85,
-          minChildSize: 0.3,
-          expand: false,
-          builder: (context, scrollController) {
-            return Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: AppColors.border(isDarkMode),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    '$courseCode — Attendance Logs',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary(isDarkMode),
-                    ),
-                  ),
-                  Text(
-                    '${logs.length} student(s) submitted',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textSecondary(isDarkMode),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: logs.isEmpty
-                        ? Center(
-                            child: Text(
-                              'No submissions yet',
-                              style: TextStyle(
-                                color: AppColors.textSecondary(isDarkMode),
-                              ),
-                            ),
-                          )
-                        : ListView.builder(
-                            controller: scrollController,
-                            itemCount: logs.length,
-                            itemBuilder: (context, index) {
-                              final log = logs[index];
-                              final student =
-                                  log['students'] as Map<String, dynamic>?;
-                              final rollNo = student?['roll_no'] ?? 'Unknown';
-                              final name = student?['full_name'] ?? 'Unknown';
-                              final dist = log['distance_meters'] as num? ?? 0;
-                              final time = DateTime.tryParse(
-                                log['submitted_at'] as String? ?? '',
-                              );
+      builder: (modalContext) {
+        return StatefulBuilder(
+          builder: (modalContext, setModalState) {
+            Future<void> updateStatus(
+              Map<String, dynamic> log,
+              String status,
+            ) async {
+              final studentUserId = log['student_user_id'] as String?;
+              if (studentUserId == null || studentUserId.isEmpty) return;
 
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: AppColors.surfaceElevated(isDarkMode),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: AppColors.border(isDarkMode),
+              setModalState(() => updatingStudentId = studentUserId);
+              try {
+                await GeoAttendanceService.updateRoomAttendanceStatus(
+                  roomId: roomId,
+                  studentUserId: studentUserId,
+                  status: status,
+                );
+                log['attendance_status'] = status;
+                if (status != 'ABSENT') {
+                  log['status'] = status;
+                }
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Attendance updated to ${_statusLabel(status)}.',
+                      ),
+                      backgroundColor: _statusColor(status),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to update attendance: $e'),
+                      backgroundColor: AppColors.danger,
+                    ),
+                  );
+                }
+              } finally {
+                setModalState(() => updatingStudentId = null);
+              }
+            }
+
+            return DraggableScrollableSheet(
+              initialChildSize: 0.5,
+              maxChildSize: 0.85,
+              minChildSize: 0.3,
+              expand: false,
+              builder: (context, scrollController) {
+                return Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: AppColors.border(isDarkMode),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        '$courseCode — Attendance Logs',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary(isDarkMode),
+                        ),
+                      ),
+                      Text(
+                        '${logs.length} student(s) submitted',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary(isDarkMode),
+                        ),
+                      ),
+                      if (canEdit) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          'Present, late, and absent can be changed while the room is active.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.info,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: logs.isEmpty
+                            ? Center(
+                                child: Text(
+                                  'No submissions yet',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary(isDarkMode),
                                   ),
                                 ),
-                                child: Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 18,
-                                      backgroundColor: AppColors.success
-                                          .withOpacity(0.15),
-                                      child: Text(
-                                        '${index + 1}',
-                                        style: TextStyle(
-                                          color: AppColors.success,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                        ),
+                              )
+                            : ListView.builder(
+                                controller: scrollController,
+                                itemCount: logs.length,
+                                itemBuilder: (context, index) {
+                                  final log = logs[index];
+                                  final student =
+                                      log['students'] as Map<String, dynamic>?;
+                                  final rollNo =
+                                      student?['roll_no'] ?? 'Unknown';
+                                  final name =
+                                      student?['full_name'] ?? 'Unknown';
+                                  final dist =
+                                      log['distance_meters'] as num? ?? 0;
+                                  final time = DateTime.tryParse(
+                                    log['submitted_at'] as String? ?? '',
+                                  );
+                                  final status = _normalizeAttendanceStatus(
+                                    log['attendance_status'] ?? log['status'],
+                                  );
+                                  final isUpdating =
+                                      updatingStudentId ==
+                                      (log['student_user_id'] as String? ?? '');
+
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surfaceElevated(
+                                        isDarkMode,
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: AppColors.border(isDarkMode),
                                       ),
                                     ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            '$rollNo — $name',
+                                    child: Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 18,
+                                          backgroundColor: _statusColor(
+                                            status,
+                                          ).withOpacity(0.15),
+                                          child: Text(
+                                            '${index + 1}',
                                             style: TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              color: AppColors.textPrimary(
-                                                isDarkMode,
+                                              color: _statusColor(status),
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                '$rollNo — $name',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppColors.textPrimary(
+                                                    isDarkMode,
+                                                  ),
+                                                ),
+                                              ),
+                                              Text(
+                                                '${dist}m away • ${time != null ? _formatTime(time) : ""}',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color:
+                                                      AppColors.textSecondary(
+                                                        isDarkMode,
+                                                      ),
+                                                ),
+                                              ),
+                                              if (canEdit) ...[
+                                                const SizedBox(height: 10),
+                                                Wrap(
+                                                  spacing: 8,
+                                                  runSpacing: 8,
+                                                  children:
+                                                      [
+                                                        'PRESENT',
+                                                        'LATE',
+                                                        'ABSENT',
+                                                      ].map((candidate) {
+                                                        final selected =
+                                                            status == candidate;
+                                                        final color =
+                                                            _statusColor(
+                                                              candidate,
+                                                            );
+                                                        return ChoiceChip(
+                                                          label: Text(
+                                                            candidate ==
+                                                                    'PRESENT'
+                                                                ? 'Present'
+                                                                : candidate ==
+                                                                      'LATE'
+                                                                ? 'Late'
+                                                                : 'Absent',
+                                                          ),
+                                                          selected: selected,
+                                                          onSelected: isUpdating
+                                                              ? null
+                                                              : (_) =>
+                                                                    updateStatus(
+                                                                      log,
+                                                                      candidate,
+                                                                    ),
+                                                          selectedColor: color
+                                                              .withOpacity(
+                                                                0.18,
+                                                              ),
+                                                          labelStyle: TextStyle(
+                                                            color: selected
+                                                                ? color
+                                                                : AppColors.textSecondary(
+                                                                    isDarkMode,
+                                                                  ),
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                          ),
+                                                          side: BorderSide(
+                                                            color: selected
+                                                                ? color
+                                                                : AppColors.border(
+                                                                    isDarkMode,
+                                                                  ),
+                                                          ),
+                                                          backgroundColor:
+                                                              AppColors.surface(
+                                                                isDarkMode,
+                                                              ),
+                                                        );
+                                                      }).toList(),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                        if (isUpdating)
+                                          const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        else
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: _statusColor(
+                                                status,
+                                              ).withOpacity(0.15),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              _statusLabel(status),
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: _statusColor(status),
                                               ),
                                             ),
                                           ),
-                                          Text(
-                                            '${dist}m away • ${time != null ? _formatTime(time) : ""}',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: AppColors.textSecondary(
-                                                isDarkMode,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                      ],
                                     ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.success.withOpacity(
-                                          0.15,
-                                        ),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        'Present',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.success,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
+                                  );
+                                },
+                              ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             );
           },
         );
@@ -412,10 +565,50 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
   }
 
   String _formatTime(DateTime dt) {
-    final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
-    final amPm = dt.hour >= 12 ? 'PM' : 'AM';
-    final min = dt.minute.toString().padLeft(2, '0');
+    final local = dt.toLocal();
+    final hour = local.hour > 12
+        ? local.hour - 12
+        : (local.hour == 0 ? 12 : local.hour);
+    final amPm = local.hour >= 12 ? 'PM' : 'AM';
+    final min = local.minute.toString().padLeft(2, '0');
     return '$hour:$min $amPm';
+  }
+
+  bool _canEditAttendanceLogs(Map<String, dynamic> room) {
+    if (room['is_active'] != true) return false;
+    final end = DateTime.tryParse(room['end_time'] as String? ?? '');
+    if (end == null) return false;
+    return end.toLocal().isAfter(DateTime.now());
+  }
+
+  String _normalizeAttendanceStatus(dynamic status) {
+    final value = (status as String? ?? 'PRESENT').toUpperCase();
+    if (value == 'ABSENT' || value == 'LATE' || value == 'PRESENT') {
+      return value;
+    }
+    return 'PRESENT';
+  }
+
+  String _statusLabel(String status) {
+    switch (_normalizeAttendanceStatus(status)) {
+      case 'ABSENT':
+        return 'Absent';
+      case 'LATE':
+        return 'Late';
+      default:
+        return 'Present';
+    }
+  }
+
+  Color _statusColor(String status) {
+    switch (_normalizeAttendanceStatus(status)) {
+      case 'ABSENT':
+        return AppColors.danger;
+      case 'LATE':
+        return AppColors.warning;
+      default:
+        return AppColors.success;
+    }
   }
 
   @override
@@ -710,11 +903,7 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.people, size: 18),
                   label: const Text('View Logs'),
-                  onPressed: () => _showAttendanceLogs(
-                    room['id'] as String,
-                    code,
-                    isDarkMode,
-                  ),
+                  onPressed: () => _showAttendanceLogs(room, code, isDarkMode),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primary,
                     side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
@@ -761,6 +950,10 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
   }
 
   Widget _buildOpenRoomForm(bool isDarkMode) {
+    final selectedRoomHasCoords =
+        _selectedRoom?['latitude'] != null &&
+        _selectedRoom?['longitude'] != null;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -902,8 +1095,8 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                 items: _allRooms.map((room) {
                   final roomNum = room['room_number'] as String? ?? '';
                   final building = room['building_name'] as String? ?? '';
-                  final hasCoords = room['latitude'] != null &&
-                      room['longitude'] != null;
+                  final hasCoords =
+                      room['latitude'] != null && room['longitude'] != null;
                   return DropdownMenuItem(
                     value: roomNum,
                     child: Row(
@@ -911,7 +1104,9 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                         Icon(
                           hasCoords ? Icons.gps_fixed : Icons.gps_off,
                           size: 16,
-                          color: hasCoords ? AppColors.success : AppColors.textMuted,
+                          color: hasCoords
+                              ? AppColors.success
+                              : AppColors.textMuted,
                         ),
                         const SizedBox(width: 8),
                         Text(
@@ -922,7 +1117,8 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                           const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 5, vertical: 1,
+                              horizontal: 5,
+                              vertical: 1,
                             ),
                             decoration: BoxDecoration(
                               color: AppColors.success.withOpacity(0.15),
@@ -946,14 +1142,23 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                   setState(() {
                     _selectedRoom = val == null
                         ? null
-                        : _allRooms.firstWhere(
-                            (r) => r['room_number'] == val,
-                          );
+                        : _allRooms.firstWhere((r) => r['room_number'] == val);
                   });
                 },
               ),
             ),
           ),
+          if (_selectedRoom != null && !selectedRoomHasCoords) ...[
+            const SizedBox(height: 8),
+            Text(
+              'This room has no GPS coordinates yet, so the 30m radius cannot be enforced. Choose a room with the GPS badge.',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.warning,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
           const SizedBox(height: 14),
 
           // Duration
@@ -978,10 +1183,7 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                 value: _durationMinutes,
                 items: const [
                   DropdownMenuItem(value: 30, child: Text('30 min')),
-                  DropdownMenuItem(
-                    value: 50,
-                    child: Text('50 min (1 period)'),
-                  ),
+                  DropdownMenuItem(value: 50, child: Text('50 min (1 period)')),
                   DropdownMenuItem(value: 80, child: Text('80 min')),
                   DropdownMenuItem(
                     value: 100,
@@ -1024,7 +1226,11 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                   fontSize: 15,
                 ),
               ),
-              onPressed: (_selectedCourse == null || _isOpening)
+              onPressed:
+                  (_selectedCourse == null ||
+                      _selectedRoom == null ||
+                      !selectedRoomHasCoords ||
+                      _isOpening)
                   ? null
                   : _openRoom,
               style: ElevatedButton.styleFrom(
@@ -1083,8 +1289,7 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
             ),
           ),
           TextButton(
-            onPressed: () =>
-                _showAttendanceLogs(room['id'] as String, code, isDarkMode),
+            onPressed: () => _showAttendanceLogs(room, code, isDarkMode),
             child: Text(
               'Logs',
               style: TextStyle(
