@@ -49,6 +49,8 @@ dependencies:
   
   # Local session persistence
   shared_preferences: ^2.5.4
+  flutter_secure_storage: ^9.2.4
+  local_auth: ^2.3.0
   url_launcher: ^6.3.1
   
   # Geolocation for proximity-based attendance

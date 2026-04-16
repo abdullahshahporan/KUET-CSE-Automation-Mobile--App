@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../Auth/Sign_In_Screen.dart';
+import '../services/biometric_auth_service.dart';
 import '../services/class_reminder_service.dart';
 import '../services/local_notification_service.dart';
 import '../services/notification_service.dart';
@@ -116,7 +117,11 @@ Widget buildInfoTile(
             borderRadius: BorderRadius.circular(8),
             child: Padding(
               padding: const EdgeInsets.all(6),
-              child: Icon(Icons.edit_outlined, size: 16, color: AppColors.accent),
+              child: Icon(
+                Icons.edit_outlined,
+                size: 16,
+                color: AppColors.accent,
+              ),
             ),
           )
         else
@@ -160,7 +165,11 @@ Widget buildActionTile(
               ),
             ),
           ),
-          Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.textMuted),
+          Icon(
+            Icons.arrow_forward_ios_rounded,
+            size: 16,
+            color: AppColors.textMuted,
+          ),
         ],
       ),
     ),
@@ -223,8 +232,9 @@ Widget buildLogoutButton(BuildContext context, bool isDarkMode) {
         icon: const Icon(Icons.logout_rounded, size: 20),
         label: const Text('Logout'),
         style: ElevatedButton.styleFrom(
-          backgroundColor:
-              isDarkMode ? AppColors.darkSurfaceElevated : Colors.red[50],
+          backgroundColor: isDarkMode
+              ? AppColors.darkSurfaceElevated
+              : Colors.red[50],
           foregroundColor: AppColors.danger,
           side: BorderSide(color: AppColors.danger.withOpacity(0.3)),
           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -355,7 +365,9 @@ Widget buildDarkModeToggle(bool isDarkMode, VoidCallback onToggle) {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: (isDarkMode ? Colors.amber : Colors.indigo).withOpacity(0.12),
+            color: (isDarkMode ? Colors.amber : Colors.indigo).withOpacity(
+              0.12,
+            ),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
@@ -386,10 +398,310 @@ Widget buildDarkModeToggle(bool isDarkMode, VoidCallback onToggle) {
   );
 }
 
+// ── BIOMETRIC LOGIN TOGGLE ───────────────────────────────────────────────────
+
+Widget buildBiometricLoginTile(BuildContext context, bool isDarkMode) {
+  return _BiometricLoginTile(isDarkMode: isDarkMode);
+}
+
+class _BiometricLoginTile extends StatefulWidget {
+  final bool isDarkMode;
+  const _BiometricLoginTile({required this.isDarkMode});
+
+  @override
+  State<_BiometricLoginTile> createState() => _BiometricLoginTileState();
+}
+
+class _BiometricLoginTileState extends State<_BiometricLoginTile> {
+  bool _isChecking = true;
+  bool _isBusy = false;
+  bool _isSupported = false;
+  bool _isEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadState();
+  }
+
+  Future<void> _loadState() async {
+    final supported = await BiometricAuthService.isSupported();
+    final enabled =
+        supported &&
+        await BiometricAuthService.isEnabled() &&
+        await BiometricAuthService.hasStoredCredentials();
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isSupported = supported;
+      _isEnabled = enabled;
+      _isChecking = false;
+    });
+  }
+
+  Future<void> _toggleBiometric(bool value) async {
+    if (_isBusy) {
+      return;
+    }
+
+    if (!value) {
+      setState(() => _isBusy = true);
+      await BiometricAuthService.disable();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isBusy = false;
+        _isEnabled = false;
+      });
+      showAppSnackBar(
+        context,
+        message: 'Fingerprint login disabled for this device.',
+      );
+      return;
+    }
+
+    final password = await _showPasswordPrompt();
+    if (!mounted || password == null) {
+      return;
+    }
+
+    setState(() => _isBusy = true);
+    final result = await BiometricAuthService.enableForCurrentUser(
+      currentPassword: password,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() => _isBusy = false);
+    await _loadState();
+
+    showAppSnackBar(
+      context,
+      message:
+          result['message']?.toString() ??
+          'Unable to update fingerprint login.',
+      isSuccess: result['success'] == true,
+    );
+  }
+
+  Future<String?> _showPasswordPrompt() async {
+    final controller = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool obscureText = true;
+
+    final password = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: AppColors.surfaceElevated(widget.isDarkMode),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: Text(
+                'Enable Fingerprint Login',
+                style: TextStyle(
+                  color: AppColors.textPrimary(widget.isDarkMode),
+                ),
+              ),
+              content: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Enter your current password once to store secure credentials on this device.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary(widget.isDarkMode),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: controller,
+                      obscureText: obscureText,
+                      style: TextStyle(
+                        color: AppColors.textPrimary(widget.isDarkMode),
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Current password',
+                        hintStyle: TextStyle(
+                          color: AppColors.textSecondary(widget.isDarkMode),
+                        ),
+                        prefixIcon: Icon(
+                          Icons.lock_outlined,
+                          color: AppColors.textSecondary(widget.isDarkMode),
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            obscureText
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: AppColors.textSecondary(widget.isDarkMode),
+                          ),
+                          onPressed: () {
+                            setDialogState(() {
+                              obscureText = !obscureText;
+                            });
+                          },
+                        ),
+                        filled: true,
+                        fillColor: AppColors.surface(widget.isDarkMode),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: AppColors.border(widget.isDarkMode),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: AppColors.primary,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your current password';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(
+                      color: AppColors.textSecondary(widget.isDarkMode),
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (!formKey.currentState!.validate()) {
+                      return;
+                    }
+                    Navigator.pop(ctx, controller.text);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Enable',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    controller.dispose();
+    return password;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final subtitle = _isChecking
+        ? 'Checking device support...'
+        : _isSupported
+        ? _isEnabled
+              ? 'Use your fingerprint to sign in on this device'
+              : 'Enable quick sign in with fingerprint'
+        : 'Biometric authentication is not available on this device';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.teal.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.fingerprint_rounded,
+              size: 20,
+              color: AppColors.teal,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Fingerprint Login',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textPrimary(widget.isDarkMode),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary(widget.isDarkMode),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_isBusy)
+            const SizedBox(
+              height: 18,
+              width: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          const SizedBox(width: 6),
+          Switch.adaptive(
+            value: _isSupported && _isEnabled,
+            onChanged: _isChecking || _isBusy || !_isSupported
+                ? null
+                : _toggleBiometric,
+            activeColor: Colors.white,
+            activeTrackColor: AppColors.primary,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── SNACKBAR HELPER ───────────────────────────────────────────────────────────
 
 /// @deprecated Use [showAppSnackBar] from `ui_helpers.dart` instead.
-void showResultSnackBar(BuildContext context, {required bool success, required String message}) {
+void showResultSnackBar(
+  BuildContext context, {
+  required bool success,
+  required String message,
+}) {
   showAppSnackBar(context, message: message, isSuccess: success);
 }
 
@@ -444,10 +756,7 @@ class _TestNotificationTileState extends State<_TestNotificationTile> {
             'If you see this in the notification tray, push delivery is working!',
         targetType: 'USER',
         targetValue: userId,
-        metadata: {
-          'test': true,
-          'sent_at': DateTime.now().toIso8601String(),
-        },
+        metadata: {'test': true, 'sent_at': DateTime.now().toIso8601String()},
       );
 
       if (mounted) {
@@ -507,8 +816,11 @@ class _TestNotificationTileState extends State<_TestNotificationTile> {
                 ),
               ),
             ),
-            Icon(Icons.arrow_forward_ios_rounded,
-                size: 16, color: AppColors.textMuted),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 16,
+              color: AppColors.textMuted,
+            ),
           ],
         ),
       ),
@@ -596,8 +908,9 @@ class _ReminderTimeTileState extends State<_ReminderTimeTile> {
                   title: Text(
                     '$min minutes before',
                     style: TextStyle(
-                      fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                       color: AppColors.textPrimary(widget.isDarkMode),
                     ),
                   ),
@@ -641,11 +954,7 @@ class _ReminderTimeTileState extends State<_ReminderTimeTile> {
                 color: AppColors.teal.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(
-                Icons.alarm,
-                size: 18,
-                color: AppColors.teal,
-              ),
+              child: Icon(Icons.alarm, size: 18, color: AppColors.teal),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -670,8 +979,11 @@ class _ReminderTimeTileState extends State<_ReminderTimeTile> {
                 ],
               ),
             ),
-            Icon(Icons.arrow_forward_ios_rounded,
-                size: 16, color: AppColors.textMuted),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 16,
+              color: AppColors.textMuted,
+            ),
           ],
         ),
       ),

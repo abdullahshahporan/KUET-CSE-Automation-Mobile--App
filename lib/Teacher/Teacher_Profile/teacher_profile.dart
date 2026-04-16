@@ -44,7 +44,11 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
     if (_isLoading) {
       return Scaffold(
         backgroundColor: AppColors.background(isDarkMode),
-        appBar: AppBar(title: const Text('Profile'), backgroundColor: Colors.transparent, elevation: 0),
+        appBar: AppBar(
+          title: const Text('Profile'),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -76,55 +80,155 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
-                    Expanded(child: buildStatCard('Department', department, Icons.apartment_rounded, AppColors.primary, isDarkMode)),
+                    Expanded(
+                      child: buildStatCard(
+                        'Department',
+                        department,
+                        Icons.apartment_rounded,
+                        AppColors.primary,
+                        isDarkMode,
+                      ),
+                    ),
                     const SizedBox(width: 10),
-                    Expanded(child: buildStatCard('Room', roomNo != 'N/A' ? roomNo : '—', Icons.meeting_room_rounded, AppColors.accent, isDarkMode)),
+                    Expanded(
+                      child: buildStatCard(
+                        'Room',
+                        roomNo != 'N/A' ? roomNo : '—',
+                        Icons.meeting_room_rounded,
+                        AppColors.accent,
+                        isDarkMode,
+                      ),
+                    ),
                     const SizedBox(width: 10),
-                    Expanded(child: buildStatCard('UID', _shortenUid(teacherUid), Icons.fingerprint_rounded, AppColors.teal, isDarkMode)),
+                    Expanded(
+                      child: buildStatCard(
+                        'UID',
+                        _shortenUid(teacherUid),
+                        Icons.fingerprint_rounded,
+                        AppColors.teal,
+                        isDarkMode,
+                      ),
+                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
 
               // Academic Info
-              buildProfileSection(isDarkMode, 'Academic Information', Icons.school_outlined, [
-                buildInfoTile(Icons.fingerprint, 'Teacher UID', teacherUid, isDarkMode),
-                buildInfoTile(Icons.work_outline, 'Designation', designation, isDarkMode),
-                buildInfoTile(Icons.apartment, 'Department', department, isDarkMode),
-                buildInfoTile(Icons.meeting_room_outlined, 'Office Room', officeRoom, isDarkMode),
-                buildInfoTile(Icons.door_sliding_outlined, 'Room No', roomNo, isDarkMode),
-                buildInfoTile(Icons.date_range_outlined, 'Date of Joining', formatDate(dateOfJoin), isDarkMode),
-              ]),
+              buildProfileSection(
+                isDarkMode,
+                'Academic Information',
+                Icons.school_outlined,
+                [
+                  buildInfoTile(
+                    Icons.fingerprint,
+                    'Teacher UID',
+                    teacherUid,
+                    isDarkMode,
+                  ),
+                  buildInfoTile(
+                    Icons.work_outline,
+                    'Designation',
+                    designation,
+                    isDarkMode,
+                  ),
+                  buildInfoTile(
+                    Icons.apartment,
+                    'Department',
+                    department,
+                    isDarkMode,
+                  ),
+                  buildInfoTile(
+                    Icons.meeting_room_outlined,
+                    'Office Room',
+                    officeRoom,
+                    isDarkMode,
+                  ),
+                  buildInfoTile(
+                    Icons.door_sliding_outlined,
+                    'Room No',
+                    roomNo,
+                    isDarkMode,
+                  ),
+                  buildInfoTile(
+                    Icons.date_range_outlined,
+                    'Date of Joining',
+                    formatDate(dateOfJoin),
+                    isDarkMode,
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
 
               // Contact
-              buildProfileSection(isDarkMode, 'Contact Information', Icons.contact_mail_outlined, [
-                buildInfoTile(Icons.email_outlined, 'Email', email, isDarkMode),
-                buildInfoTile(Icons.phone_outlined, 'Phone', phone, isDarkMode),
-              ]),
+              buildProfileSection(
+                isDarkMode,
+                'Contact Information',
+                Icons.contact_mail_outlined,
+                [
+                  buildInfoTile(
+                    Icons.email_outlined,
+                    'Email',
+                    email,
+                    isDarkMode,
+                  ),
+                  buildInfoTile(
+                    Icons.phone_outlined,
+                    'Phone',
+                    phone,
+                    isDarkMode,
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
 
               // Settings
-              buildProfileSection(isDarkMode, 'Settings', Icons.settings_outlined, [
-                buildActionTile(Icons.edit_outlined, 'Edit Profile', isDarkMode, () async {
-                  if (_profileData == null) return;
-                  final changed = await Navigator.push<bool>(
-                    context,
-                    MaterialPageRoute(builder: (_) => EditTeacherProfileScreen(profileData: _profileData!)),
-                  );
-                  if (changed == true) _loadProfile();
-                }),
-                const Divider(height: 1),
-                buildActionTile(Icons.lock_outline, 'Change Password', isDarkMode, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen()));
-                }),
-                const Divider(height: 1),
-                buildDarkModeToggle(isDarkMode, themeProvider.toggleTheme),
-                const Divider(height: 1),
-                buildReminderTimeTile(context, isDarkMode),
-                const Divider(height: 1),
-                buildTestNotificationTile(context, isDarkMode),
-              ]),
+              buildProfileSection(
+                isDarkMode,
+                'Settings',
+                Icons.settings_outlined,
+                [
+                  buildActionTile(
+                    Icons.edit_outlined,
+                    'Edit Profile',
+                    isDarkMode,
+                    () async {
+                      if (_profileData == null) return;
+                      final changed = await Navigator.push<bool>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => EditTeacherProfileScreen(
+                            profileData: _profileData!,
+                          ),
+                        ),
+                      );
+                      if (changed == true) _loadProfile();
+                    },
+                  ),
+                  const Divider(height: 1),
+                  buildBiometricLoginTile(context, isDarkMode),
+                  const Divider(height: 1),
+                  buildActionTile(
+                    Icons.lock_outline,
+                    'Reset Password',
+                    isDarkMode,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ChangePasswordScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1),
+                  buildDarkModeToggle(isDarkMode, themeProvider.toggleTheme),
+                  const Divider(height: 1),
+                  buildReminderTimeTile(context, isDarkMode),
+                  const Divider(height: 1),
+                  buildTestNotificationTile(context, isDarkMode),
+                ],
+              ),
               const SizedBox(height: 16),
 
               // Logout
@@ -137,7 +241,12 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
     );
   }
 
-  Widget _buildHeader(bool isDarkMode, String name, String designation, String department) {
+  Widget _buildHeader(
+    bool isDarkMode,
+    String name,
+    String designation,
+    String department,
+  ) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(24, 48, 24, 28),
@@ -149,7 +258,10 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(32),
+          bottomRight: Radius.circular(32),
+        ),
       ),
       child: Column(
         children: [
@@ -159,21 +271,53 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 10))],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
             child: Center(
               child: Text(
                 name.isNotEmpty ? name[0].toUpperCase() : 'T',
-                style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: AppColors.primary),
+                style: TextStyle(
+                  fontSize: 40,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
               ),
             ),
           ),
           const SizedBox(height: 16),
-          Text(name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white), textAlign: TextAlign.center),
+          Text(
+            name,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 4),
-          Text(designation, style: TextStyle(fontSize: 16, color: Colors.white.withOpacity(0.9)), textAlign: TextAlign.center),
+          Text(
+            designation,
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.white.withOpacity(0.9),
+            ),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 2),
-          Text('Department of $department', style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.75)), textAlign: TextAlign.center),
+          Text(
+            'Department of $department',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.white.withOpacity(0.75),
+            ),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );

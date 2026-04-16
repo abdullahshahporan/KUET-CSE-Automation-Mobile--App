@@ -57,7 +57,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       showResultSnackBar(
         context,
         success: success,
-        message: success ? 'Phone number updated!' : 'Failed to update. Try again.',
+        message: success
+            ? 'Phone number updated!'
+            : 'Failed to update. Try again.',
       );
     }
   }
@@ -94,7 +96,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             children: [
               // Header
-              _buildHeader(isDarkMode, fullName, rollNo, yearDisplay, semesterDisplay),
+              _buildHeader(
+                isDarkMode,
+                fullName,
+                rollNo,
+                yearDisplay,
+                semesterDisplay,
+              ),
               const SizedBox(height: 16),
 
               // Stats
@@ -102,59 +110,144 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
-                    Expanded(child: buildStatCard('CGPA', cgpaStr, Icons.star_rounded, AppColors.gold, isDarkMode)),
+                    Expanded(
+                      child: buildStatCard(
+                        'CGPA',
+                        cgpaStr,
+                        Icons.star_rounded,
+                        AppColors.gold,
+                        isDarkMode,
+                      ),
+                    ),
                     const SizedBox(width: 10),
-                    Expanded(child: buildStatCard('Year', yearDisplay, Icons.school, AppColors.primary, isDarkMode)),
+                    Expanded(
+                      child: buildStatCard(
+                        'Year',
+                        yearDisplay,
+                        Icons.school,
+                        AppColors.primary,
+                        isDarkMode,
+                      ),
+                    ),
                     const SizedBox(width: 10),
-                    Expanded(child: buildStatCard('Semester', semesterDisplay, Icons.calendar_today, AppColors.accent, isDarkMode)),
+                    Expanded(
+                      child: buildStatCard(
+                        'Semester',
+                        semesterDisplay,
+                        Icons.calendar_today,
+                        AppColors.accent,
+                        isDarkMode,
+                      ),
+                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
 
               // Academic Info
-              buildProfileSection(isDarkMode, 'Academic Information', Icons.school_outlined, [
-                buildInfoTile(Icons.badge_outlined, 'Roll Number', rollNo, isDarkMode),
-                buildInfoTile(Icons.calendar_month, 'Session', session, isDarkMode),
-                buildInfoTile(Icons.group_outlined, 'Batch', batch, isDarkMode),
-                buildInfoTile(Icons.category_outlined, 'Section', section, isDarkMode),
-                buildInfoTile(Icons.timeline, 'Current Term', '$yearDisplay Year, $semesterDisplay Term', isDarkMode),
-                UpgradeTermTile(
-                  currentTerm: _profileData?['term'] ?? '1-1',
-                  isDarkMode: isDarkMode,
-                  onUpgraded: _loadProfile,
-                ),
-              ]),
+              buildProfileSection(
+                isDarkMode,
+                'Academic Information',
+                Icons.school_outlined,
+                [
+                  buildInfoTile(
+                    Icons.badge_outlined,
+                    'Roll Number',
+                    rollNo,
+                    isDarkMode,
+                  ),
+                  buildInfoTile(
+                    Icons.calendar_month,
+                    'Session',
+                    session,
+                    isDarkMode,
+                  ),
+                  buildInfoTile(
+                    Icons.group_outlined,
+                    'Batch',
+                    batch,
+                    isDarkMode,
+                  ),
+                  buildInfoTile(
+                    Icons.category_outlined,
+                    'Section',
+                    section,
+                    isDarkMode,
+                  ),
+                  buildInfoTile(
+                    Icons.timeline,
+                    'Current Term',
+                    '$yearDisplay Year, $semesterDisplay Term',
+                    isDarkMode,
+                  ),
+                  UpgradeTermTile(
+                    currentTerm: _profileData?['term'] ?? '1-1',
+                    isDarkMode: isDarkMode,
+                    onUpgraded: _loadProfile,
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
 
               // Contact
-              buildProfileSection(isDarkMode, 'Contact Information', Icons.contact_mail_outlined, [
-                buildInfoTile(Icons.email_outlined, 'Email', email, isDarkMode),
-                buildInfoTile(Icons.phone_outlined, 'Phone', phone, isDarkMode,
-                  editable: true,
-                  onEdit: () => showEditPhoneDialog(
-                    context: context,
-                    isDarkMode: isDarkMode,
-                    controller: _phoneController,
-                    isUpdating: _isUpdating,
-                    onSave: _updatePhone,
+              buildProfileSection(
+                isDarkMode,
+                'Contact Information',
+                Icons.contact_mail_outlined,
+                [
+                  buildInfoTile(
+                    Icons.email_outlined,
+                    'Email',
+                    email,
+                    isDarkMode,
                   ),
-                ),
-              ]),
+                  buildInfoTile(
+                    Icons.phone_outlined,
+                    'Phone',
+                    phone,
+                    isDarkMode,
+                    editable: true,
+                    onEdit: () => showEditPhoneDialog(
+                      context: context,
+                      isDarkMode: isDarkMode,
+                      controller: _phoneController,
+                      isUpdating: _isUpdating,
+                      onSave: _updatePhone,
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
 
               // Settings
-              buildProfileSection(isDarkMode, 'Settings', Icons.settings_outlined, [
-                buildDarkModeToggle(isDarkMode, themeProvider.toggleTheme),
-                const Divider(height: 1),
-                buildReminderTimeTile(context, isDarkMode),
-                const Divider(height: 1),
-                buildActionTile(Icons.lock_outline, 'Change Password', isDarkMode, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen()));
-                }),
-                const Divider(height: 1),
-                buildTestNotificationTile(context, isDarkMode),
-              ]),
+              buildProfileSection(
+                isDarkMode,
+                'Settings',
+                Icons.settings_outlined,
+                [
+                  buildDarkModeToggle(isDarkMode, themeProvider.toggleTheme),
+                  const Divider(height: 1),
+                  buildBiometricLoginTile(context, isDarkMode),
+                  const Divider(height: 1),
+                  buildReminderTimeTile(context, isDarkMode),
+                  const Divider(height: 1),
+                  buildActionTile(
+                    Icons.lock_outline,
+                    'Reset Password',
+                    isDarkMode,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ChangePasswordScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1),
+                  buildTestNotificationTile(context, isDarkMode),
+                ],
+              ),
               const SizedBox(height: 16),
 
               // Logout
@@ -167,36 +260,82 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildHeader(bool isDarkMode, String name, String rollNo, String year, String semester) {
+  Widget _buildHeader(
+    bool isDarkMode,
+    String name,
+    String rollNo,
+    String year,
+    String semester,
+  ) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(24, 48, 24, 28),
       decoration: BoxDecoration(
         gradient: isDarkMode
-            ? const LinearGradient(colors: [Color(0xFF1A1A2E), Color(0xFF16213E)], begin: Alignment.topLeft, end: Alignment.bottomRight)
-            : LinearGradient(colors: [Colors.blue[700]!, Colors.cyan[500]!], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
+            ? const LinearGradient(
+                colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : LinearGradient(
+                colors: [Colors.blue[700]!, Colors.cyan[500]!],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(32),
+          bottomRight: Radius.circular(32),
+        ),
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white.withOpacity(0.3), width: 3)),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withOpacity(0.3),
+                width: 3,
+              ),
+            ),
             child: CircleAvatar(
               radius: 44,
               backgroundColor: Colors.white.withOpacity(isDarkMode ? 0.1 : 0.2),
               child: Text(
                 name.isNotEmpty ? name[0].toUpperCase() : 'S',
-                style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.white),
+                style: const TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
           const SizedBox(height: 14),
-          Text(name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+          Text(
+            name,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text('Roll: $rollNo', style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.85))),
+          Text(
+            'Roll: $rollNo',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.white.withOpacity(0.85),
+            ),
+          ),
           const SizedBox(height: 2),
-          Text('CSE — $year Year, $semester Semester', style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.75))),
+          Text(
+            'CSE — $year Year, $semester Semester',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.white.withOpacity(0.75),
+            ),
+          ),
         ],
       ),
     );
