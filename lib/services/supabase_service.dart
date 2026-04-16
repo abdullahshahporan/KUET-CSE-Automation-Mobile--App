@@ -23,11 +23,10 @@ class SupabaseService {
   static Future<void> initialize({
     required String supabaseUrl,
     required String supabaseAnonKey,
-  }) =>
-      SupabaseCore.initialize(
-        supabaseUrl: supabaseUrl,
-        supabaseAnonKey: supabaseAnonKey,
-      );
+  }) => SupabaseCore.initialize(
+    supabaseUrl: supabaseUrl,
+    supabaseAnonKey: supabaseAnonKey,
+  );
 
   // ── Client access ───────────────────────────────────────────────────
 
@@ -39,19 +38,27 @@ class SupabaseService {
   static Future<Map<String, dynamic>> signIn({
     required String email,
     required String password,
-  }) =>
-      AuthService.signIn(email: email, password: password);
+  }) => AuthService.signIn(email: email, password: password);
 
   static Future<void> signOut() => AuthService.signOut();
 
   static Future<Map<String, dynamic>> changePassword({
     required String currentPassword,
     required String newPassword,
-  }) =>
-      AuthService.changePassword(
-        currentPassword: currentPassword,
-        newPassword: newPassword,
-      );
+  }) => AuthService.changePassword(
+    currentPassword: currentPassword,
+    newPassword: newPassword,
+  );
+
+  static Future<Map<String, dynamic>> resetForgottenPassword({
+    required String email,
+    required String verificationValue,
+    required String newPassword,
+  }) => AuthService.resetForgottenPassword(
+    email: email,
+    verificationValue: verificationValue,
+    newPassword: newPassword,
+  );
 
   // ── Session ─────────────────────────────────────────────────────────
 
@@ -89,12 +96,11 @@ class SupabaseService {
     required String currentTerm,
     required String requestedTerm,
     String? reason,
-  }) =>
-      ProfileService.submitTermUpgradeRequest(
-        currentTerm: currentTerm,
-        requestedTerm: requestedTerm,
-        reason: reason,
-      );
+  }) => ProfileService.submitTermUpgradeRequest(
+    currentTerm: currentTerm,
+    requestedTerm: requestedTerm,
+    reason: reason,
+  );
 
   // ── Teacher Courses ─────────────────────────────────────────────────
 

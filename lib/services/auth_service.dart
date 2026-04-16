@@ -14,6 +14,9 @@ import 'supabase_core.dart';
 class AuthService {
   AuthService._();
 
+  static const _recoveryFailureMessage =
+      'We could not verify those account details.';
+
   /// Sign in by querying the `profiles` table and verifying the bcrypt hash.
   ///
   /// Returns a Map with keys: `success`, `user_id`, `role`, `email`, `message`.
@@ -67,8 +70,8 @@ class AuthService {
       try {
         await SupabaseCore.from('profiles')
             .update({'last_login': DateTime.now().toUtc().toIso8601String()})
-          .eq('user_id', userId)
-          .timeout(const Duration(seconds: 5));
+            .eq('user_id', userId)
+            .timeout(const Duration(seconds: 5));
       } catch (_) {}
 
       return {
@@ -80,7 +83,8 @@ class AuthService {
     } on TimeoutException {
       return {
         'success': false,
-        'message': 'Sign in timed out. Please check your connection and try again.',
+        'message':
+            'Sign in timed out. Please check your connection and try again.',
       };
     } catch (e) {
       return {'success': false, 'message': 'Connection error: ${e.toString()}'};
@@ -99,6 +103,37 @@ class AuthService {
   static Future<Map<String, dynamic>> changePassword({
     required String currentPassword,
     required String newPassword,
+  }) async {
+    try {
+      final verification = await verifyCurrentPassword(
+        currentPassword: currentPassword,
+      );
+      if (verification['success'] != true) {
+        return verification;
+      }
+
+      final userId = SessionService.currentUserId;
+      if (userId == null) {
+        return {'success': false, 'message': 'Not logged in'};
+      }
+
+      final newHash = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+      await SupabaseCore.from('profiles')
+          .update({
+            'password_hash': newHash,
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('user_id', userId);
+
+      return {'success': true, 'message': 'Password changed successfully'};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: ${e.toString()}'};
+    }
+  }
+
+  /// Verifies the current user's password without mutating the session.
+  static Future<Map<String, dynamic>> verifyCurrentPassword({
+    required String currentPassword,
   }) async {
     final userId = SessionService.currentUserId;
     if (userId == null) {
@@ -119,6 +154,83 @@ class AuthService {
         return {'success': false, 'message': 'Current password is incorrect'};
       }
 
+      return {'success': true, 'message': 'Password verified'};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: ${e.toString()}'};
+    }
+  }
+
+  /// Recovers a forgotten password using email plus institutional identity.
+  static Future<Map<String, dynamic>> resetForgottenPassword({
+    required String email,
+    required String verificationValue,
+    required String newPassword,
+  }) async {
+    final normalizedEmail = email.trim().toLowerCase();
+    final normalizedVerification = verificationValue.trim().toUpperCase();
+
+    if (normalizedEmail.isEmpty ||
+        normalizedVerification.isEmpty ||
+        newPassword.length < 6) {
+      return {'success': false, 'message': _recoveryFailureMessage};
+    }
+
+    try {
+      final profile = await SupabaseCore.from('profiles')
+          .select('user_id, role, is_active')
+          .eq('email', normalizedEmail)
+          .maybeSingle()
+          .timeout(const Duration(seconds: 15));
+
+      if (profile == null) {
+        return {'success': false, 'message': _recoveryFailureMessage};
+      }
+
+      final isActive = profile['is_active'] as bool? ?? false;
+      if (!isActive) {
+        return {
+          'success': false,
+          'message': 'Account is deactivated. Contact admin.',
+        };
+      }
+
+      final userId = (profile['user_id'] ?? '').toString();
+      final role = (profile['role'] ?? '').toString().toUpperCase();
+
+      late final String table;
+      late final String column;
+      switch (role) {
+        case 'STUDENT':
+          table = 'students';
+          column = 'roll_no';
+          break;
+        case 'TEACHER':
+          table = 'teachers';
+          column = 'teacher_uid';
+          break;
+        default:
+          return {
+            'success': false,
+            'message': 'Password recovery is not available for this account.',
+          };
+      }
+
+      final identityRow = await SupabaseCore.from(
+        table,
+      ).select(column).eq('user_id', userId).maybeSingle();
+
+      if (identityRow == null) {
+        return {'success': false, 'message': _recoveryFailureMessage};
+      }
+
+      final storedValue = (identityRow[column] ?? '')
+          .toString()
+          .trim()
+          .toUpperCase();
+      if (storedValue != normalizedVerification) {
+        return {'success': false, 'message': _recoveryFailureMessage};
+      }
+
       final newHash = BCrypt.hashpw(newPassword, BCrypt.gensalt());
       await SupabaseCore.from('profiles')
           .update({
@@ -127,7 +239,13 @@ class AuthService {
           })
           .eq('user_id', userId);
 
-      return {'success': true, 'message': 'Password changed successfully'};
+      return {'success': true, 'message': 'Password reset successfully'};
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message':
+            'Password reset timed out. Please check your connection and try again.',
+      };
     } catch (e) {
       return {'success': false, 'message': 'Error: ${e.toString()}'};
     }

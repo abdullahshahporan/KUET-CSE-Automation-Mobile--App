@@ -1,71 +1,101 @@
 import 'package:flutter/material.dart';
+
 import '../services/biometric_auth_service.dart';
-import '../shared/ui_helpers.dart';
 import '../services/supabase_service.dart';
+import '../shared/ui_helpers.dart';
 import '../theme/app_colors.dart';
 
-class ChangePasswordScreen extends StatefulWidget {
-  const ChangePasswordScreen({super.key});
+class ForgotPasswordScreen extends StatefulWidget {
+  final String? initialEmail;
+
+  const ForgotPasswordScreen({super.key, this.initialEmail});
 
   @override
-  State<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
-class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _currentPasswordController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _verificationController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  bool _obscureCurrent = true;
-  bool _obscureNew = true;
-  bool _obscureConfirm = true;
+  bool _obscureNewPassword = true;
+  bool _obscureConfirmPassword = true;
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    _emailController.text = widget.initialEmail?.trim() ?? '';
+  }
+
+  @override
   void dispose() {
-    _currentPasswordController.dispose();
+    _emailController.dispose();
+    _verificationController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _changePassword() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _resetPassword() async {
+    if (_isLoading || !_formKey.currentState!.validate()) {
+      return;
+    }
 
     setState(() => _isLoading = true);
 
-    final result = await SupabaseService.changePassword(
-      currentPassword: _currentPasswordController.text,
-      newPassword: _newPasswordController.text,
-    );
+    final email = _emailController.text.trim().toLowerCase();
+    final newPassword = _newPasswordController.text;
 
-    if (mounted) {
+    try {
+      final result = await SupabaseService.resetForgottenPassword(
+        email: email,
+        verificationValue: _verificationController.text.trim(),
+        newPassword: newPassword,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
       setState(() => _isLoading = false);
 
       if (result['success'] == true) {
-        final email = SupabaseService.currentEmail;
-        if (email != null) {
-          await BiometricAuthService.syncStoredPasswordIfEnabled(
-            email: email,
-            newPassword: _newPasswordController.text,
-            role: SupabaseService.currentRole,
-          );
-        }
-
+        await BiometricAuthService.syncStoredPasswordIfEnabled(
+          email: email,
+          newPassword: newPassword,
+        );
         if (!mounted) {
           return;
         }
-
-        showAppSnackBar(context, message: 'Password reset successfully!');
-        Navigator.pop(context);
+        showAppSnackBar(
+          context,
+          message:
+              result['message']?.toString() ?? 'Password reset successfully',
+        );
+        Navigator.pop(context, true);
       } else {
         showAppSnackBar(
           context,
-          message: result['message'] ?? 'Failed to reset password',
+          message:
+              result['message']?.toString() ??
+              'Unable to reset your password right now.',
           isSuccess: false,
         );
       }
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _isLoading = false);
+      showAppSnackBar(
+        context,
+        message: 'Error: ${e.toString()}',
+        isSuccess: false,
+      );
     }
   }
 
@@ -76,7 +106,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     return Scaffold(
       backgroundColor: AppColors.background(isDarkMode),
       appBar: AppBar(
-        title: const Text('Reset Password'),
+        title: const Text('Forgot Password'),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: AppColors.textPrimary(isDarkMode),
@@ -88,25 +118,24 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Security icon header
               Center(
                 child: Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.info.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    Icons.lock_outline_rounded,
+                    Icons.lock_reset_rounded,
                     size: 48,
-                    color: AppColors.primary,
+                    color: AppColors.info,
                   ),
                 ),
               ),
               const SizedBox(height: 16),
               Center(
                 child: Text(
-                  'Reset Your Password',
+                  'Recover Your Account',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -117,7 +146,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               const SizedBox(height: 8),
               Center(
                 child: Text(
-                  'Enter your current password and choose a new one',
+                  'Enter your registered email and your student roll number or teacher UID to set a new password.',
                   style: TextStyle(
                     fontSize: 14,
                     color: AppColors.textSecondary(isDarkMode),
@@ -126,34 +155,50 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-
-              // Current Password
-              _buildLabel('Current Password', isDarkMode),
+              _buildLabel('Email Address', isDarkMode),
               const SizedBox(height: 8),
-              _buildPasswordField(
-                controller: _currentPasswordController,
-                hint: 'Enter current password',
-                obscure: _obscureCurrent,
-                onToggle: () =>
-                    setState(() => _obscureCurrent = !_obscureCurrent),
+              _buildTextField(
+                controller: _emailController,
+                hint: 'Enter your email',
+                icon: Icons.email_outlined,
                 isDarkMode: isDarkMode,
+                keyboardType: TextInputType.emailAddress,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your current password';
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter your email';
+                  }
+                  if (!RegExp(
+                    r'^[\w\-.]+@([\w-]+\.)+[\w-]{2,4}$',
+                  ).hasMatch(value.trim())) {
+                    return 'Please enter a valid email';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 20),
-
-              // New Password
+              _buildLabel('Roll Number or Teacher UID', isDarkMode),
+              const SizedBox(height: 8),
+              _buildTextField(
+                controller: _verificationController,
+                hint: 'Example: 2107001 or T-ABC123456',
+                icon: Icons.badge_outlined,
+                isDarkMode: isDarkMode,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter your roll number or teacher UID';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
               _buildLabel('New Password', isDarkMode),
               const SizedBox(height: 8),
               _buildPasswordField(
                 controller: _newPasswordController,
-                hint: 'Enter new password',
-                obscure: _obscureNew,
-                onToggle: () => setState(() => _obscureNew = !_obscureNew),
+                hint: 'Enter a new password',
+                obscure: _obscureNewPassword,
+                onToggle: () =>
+                    setState(() => _obscureNewPassword = !_obscureNewPassword),
                 isDarkMode: isDarkMode,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -162,23 +207,19 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   if (value.length < 6) {
                     return 'Password must be at least 6 characters';
                   }
-                  if (value == _currentPasswordController.text) {
-                    return 'New password must be different from current';
-                  }
                   return null;
                 },
               ),
               const SizedBox(height: 20),
-
-              // Confirm Password
               _buildLabel('Confirm New Password', isDarkMode),
               const SizedBox(height: 8),
               _buildPasswordField(
                 controller: _confirmPasswordController,
-                hint: 'Re-enter new password',
-                obscure: _obscureConfirm,
-                onToggle: () =>
-                    setState(() => _obscureConfirm = !_obscureConfirm),
+                hint: 'Re-enter your new password',
+                obscure: _obscureConfirmPassword,
+                onToggle: () => setState(
+                  () => _obscureConfirmPassword = !_obscureConfirmPassword,
+                ),
                 isDarkMode: isDarkMode,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -190,9 +231,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 12),
-
-              // Password requirements
+              const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
@@ -200,44 +239,30 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppColors.info.withOpacity(0.2)),
                 ),
-                child: Column(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          size: 16,
-                          color: AppColors.info,
+                    Icon(Icons.info_outline, size: 18, color: AppColors.info),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Students should use their roll number. Teachers should use their teacher UID. Passwords must be at least 6 characters.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary(isDarkMode),
+                          height: 1.4,
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Password Requirements',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.info,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    _buildRequirement('At least 6 characters', isDarkMode),
-                    _buildRequirement(
-                      'Must differ from current password',
-                      isDarkMode,
+                      ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 32),
-
-              // Reset Password Button
               SizedBox(
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : _changePassword,
+                  onPressed: _isLoading ? null : _resetPassword,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -267,7 +292,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         ),
                 ),
               ),
-              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -275,8 +299,59 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     );
   }
 
-  Widget _buildLabel(String text, bool isDarkMode) =>
-      FormSectionLabel(text: text, isDarkMode: isDarkMode);
+  Widget _buildLabel(String text, bool isDarkMode) {
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textSecondary(isDarkMode),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    required bool isDarkMode,
+    TextInputType? keyboardType,
+    required String? Function(String?) validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      style: TextStyle(color: AppColors.textPrimary(isDarkMode)),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(color: AppColors.textSecondary(isDarkMode)),
+        prefixIcon: Icon(icon, color: AppColors.textSecondary(isDarkMode)),
+        filled: true,
+        fillColor: AppColors.surface(isDarkMode),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.border(isDarkMode)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.primary, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.danger),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.danger, width: 2),
+        ),
+      ),
+      validator: validator,
+    );
+  }
 
   Widget _buildPasswordField({
     required TextEditingController controller,
@@ -328,29 +403,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         ),
       ),
       validator: validator,
-    );
-  }
-
-  Widget _buildRequirement(String text, bool isDarkMode) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 24, top: 4),
-      child: Row(
-        children: [
-          Icon(
-            Icons.circle,
-            size: 5,
-            color: AppColors.textSecondary(isDarkMode),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary(isDarkMode),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
