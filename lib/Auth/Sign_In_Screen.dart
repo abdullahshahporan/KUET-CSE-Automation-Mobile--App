@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:kuet_cse_automation/Student Folder/Common Screen/main_bottom_navbar_screen.dart';
 import 'package:kuet_cse_automation/Teacher/teacher_navbar/teacher_navbar_screen.dart';
 
+import 'forgot_password_screen.dart';
+import '../services/biometric_auth_service.dart';
 import '../services/supabase_service.dart';
 import '../shared/ui_helpers.dart';
 import '../theme/app_colors.dart';
@@ -19,12 +21,46 @@ class _SignInScreenState extends State<SignInScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _isCheckingBiometric = true;
+  bool _canUseBiometricSignIn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBiometricState();
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadBiometricState() async {
+    final canUseBiometricSignIn =
+        await BiometricAuthService.isReadyForBiometricLogin();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _canUseBiometricSignIn = canUseBiometricSignIn;
+      _isCheckingBiometric = false;
+    });
+  }
+
+  Future<void> _openForgotPassword() async {
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            ForgotPasswordScreen(initialEmail: _emailController.text.trim()),
+      ),
+    );
+
+    if (changed == true) {
+      await _loadBiometricState();
+    }
   }
 
   Future<void> _signIn() async {
@@ -37,54 +73,85 @@ class _SignInScreenState extends State<SignInScreen> {
         final email = _emailController.text.trim().toLowerCase();
         final password = _passwordController.text;
 
-        final result = await SupabaseService.signIn(
-          email: email,
-          password: password,
-        ).timeout(
-          const Duration(seconds: 20),
-          onTimeout: () => {
-            'success': false,
-            'message': 'Sign in timed out. Please check your internet and try again.',
-          },
-        );
+        final result =
+            await SupabaseService.signIn(
+              email: email,
+              password: password,
+            ).timeout(
+              const Duration(seconds: 20),
+              onTimeout: () => {
+                'success': false,
+                'message':
+                    'Sign in timed out. Please check your internet and try again.',
+              },
+            );
 
-        if (mounted) {
-          setState(() => _isLoading = false);
-
-          if (result['success'] == true) {
-            showAppSnackBar(context, message: 'Sign in successful!');
-
-            await Future.delayed(const Duration(milliseconds: 300));
-
-            if (mounted) {
-              final role = result['role'];
-              if (role == 'TEACHER') {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const TeacherMainScreen(),
-                  ),
-                );
-              } else {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const MainBottomNavBarScreen(),
-                  ),
-                );
-              }
-            }
-          } else {
-            showAppSnackBar(context, message: result['message'] ?? 'Sign in failed', isSuccess: false);
-          }
-        }
+        await _finishSignInFlow(result, successMessage: 'Sign in successful!');
       } catch (e) {
         if (mounted) {
           setState(() => _isLoading = false);
-          showAppSnackBar(context, message: 'Error: ${e.toString()}', isSuccess: false);
+          showAppSnackBar(
+            context,
+            message: 'Error: ${e.toString()}',
+            isSuccess: false,
+          );
         }
       }
     }
+  }
+
+  Future<void> _signInWithBiometrics() async {
+    if (_isLoading) return;
+
+    setState(() => _isLoading = true);
+    final result = await BiometricAuthService.signInWithBiometrics();
+    await _finishSignInFlow(
+      result,
+      successMessage: 'Biometric sign in successful!',
+    );
+  }
+
+  Future<void> _finishSignInFlow(
+    Map<String, dynamic> result, {
+    required String successMessage,
+  }) async {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() => _isLoading = false);
+
+    if (result['success'] == true) {
+      showAppSnackBar(context, message: successMessage);
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (!mounted) {
+        return;
+      }
+      _navigateToHome(result['role']?.toString());
+      return;
+    }
+
+    showAppSnackBar(
+      context,
+      message: result['message'] ?? 'Sign in failed',
+      isSuccess: false,
+    );
+    await _loadBiometricState();
+  }
+
+  void _navigateToHome(String? role) {
+    if (role == 'TEACHER') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const TeacherMainScreen()),
+      );
+      return;
+    }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const MainBottomNavBarScreen()),
+    );
   }
 
   @override
@@ -276,6 +343,13 @@ class _SignInScreenState extends State<SignInScreen> {
                   },
                 ),
                 const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _isLoading ? null : _openForgotPassword,
+                    child: const Text('Forgot Password?'),
+                  ),
+                ),
 
                 const SizedBox(height: 32),
 
@@ -314,6 +388,33 @@ class _SignInScreenState extends State<SignInScreen> {
                           ),
                   ),
                 ),
+                if (!_isCheckingBiometric && _canUseBiometricSignIn) ...[
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: OutlinedButton.icon(
+                      onPressed: _isLoading ? null : _signInWithBiometrics,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: BorderSide(
+                          color: AppColors.primary.withOpacity(0.35),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.fingerprint_rounded),
+                      label: const Text(
+                        'Sign In with Fingerprint',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 24),
 
                 // Database Info
@@ -330,7 +431,9 @@ class _SignInScreenState extends State<SignInScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Use your registered email and password to sign in',
+                          _canUseBiometricSignIn
+                              ? 'Use your registered email and password, or fingerprint if enabled on this device.'
+                              : 'Use your registered email and password to sign in. You can reset a forgotten password or enable fingerprint login later from Settings.',
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondary(isDarkMode),
