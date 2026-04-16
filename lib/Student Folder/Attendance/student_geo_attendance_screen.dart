@@ -154,16 +154,20 @@ class _StudentGeoAttendanceScreenState extends State<StudentGeoAttendanceScreen>
         return;
       }
 
-      // Check distance first before submitting
-      final distance = GeoAttendanceService.calculateDistance(
-        position.latitude,
-        position.longitude,
+      final locationCheck = await GeoAttendanceService.checkAttendanceLocation(
+        geoRoomId: roomId,
+        latitude: position.latitude,
+        longitude: position.longitude,
       );
 
-      if (distance > GeoAttendanceService.buildingMaxDistanceMeters) {
+      if (!locationCheck.isWithinRange) {
         if (mounted) {
           setState(() => _submittingRoomId = null);
-          _showDistanceAlert(distance);
+          _showDistanceAlert(
+            distance: locationCheck.distance,
+            maxDistance: locationCheck.maxDistance,
+            targetLabel: locationCheck.targetLabel,
+          );
         }
         return;
       }
@@ -191,7 +195,11 @@ class _StudentGeoAttendanceScreenState extends State<StudentGeoAttendanceScreen>
       }
     } on GeoDistanceException catch (e) {
       if (mounted) {
-        _showDistanceAlert(e.distance);
+        _showDistanceAlert(
+          distance: e.distance,
+          maxDistance: e.maxDistance,
+          targetLabel: e.targetLabel,
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -204,7 +212,11 @@ class _StudentGeoAttendanceScreenState extends State<StudentGeoAttendanceScreen>
     }
   }
 
-  void _showDistanceAlert(double distance) {
+  void _showDistanceAlert({
+    required double distance,
+    required double maxDistance,
+    required String targetLabel,
+  }) {
     showDialog(
       context: context,
       builder: (context) {
@@ -253,7 +265,8 @@ class _StudentGeoAttendanceScreenState extends State<StudentGeoAttendanceScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                'Please go near the room.\nYou must be within 30m to submit attendance.',
+                'Please go closer to the $targetLabel.\n'
+                'You must be within ${maxDistance.round()}m to submit attendance.',
                 style: TextStyle(
                   fontSize: 14,
                   color: AppColors.textSecondary(isDarkMode),
