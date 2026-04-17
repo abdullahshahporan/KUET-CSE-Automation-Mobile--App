@@ -31,14 +31,18 @@ class _SplashScreenState extends State<SplashScreen>
     _TermLine(text: 'Establishing connection...', duration: 700),
     _TermLine(text: 'Authenticating session token...', duration: 600),
     _TermLine(text: 'Loading department modules...', duration: 500),
-    _TermLine(text: '[OK] Connected to campus_server', duration: 400, isOk: true),
+    _TermLine(
+      text: '[OK] Connected to campus_server',
+      duration: 400,
+      isOk: true,
+    ),
     _TermLine(text: '[OK] Status: Authenticated', duration: 300, isOk: true),
   ];
 
-  int _visibleLines = 0;        // how many lines have started typing
-  int _charIndex = 0;           // chars typed in current line
-  bool _cursorVisible = true;   // blinking cursor
-  double _progress = 0.0;       // 0..1 progress bar
+  int _visibleLines = 0; // how many lines have started typing
+  int _charIndex = 0; // chars typed in current line
+  bool _cursorVisible = true; // blinking cursor
+  double _progress = 0.0; // 0..1 progress bar
 
   late AnimationController _exitController;
   late Animation<Offset> _slideUpAnimation;
@@ -47,6 +51,10 @@ class _SplashScreenState extends State<SplashScreen>
   Timer? _typeTimer;
   Timer? _cursorTimer;
   Timer? _progressTimer;
+  Timer? _typingStartTimer;
+  Timer? _lineAdvanceTimer;
+  Timer? _progressStartTimer;
+  Timer? _exitDelayTimer;
 
   @override
   void initState() {
@@ -57,13 +65,14 @@ class _SplashScreenState extends State<SplashScreen>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
-    _slideUpAnimation = Tween<Offset>(
-      begin: Offset.zero,
-      end: const Offset(0, -1),
-    ).animate(CurvedAnimation(parent: _exitController, curve: Curves.easeInCubic));
-    _exitFadeAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _exitController, curve: Curves.easeIn),
-    );
+    _slideUpAnimation =
+        Tween<Offset>(begin: Offset.zero, end: const Offset(0, -1)).animate(
+          CurvedAnimation(parent: _exitController, curve: Curves.easeInCubic),
+        );
+    _exitFadeAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(parent: _exitController, curve: Curves.easeIn));
 
     // Blinking cursor
     _cursorTimer = Timer.periodic(const Duration(milliseconds: 530), (_) {
@@ -74,7 +83,9 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _startTypingSequence() {
-    Future.delayed(const Duration(milliseconds: 300), () {
+    _typingStartTimer?.cancel();
+    _typingStartTimer = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
       _typeNextLine();
     });
   }
@@ -86,33 +97,51 @@ class _SplashScreenState extends State<SplashScreen>
     }
 
     if (_visibleLines == 0 || _charIndex == 0) {
-      if (mounted) setState(() {});  // trigger rebuild to show new line stub
+      if (mounted) setState(() {}); // trigger rebuild to show new line stub
     }
 
     final line = _lines[_visibleLines];
     final charDelay = line.duration ~/ line.text.length;
 
-    _typeTimer = Timer.periodic(Duration(milliseconds: charDelay.clamp(18, 60)), (t) {
-      if (!mounted) { t.cancel(); return; }
-      setState(() => _charIndex++);
-      if (_charIndex >= line.text.length) {
-        t.cancel();
-        _charIndex = 0;
-        _visibleLines++;
-        Future.delayed(const Duration(milliseconds: 120), _typeNextLine);
-      }
-    });
+    _typeTimer = Timer.periodic(
+      Duration(milliseconds: charDelay.clamp(18, 60)),
+      (t) {
+        if (!mounted) {
+          t.cancel();
+          return;
+        }
+        setState(() => _charIndex++);
+        if (_charIndex >= line.text.length) {
+          t.cancel();
+          _charIndex = 0;
+          _visibleLines++;
+          _lineAdvanceTimer?.cancel();
+          _lineAdvanceTimer = Timer(const Duration(milliseconds: 120), () {
+            if (!mounted) return;
+            _typeNextLine();
+          });
+        }
+      },
+    );
   }
 
   void _startProgressBar() {
-    Future.delayed(const Duration(milliseconds: 200), () {
+    _progressStartTimer?.cancel();
+    _progressStartTimer = Timer(const Duration(milliseconds: 200), () {
       if (!mounted) return;
       _progressTimer = Timer.periodic(const Duration(milliseconds: 40), (t) {
-        if (!mounted) { t.cancel(); return; }
+        if (!mounted) {
+          t.cancel();
+          return;
+        }
         setState(() => _progress = (_progress + 0.012).clamp(0.0, 1.0));
         if (_progress >= 1.0) {
           t.cancel();
-          Future.delayed(const Duration(milliseconds: 400), _triggerExit);
+          _exitDelayTimer?.cancel();
+          _exitDelayTimer = Timer(const Duration(milliseconds: 400), () {
+            if (!mounted) return;
+            _triggerExit();
+          });
         }
       });
     });
@@ -127,7 +156,7 @@ class _SplashScreenState extends State<SplashScreen>
     Widget destination;
     if (SupabaseService.isLoggedIn) {
       final role = SupabaseService.currentRole;
-      destination = role == 'TEACHER'
+      destination = role == 'TEACHER' || role == 'HEAD'
           ? const TeacherMainScreen()
           : const MainBottomNavBarScreen();
     } else {
@@ -148,6 +177,10 @@ class _SplashScreenState extends State<SplashScreen>
     _typeTimer?.cancel();
     _cursorTimer?.cancel();
     _progressTimer?.cancel();
+    _typingStartTimer?.cancel();
+    _lineAdvanceTimer?.cancel();
+    _progressStartTimer?.cancel();
+    _exitDelayTimer?.cancel();
     _exitController.dispose();
     super.dispose();
   }
@@ -206,20 +239,17 @@ class _SplashScreenState extends State<SplashScreen>
         const SizedBox(width: 16),
         Text(
           'kuet-cse — bash — 80×24',
-          style: GoogleFonts.ibmPlexMono(
-            fontSize: 11,
-            color: _kGray,
-          ),
+          style: GoogleFonts.ibmPlexMono(fontSize: 11, color: _kGray),
         ),
       ],
     );
   }
 
   Widget _dot(Color c) => Container(
-        width: 12,
-        height: 12,
-        decoration: BoxDecoration(color: c, shape: BoxShape.circle),
-      );
+    width: 12,
+    height: 12,
+    decoration: BoxDecoration(color: c, shape: BoxShape.circle),
+  );
 
   // Large monospaced title
   Widget _buildBigTitle() {
@@ -282,7 +312,10 @@ class _SplashScreenState extends State<SplashScreen>
 
   Widget _buildCurrentLine() {
     final line = _lines[_visibleLines];
-    final visible = line.text.substring(0, _charIndex.clamp(0, line.text.length));
+    final visible = line.text.substring(
+      0,
+      _charIndex.clamp(0, line.text.length),
+    );
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: RichText(
@@ -298,10 +331,7 @@ class _SplashScreenState extends State<SplashScreen>
             ),
             TextSpan(
               text: _cursorVisible ? '█' : ' ',
-              style: GoogleFonts.ibmPlexMono(
-                fontSize: 13,
-                color: _kGreen,
-              ),
+              style: GoogleFonts.ibmPlexMono(fontSize: 13, color: _kGreen),
             ),
           ],
         ),
@@ -333,17 +363,14 @@ class _SplashScreenState extends State<SplashScreen>
     final pct = (_progress * 100).round();
     return Text(
       '${pct.toString().padLeft(3)}%  Loading system modules...',
-      style: GoogleFonts.ibmPlexMono(
-        fontSize: 11,
-        color: _kGray,
-      ),
+      style: GoogleFonts.ibmPlexMono(fontSize: 11, color: _kGray),
     );
   }
 }
 
 class _TermLine {
   final String text;
-  final int duration;   // total ms for the typing animation
+  final int duration; // total ms for the typing animation
   final bool isOk;
 
   const _TermLine({
