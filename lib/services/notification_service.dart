@@ -380,23 +380,9 @@ class NotificationService {
           .single();
       final notificationId = inserted['id'] as String?;
 
-      final recipientIds = await _resolveTargetRecipientIds(
-        targetType: targetType,
-        targetValue: targetValue,
-        targetYearTerm: targetYearTerm,
-      );
-
-      await PushNotificationService.sendNotificationToUsers(
-        userIds: recipientIds,
-        title: title,
-        body: body,
-        data: {
-          'type': type,
-          if (notificationId != null) 'notification_id': notificationId,
-          ...metadata,
-        },
-        collapseId: notificationId == null ? null : 'notif_$notificationId',
-      );
+      if (notificationId != null) {
+        await PushNotificationService.dispatchNotification(notificationId);
+      }
     } catch (e) {
       debugPrint('[NotificationService] createNotification error: $e');
     }
@@ -416,6 +402,7 @@ class NotificationService {
 
     final normalizedTerm = _cleanText(term);
     if (normalizedTerm == null) return;
+    final normalizedSection = _normalizeGeoAttendanceSection(section);
 
     final sectionLabel = _formatGeoAttendanceSectionLabel(section);
     final title = '📍 Attendance Open — $courseCode$sectionLabel';
@@ -439,22 +426,31 @@ class NotificationService {
     // ignore: unused_local_variable
     final _ = collapseId;
 
-    // COURSE target → only students enrolled in this course + its teacher(s)
-    // get in-app visibility + push. Same proven pattern as exam & room booking.
+    final studentTargetType = normalizedSection != null
+        ? 'SECTION'
+        : 'YEAR_TERM';
+    final studentTargetValue = normalizedSection ?? normalizedTerm;
+    final studentTargetYearTerm = normalizedSection != null
+        ? normalizedTerm
+        : null;
+
+    // Notify students directly by section/term so remote push delivery matches
+    // the in-app audience even when course-target resolution is incomplete.
     // Also send a direct USER notification to the teacher who opened the room.
     await Future.wait<Object?>([
-      // 1. In-app notification for enrolled students (COURSE target)
+      // 1. Notification for targeted students
       createNotification(
         type: 'geo_attendance_open',
         title: title,
         body: body,
-        targetType: 'COURSE',
-        targetValue: courseCode,
+        targetType: studentTargetType,
+        targetValue: studentTargetValue,
+        targetYearTerm: studentTargetYearTerm,
         metadata: metadata,
         expiresAt: expiresAt,
       ).then((_) => null).onError((e, _) {
         debugPrint(
-          '[NotificationService] geo_attendance COURSE notify error: $e',
+          '[NotificationService] geo_attendance student notify error: $e',
         );
         return null;
       }),
@@ -477,176 +473,7 @@ class NotificationService {
       }),
     ]);
 
-    // Push was already fired by createNotification → _resolveTargetRecipientIds
-    // for both COURSE (students + teacher) and USER (teacher) targets.
-    // No additional manual push needed.
-  }
-
-  static Future<List<String>> _resolveTargetRecipientIds({
-    required String targetType,
-    String? targetValue,
-    String? targetYearTerm,
-  }) async {
-    final normalizedTargetType = targetType.trim().toUpperCase();
-    final cleanedValue = _cleanText(targetValue);
-    final cleanedYearTerm = _cleanText(targetYearTerm);
-
-    switch (normalizedTargetType) {
-      case 'USER':
-        return cleanedValue == null ? [] : [cleanedValue];
-      case 'ROLE':
-        return _resolveRoleRecipientIds(cleanedValue);
-      case 'YEAR_TERM':
-        return _resolveYearTermRecipientIds(cleanedValue);
-      case 'SECTION':
-        return _resolveSectionRecipientIds(
-          section: cleanedValue,
-          yearTerm: cleanedYearTerm,
-        );
-      case 'COURSE':
-        return _resolveCourseRecipientIds(cleanedValue);
-      case 'ALL':
-        return _resolveAllRecipientIds();
-      default:
-        return [];
-    }
-  }
-
-  static Future<List<String>> _resolveAllRecipientIds() async {
-    final data = await SupabaseCore.from(
-      'profiles',
-    ).select('user_id, is_active');
-
-    final recipients = <String>{};
-    for (final row in List<Map<String, dynamic>>.from(data as List)) {
-      final userId = _cleanText(row['user_id']?.toString());
-      final isActive = row['is_active'] as bool? ?? true;
-      if (userId != null && isActive) {
-        recipients.add(userId);
-      }
-    }
-
-    return recipients.toList();
-  }
-
-  static Future<List<String>> _resolveRoleRecipientIds(String? role) async {
-    final normalizedRole = role?.trim().toUpperCase();
-    if (normalizedRole == null || normalizedRole.isEmpty) return [];
-
-    final data = await SupabaseCore.from(
-      'profiles',
-    ).select('user_id, role, is_active');
-
-    final recipients = <String>{};
-    for (final row in List<Map<String, dynamic>>.from(data as List)) {
-      final userId = _cleanText(row['user_id']?.toString());
-      final rowRole = _cleanText(row['role']?.toString())?.toUpperCase();
-      final isActive = row['is_active'] as bool? ?? true;
-      if (userId != null && isActive && rowRole == normalizedRole) {
-        recipients.add(userId);
-      }
-    }
-
-    return recipients.toList();
-  }
-
-  static Future<List<String>> _resolveYearTermRecipientIds(
-    String? yearTerm,
-  ) async {
-    final normalizedTerm = _cleanText(yearTerm);
-    if (normalizedTerm == null) return [];
-
-    final data = await SupabaseCore.from(
-      'students',
-    ).select('user_id').eq('term', normalizedTerm);
-
-    return List<Map<String, dynamic>>.from(data as List)
-        .map((row) => _cleanText(row['user_id']?.toString()))
-        .whereType<String>()
-        .toSet()
-        .toList();
-  }
-
-  static Future<List<String>> _resolveSectionRecipientIds({
-    String? section,
-    String? yearTerm,
-  }) async {
-    final normalizedSection = section?.trim().toUpperCase();
-    if (normalizedSection == null || normalizedSection.isEmpty) return [];
-
-    final data = await SupabaseCore.from(
-      'students',
-    ).select('user_id, term, section');
-
-    final recipients = <String>{};
-    for (final row in List<Map<String, dynamic>>.from(data as List)) {
-      final userId = _cleanText(row['user_id']?.toString());
-      final rowTerm = _cleanText(row['term']?.toString());
-      final rowSection = _cleanText(row['section']?.toString())?.toUpperCase();
-      if (userId == null || rowSection != normalizedSection) continue;
-      if (yearTerm != null && yearTerm.isNotEmpty && rowTerm != yearTerm) {
-        continue;
-      }
-      recipients.add(userId);
-    }
-
-    return recipients.toList();
-  }
-
-  static Future<List<String>> _resolveCourseRecipientIds(
-    String? courseCode,
-  ) async {
-    final normalizedCode = courseCode?.trim().toUpperCase();
-    if (normalizedCode == null || normalizedCode.isEmpty) return [];
-
-    final offeringsData = await SupabaseCore.from('course_offerings').select('''
-          term,
-          teacher_user_id,
-          courses ( code )
-        ''');
-
-    final termWideTerms = <String>{};
-    final teacherIds = <String>{};
-
-    for (final row in List<Map<String, dynamic>>.from(offeringsData as List)) {
-      final course = row['courses'] as Map<String, dynamic>?;
-      final code = _cleanText(course?['code']?.toString())?.toUpperCase();
-      if (code != normalizedCode) continue;
-
-      // Collect the teacher assigned to this course offering
-      final teacherId = _cleanText(row['teacher_user_id']?.toString());
-      if (teacherId != null) teacherIds.add(teacherId);
-
-      final term = _cleanText(row['term']?.toString());
-      if (term == null) continue;
-
-      termWideTerms.add(term);
-    }
-
-    if (termWideTerms.isEmpty) {
-      // No student targets, but still return any matched teachers
-      return teacherIds.toList();
-    }
-
-    final studentData = await SupabaseCore.from(
-      'students',
-    ).select('user_id, term');
-
-    final recipients = <String>{};
-    // Include course teachers
-    recipients.addAll(teacherIds);
-
-    for (final row in List<Map<String, dynamic>>.from(studentData as List)) {
-      final userId = _cleanText(row['user_id']?.toString());
-      final term = _cleanText(row['term']?.toString());
-      if (userId == null || term == null) continue;
-
-      if (termWideTerms.contains(term)) {
-        recipients.add(userId);
-      }
-    }
-
-    return recipients.toList();
+    // Push dispatch is now handled server-side by the Supabase Edge Function.
   }
 
   static String? _cleanText(String? value) {

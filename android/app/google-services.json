@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "680617602725",
-    "project_id": "kuet-cse-automation",
-    "storage_bucket": "kuet-cse-automation.firebasestorage.app"
+    "project_number": "627613902341",
+    "project_id": "kuet-cse-automation-d6ea2",
+    "storage_bucket": "kuet-cse-automation-d6ea2.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:680617602725:android:740819ed43130965d0a74c",
+        "mobilesdk_app_id": "1:627613902341:android:993fe38be2783f7cbc9e6c",
         "android_client_info": {
           "package_name": "com.example.kuet_cse_automation"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAMEyyWjg7IphV9Ya6LPH80RU-s9sQkPbI"
+          "current_key": "AIzaSyDP2i_jQWmorF63OH4raT9y92RNbmJK520"
         }
       ],
       "services": {

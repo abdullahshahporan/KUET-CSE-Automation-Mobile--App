@@ -19,10 +19,9 @@ class CRRoomRequestService {
     if (userId == null) return false;
 
     try {
-      final data = await SupabaseCore.from('students')
-          .select('is_cr')
-          .eq('user_id', userId)
-          .maybeSingle();
+      final data = await SupabaseCore.from(
+        'students',
+      ).select('is_cr').eq('user_id', userId).maybeSingle();
       return (data?['is_cr'] as bool?) ?? false;
     } catch (e) {
       debugPrint('Error checking CR status: $e');
@@ -132,7 +131,15 @@ class CRRoomRequestService {
       );
 
       // Send in-app + push notifications for the room booking
-      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const dayNames = [
+        'Sunday',
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+      ];
       final dayLabel = dayNames.elementAtOrNull(dayOfWeek) ?? 'Day $dayOfWeek';
       final notifMetadata = {
         'course_code': courseCode,
@@ -142,15 +149,24 @@ class CRRoomRequestService {
         'request_date': requestDate,
         'open_screen': 'room_booking',
       };
+      final normalizedSection = section?.trim();
+      final hasSection =
+          normalizedSection != null && normalizedSection.isNotEmpty;
+      final studentTargetType = hasSection ? 'SECTION' : 'YEAR_TERM';
+      final studentTargetValue = hasSection ? normalizedSection : term;
+      final studentTargetYearTerm = hasSection ? term : null;
 
-      // Notify students enrolled in this specific course (COURSE target = precise)
+      // Notify the CR's classmates directly so push delivery does not depend
+      // on course-offering section metadata being present.
       await NotificationService.createNotification(
         type: 'room_allocated',
         title: '🏫 Room $roomNumber Booked — $courseCode',
-        body: 'CR booked Room $roomNumber for $courseCode on '
+        body:
+            'CR booked Room $roomNumber for $courseCode on '
             '$dayLabel ($requestDate, $startTime–$endTime).',
-        targetType: 'COURSE',
-        targetValue: courseCode,
+        targetType: studentTargetType,
+        targetValue: studentTargetValue,
+        targetYearTerm: studentTargetYearTerm,
         metadata: notifMetadata,
       );
 
@@ -158,14 +174,18 @@ class CRRoomRequestService {
       await NotificationService.createNotification(
         type: 'room_allocated',
         title: '🏫 Room $roomNumber Booked by CR — $courseCode',
-        body: 'CR booked Room $roomNumber for your course $courseCode on '
+        body:
+            'CR booked Room $roomNumber for your course $courseCode on '
             '$dayLabel ($requestDate, $startTime–$endTime).',
         targetType: 'USER',
         targetValue: teacherUserId,
         metadata: notifMetadata,
       );
 
-      return (success: true, message: 'Room booked successfully! (Auto-approved)');
+      return (
+        success: true,
+        message: 'Room booked successfully! (Auto-approved)',
+      );
     } catch (e) {
       debugPrint('Error submitting CR room request: $e');
       String msg = e.toString();
@@ -186,10 +206,9 @@ class CRRoomRequestService {
 
     try {
       // 1. Get student's current term (e.g. "3-2") and section
-      final student = await SupabaseCore.from('students')
-          .select('term, session, section')
-          .eq('user_id', userId)
-          .maybeSingle();
+      final student = await SupabaseCore.from(
+        'students',
+      ).select('term, session, section').eq('user_id', userId).maybeSingle();
 
       if (student == null) return [];
 
@@ -201,13 +220,16 @@ class CRRoomRequestService {
       final term = parsed.term;
 
       // 2. Fetch all courses and filter by code prefix (same as CourseInfoService)
-      final coursesData = await SupabaseCore.from('courses')
-          .select('id, code, title, course_type');
+      final coursesData = await SupabaseCore.from(
+        'courses',
+      ).select('id, code, title, course_type');
 
       final allCourses = (coursesData as List)
           .map((c) => c as Map<String, dynamic>)
-          .where((c) =>
-              CourseUtils.codeMatchesTerm(c['code'] as String?, year, term))
+          .where(
+            (c) =>
+                CourseUtils.codeMatchesTerm(c['code'] as String?, year, term),
+          )
           .toList();
 
       if (allCourses.isEmpty) return [];
@@ -256,13 +278,11 @@ class CRRoomRequestService {
 
   static Future<List<String>> getAvailableRooms() async {
     try {
-      final data = await SupabaseCore.from('rooms')
-          .select('room_number')
-          .order('room_number');
+      final data = await SupabaseCore.from(
+        'rooms',
+      ).select('room_number').order('room_number');
 
-      return (data as List)
-          .map((e) => e['room_number'] as String)
-          .toList();
+      return (data as List).map((e) => e['room_number'] as String).toList();
     } catch (e) {
       debugPrint('Error fetching rooms: $e');
       return [];
@@ -275,13 +295,13 @@ class CRRoomRequestService {
     try {
       // Fetch request details before deleting (to clean up routine_slot)
       final reqData = await SupabaseCore.from('cr_room_requests')
-          .select('room_number, day_of_week, start_time, end_time, request_date, status')
+          .select(
+            'room_number, day_of_week, start_time, end_time, request_date, status',
+          )
           .eq('id', requestId)
           .maybeSingle();
 
-      await SupabaseCore.from('cr_room_requests')
-          .delete()
-          .eq('id', requestId);
+      await SupabaseCore.from('cr_room_requests').delete().eq('id', requestId);
 
       // Clean up synced routine_slot if the request was approved
       if (reqData != null &&
@@ -324,10 +344,9 @@ class CRRoomRequestService {
   }) async {
     try {
       // Step 1: Find the course by code
-      final courseRows = await SupabaseCore.from('courses')
-          .select('id')
-          .eq('code', courseCode)
-          .limit(1);
+      final courseRows = await SupabaseCore.from(
+        'courses',
+      ).select('id').eq('code', courseCode).limit(1);
 
       if ((courseRows as List).isEmpty) {
         debugPrint('CR sync: course not found for code: $courseCode');
@@ -423,7 +442,8 @@ class CRRoomRequestService {
   // ── Get teachers offering a specific course ───────────────
 
   static Future<List<Map<String, dynamic>>> getTeachersForCourse(
-      String courseCode) async {
+    String courseCode,
+  ) async {
     final offerings = await getCoursesForTerm();
     final teachers = <Map<String, dynamic>>[];
     final seen = <String>{};
@@ -479,7 +499,7 @@ class CRRoomRequestService {
         final from = vFrom != null ? DateTime.tryParse(vFrom) : null;
         final until = vUntil != null ? DateTime.tryParse(vUntil) : null;
         return (from == null || !reqDate.isBefore(from)) &&
-               (until == null || !reqDate.isAfter(until));
+            (until == null || !reqDate.isAfter(until));
       }).toList();
 
       final routineSlots = validRoutineData
@@ -607,7 +627,8 @@ class CRRoomRequestService {
         final sStart = _fmt(row['start_time'] as String? ?? '');
         final sEnd = _fmt(row['end_time'] as String? ?? '');
         if (sStart.compareTo(reqEnd) < 0 && sEnd.compareTo(reqStart) > 0) {
-          final offering = row['course_offerings'] as Map<String, dynamic>? ?? {};
+          final offering =
+              row['course_offerings'] as Map<String, dynamic>? ?? {};
           final course = offering['courses'] as Map<String, dynamic>? ?? {};
           final code = course['code'] ?? 'A class';
           return 'Slot conflict! $code is permanently scheduled in this room '
@@ -631,7 +652,8 @@ class CRRoomRequestService {
         final bStart = _fmt(row['start_time'] as String? ?? '');
         final bEnd = _fmt(row['end_time'] as String? ?? '');
         if (bStart.compareTo(reqEnd) < 0 && bEnd.compareTo(reqStart) > 0) {
-          final offering = row['course_offerings'] as Map<String, dynamic>? ?? {};
+          final offering =
+              row['course_offerings'] as Map<String, dynamic>? ?? {};
           final course = offering['courses'] as Map<String, dynamic>? ?? {};
           final teacher = row['teachers'] as Map<String, dynamic>? ?? {};
           final code = course['code'] ?? 'A course';

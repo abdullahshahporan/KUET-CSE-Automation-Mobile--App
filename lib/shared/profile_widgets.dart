@@ -747,7 +747,7 @@ class _TestNotificationTileState extends State<_TestNotificationTile> {
       );
 
       // 2) Create a real notification in Supabase targeting self
-      //    This tests the full pipeline: DB insert → push outbox → OneSignal
+      //    This tests the full pipeline: DB insert → push outbox → FCM
       await NotificationService.createNotification(
         type: 'test_notification',
         title: 'Test Push Notification',

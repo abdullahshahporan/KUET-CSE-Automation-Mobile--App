@@ -59,7 +59,7 @@ class AuthService {
         role: role,
       ).timeout(const Duration(seconds: 5));
       PushConfig.loginUser(userId);
-      // Keep login responsive even if OneSignal is slow/unavailable.
+      // Keep login responsive even if FCM token registration is slow.
       unawaited(
         PushNotificationService.syncUserIdentity()
             .timeout(const Duration(seconds: 5))
@@ -205,6 +205,7 @@ class AuthService {
           column = 'roll_no';
           break;
         case 'TEACHER':
+        case 'HEAD':
           table = 'teachers';
           column = 'teacher_uid';
           break;

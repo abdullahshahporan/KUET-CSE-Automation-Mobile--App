@@ -140,7 +140,7 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   void _navigateToHome(String? role) {
-    if (role == 'TEACHER') {
+    if (role == 'TEACHER' || role == 'HEAD') {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const TeacherMainScreen()),

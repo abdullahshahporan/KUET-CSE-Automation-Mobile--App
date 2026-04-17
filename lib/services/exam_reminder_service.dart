@@ -33,7 +33,7 @@ class ExamReminderService {
 
     try {
       final List<ExamSchedule> exams;
-      if (role == 'TEACHER') {
+      if (role == 'TEACHER' || role == 'HEAD') {
         exams = await _fetchTeacherExams(userId);
       } else {
         exams = await ExamScheduleService.fetchExamSchedule();

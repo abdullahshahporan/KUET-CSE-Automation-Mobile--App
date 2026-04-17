@@ -53,7 +53,9 @@ class CRExam {
       courseCode: course['code'] as String? ?? '',
       teacherName: teacher['full_name'] as String? ?? 'TBA',
       teacherUserId: offering['teacher_user_id'] as String? ?? '',
-      examType: CRExamService._normalizeExamType(m['exam_type'] as String? ?? 'CT'),
+      examType: CRExamService._normalizeExamType(
+        m['exam_type'] as String? ?? 'CT',
+      ),
       name: m['name'] as String? ?? '',
       maxMarks: (m['max_marks'] as num?)?.toDouble() ?? 0,
       examDate: m['exam_date'] as String?,
@@ -77,10 +79,9 @@ class CRExamService {
     if (userId == null) return [];
 
     try {
-      final student = await SupabaseCore.from('students')
-          .select('term, section')
-          .eq('user_id', userId)
-          .maybeSingle();
+      final student = await SupabaseCore.from(
+        'students',
+      ).select('term, section').eq('user_id', userId).maybeSingle();
 
       if (student == null) return [];
 
@@ -111,10 +112,9 @@ class CRExamService {
     if (userId == null) return [];
 
     try {
-      final student = await SupabaseCore.from('students')
-          .select('term')
-          .eq('user_id', userId)
-          .maybeSingle();
+      final student = await SupabaseCore.from(
+        'students',
+      ).select('term').eq('user_id', userId).maybeSingle();
       if (student == null) return [];
 
       final term = student['term'] as String? ?? '';
@@ -185,22 +185,28 @@ class CRExamService {
     }
 
     try {
-      final result = await SupabaseCore.from('exams').insert({
-        'offering_id': offeringId,
-        'name': name,
-        'exam_type': examType,
-        'max_marks': maxMarks,
-        if (examDate != null && examDate.isNotEmpty) 'exam_date': examDate,
-        if (examTime != null && examTime.isNotEmpty) 'exam_time': examTime,
-        if (durationMinutes != null) 'duration_minutes': durationMinutes,
-        'room_numbers': roomNumbers,
-        if (syllabus != null && syllabus.isNotEmpty) 'syllabus': syllabus,
-        if (section != null && section.isNotEmpty) 'section': section,
-        'created_by_student_user_id': userId,
-      }).select().single();
+      final result = await SupabaseCore.from('exams')
+          .insert({
+            'offering_id': offeringId,
+            'name': name,
+            'exam_type': examType,
+            'max_marks': maxMarks,
+            if (examDate != null && examDate.isNotEmpty) 'exam_date': examDate,
+            if (examTime != null && examTime.isNotEmpty) 'exam_time': examTime,
+            if (durationMinutes != null) 'duration_minutes': durationMinutes,
+            'room_numbers': roomNumbers,
+            if (syllabus != null && syllabus.isNotEmpty) 'syllabus': syllabus,
+            if (section != null && section.isNotEmpty) 'section': section,
+            'created_by_student_user_id': userId,
+          })
+          .select()
+          .single();
 
       // ── Send in-app + push notifications (fire-and-forget) ─
       try {
+        final studentContext = await SupabaseCore.from(
+          'students',
+        ).select('term, section').eq('user_id', userId).maybeSingle();
         final typeLabel = switch (examType.toUpperCase()) {
           'CT' || 'CLASS_TEST' => 'Class Test (CT)',
           'TERM_FINAL' || 'FINAL' => 'Term Final',
@@ -216,13 +222,25 @@ class CRExamService {
           'course_code': courseCode,
           'open_screen': 'exam_schedule',
         };
+        final term = (studentContext?['term'] as String?)?.trim();
+        final studentSection = (section?.trim().isNotEmpty ?? false)
+            ? section!.trim()
+            : (studentContext?['section'] as String?)?.trim();
+        final studentTargetType =
+            studentSection != null && studentSection.isNotEmpty
+            ? 'SECTION'
+            : (term != null && term.isNotEmpty ? 'YEAR_TERM' : 'COURSE');
+        final studentTargetValue = studentSection ?? term ?? courseCode;
+        final studentTargetYearTerm =
+            studentSection != null && studentSection.isNotEmpty ? term : null;
 
         // Notify teacher (USER target)
         if (teacherUserId.isNotEmpty) {
           await NotificationService.createNotification(
             type: 'exam_scheduled',
             title: '📋 $typeLabel Scheduled — $courseCode',
-            body: '$courseName $typeLabel on $dateLabel.'
+            body:
+                '$courseName $typeLabel on $dateLabel.'
                 '${maxMarks > 0 ? ' Max marks: ${maxMarks.toStringAsFixed(0)}.' : ''}',
             targetType: 'USER',
             targetValue: teacherUserId,
@@ -230,18 +248,23 @@ class CRExamService {
           );
         }
 
-        // Notify all classmates (COURSE target)
+        // Notify all classmates directly by term/section so push reaches
+        // students even when course-offering section metadata is incomplete.
         await NotificationService.createNotification(
           type: 'exam_scheduled',
           title: '📅 $typeLabel — $courseCode',
-          body: '$typeLabel for $courseName on $dateLabel.'
+          body:
+              '$typeLabel for $courseName on $dateLabel.'
               '${teacherName.isNotEmpty ? ' Teacher: $teacherName.' : ''}',
-          targetType: 'COURSE',
-          targetValue: courseCode,
+          targetType: studentTargetType,
+          targetValue: studentTargetValue,
+          targetYearTerm: studentTargetYearTerm,
           metadata: meta,
         );
       } catch (e) {
-        debugPrint('[CRExamService] notification send error (exam saved OK): $e');
+        debugPrint(
+          '[CRExamService] notification send error (exam saved OK): $e',
+        );
       }
 
       return (success: true, message: 'Exam scheduled successfully!');
@@ -280,11 +303,14 @@ class CRExamService {
     if (name != null) updates['name'] = name;
     if (examType != null) updates['exam_type'] = examType;
     if (maxMarks != null) updates['max_marks'] = maxMarks;
-    if (examDate != null) updates['exam_date'] = examDate.isEmpty ? null : examDate;
-    if (examTime != null) updates['exam_time'] = examTime.isEmpty ? null : examTime;
+    if (examDate != null)
+      updates['exam_date'] = examDate.isEmpty ? null : examDate;
+    if (examTime != null)
+      updates['exam_time'] = examTime.isEmpty ? null : examTime;
     if (durationMinutes != null) updates['duration_minutes'] = durationMinutes;
     if (roomNumbers != null) updates['room_numbers'] = roomNumbers;
-    if (syllabus != null) updates['syllabus'] = syllabus.isEmpty ? null : syllabus;
+    if (syllabus != null)
+      updates['syllabus'] = syllabus.isEmpty ? null : syllabus;
     if (section != null) updates['section'] = section.isEmpty ? null : section;
 
     if (updates.isEmpty) return (success: true, message: 'No changes.');
@@ -319,10 +345,9 @@ class CRExamService {
     }
 
     try {
-      await SupabaseCore.from('exams')
-          .delete()
-          .eq('id', examId)
-          .eq('created_by_student_user_id', userId);
+      await SupabaseCore.from(
+        'exams',
+      ).delete().eq('id', examId).eq('created_by_student_user_id', userId);
 
       return (success: true, message: 'Exam deleted.');
     } catch (e) {

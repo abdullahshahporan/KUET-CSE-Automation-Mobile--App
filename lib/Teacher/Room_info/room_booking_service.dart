@@ -528,7 +528,7 @@ class RoomBookingService {
 
   // ─── Notify students when teacher books a room ───────────────────────────
   /// Fire-and-forget: resolves course/term/section from offeringId and sends
-  /// both a Supabase notification row and OneSignal push to enrolled students.
+  /// both a Supabase notification row and server-side FCM push to enrolled students.
   static void _notifyStudentsRoomBooked({
     required String offeringId,
     required String roomNumber,

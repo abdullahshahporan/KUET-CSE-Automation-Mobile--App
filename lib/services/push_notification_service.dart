@@ -1,41 +1,86 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:functions_client/functions_client.dart';
 import 'package:flutter/material.dart';
-import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 import '../Student Folder/Attendance/student_geo_attendance_screen.dart';
 import '../config/push_config.dart';
 import '../shared/notification_screen.dart';
+import 'local_notification_service.dart';
 import 'session_service.dart';
+import 'supabase_core.dart';
+
+@pragma('vm:entry-point')
+Future<void> kuetFirebaseMessagingBackgroundHandler(
+  RemoteMessage message,
+) async {
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp();
+    }
+    debugPrint('[FCM] Background message: ${message.messageId}');
+  } catch (e) {
+    debugPrint('[FCM] Background handler error: $e');
+  }
+}
 
 class PushNotificationService {
   PushNotificationService._();
 
-  static const String _androidAlertChannelId = 'kuet_notifications';
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
 
   static bool _initialized = false;
   static bool _listenersRegistered = false;
   static bool _appReadyForNavigation = false;
+  static String? _lastRegisteredToken;
+  static StreamSubscription<String>? _tokenRefreshSubscription;
   static _PushNavigationRequest? _pendingNavigation;
+  static const Duration _recentHandledTtl = Duration(seconds: 20);
+  static final Map<String, DateTime> _recentHandledNotificationIds =
+      <String, DateTime>{};
 
   static Future<void> initialize() async {
-    final appId = PushConfig.oneSignalAppId.trim();
-    if (appId.isEmpty) {
-      debugPrint(
-        '[PushNotificationService] OneSignal App ID missing; push disabled.',
+    if (!PushConfig.enableFcmPush) return;
+
+    try {
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp();
+      }
+
+      FirebaseMessaging.onBackgroundMessage(
+        kuetFirebaseMessagingBackgroundHandler,
       );
-      return;
+
+      await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      await FirebaseMessaging.instance
+          .setForegroundNotificationPresentationOptions(
+            alert: true,
+            badge: true,
+            sound: true,
+          );
+
+      _registerListeners();
+      _initialized = true;
+
+      final initialMessage = await FirebaseMessaging.instance
+          .getInitialMessage();
+      if (initialMessage != null) {
+        _queueNavigation(initialMessage.data);
+      }
+
+      await syncUserIdentity();
+    } catch (e) {
+      debugPrint('[PushNotificationService] FCM initialization error: $e');
     }
-
-    await PushConfig.initialize();
-    _registerListeners();
-    _initialized = true;
-
-    await syncUserIdentity();
   }
 
   static void markAppReady() {
@@ -61,7 +106,8 @@ class PushNotificationService {
 
     switch (request.type) {
       case _PushNavigationType.studentGeoAttendance:
-        if (SessionService.currentRole == 'TEACHER') return;
+        final role = SessionService.currentRole;
+        if (role == 'TEACHER' || role == 'HEAD') return;
         await navigator.push(
           MaterialPageRoute(builder: (_) => const StudentGeoAttendanceScreen()),
         );
@@ -73,29 +119,91 @@ class PushNotificationService {
   }
 
   static Future<void> syncUserIdentity() async {
-    if (!_initialized) return;
+    if (!_initialized || !PushConfig.enableFcmPush) return;
 
     final userId = SessionService.currentUserId;
-    final role = SessionService.currentRole;
-
     if (userId == null || userId.isEmpty) {
-      await OneSignal.logout();
+      await clearUserIdentity();
       return;
     }
 
-    await OneSignal.login(userId);
+    await _registerCurrentFcmToken(userId);
 
-    if (role != null && role.trim().isNotEmpty) {
-      await OneSignal.User.addTags({'role': role.trim().toUpperCase()});
-    }
+    await _tokenRefreshSubscription?.cancel();
+    _tokenRefreshSubscription = FirebaseMessaging.instance.onTokenRefresh
+        .listen(
+          (token) {
+            unawaited(_saveFcmToken(userId: userId, token: token));
+          },
+          onError: (Object error) {
+            debugPrint('[PushNotificationService] token refresh error: $error');
+          },
+        );
   }
 
   static Future<void> clearUserIdentity() async {
-    if (!_initialized) return;
-
     _pendingNavigation = null;
     _appReadyForNavigation = false;
-    await OneSignal.logout();
+    await _tokenRefreshSubscription?.cancel();
+    _tokenRefreshSubscription = null;
+
+    final userId = SessionService.currentUserId;
+    final token = _lastRegisteredToken;
+    if (userId == null || token == null) return;
+
+    try {
+      await SupabaseCore.from('device_push_tokens')
+          .update({
+            'is_active': false,
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('user_id', userId)
+          .eq('provider', 'fcm')
+          .eq('token', token);
+    } catch (e) {
+      debugPrint('[PushNotificationService] clear token error: $e');
+    }
+  }
+
+  static Future<void> dispatchNotification(String notificationId) async {
+    if (notificationId.trim().isEmpty) return;
+
+    try {
+      final headers = <String, String>{};
+      final dispatchKey = PushConfig.notificationDispatchKey.trim();
+      if (dispatchKey.isNotEmpty) {
+        headers['x-notification-dispatch-key'] = dispatchKey;
+      }
+      final response = await SupabaseCore.client.functions.invoke(
+        PushConfig.supabaseEdgeFunctionName,
+        headers: headers.isEmpty ? null : headers,
+        body: {'notification_id': notificationId},
+      );
+      final payload = response.data;
+      final hasExplicitFailure = payload is Map && payload['success'] == false;
+      if (response.status >= 400 || hasExplicitFailure) {
+        debugPrint(
+          '[PushNotificationService] edge dispatch failed '
+          '(${response.status}): $payload',
+        );
+      }
+    } on FunctionException catch (e) {
+      if (e.status == 401 &&
+          PushConfig.notificationDispatchKey.trim().isEmpty) {
+        debugPrint(
+          '[PushNotificationService] edge dispatch unauthorized. '
+          'If the edge function uses NOTIFICATION_DISPATCH_KEY, set '
+          'PushConfig.notificationDispatchKey or move dispatch behind a '
+          'trusted backend.',
+        );
+      }
+      debugPrint(
+        '[PushNotificationService] edge dispatch error '
+        '(${e.status}): ${e.details ?? e.reasonPhrase}',
+      );
+    } catch (e) {
+      debugPrint('[PushNotificationService] edge dispatch error: $e');
+    }
   }
 
   static Future<void> sendNotificationToUsers({
@@ -105,89 +213,40 @@ class PushNotificationService {
     Map<String, dynamic> data = const {},
     String? collapseId,
   }) async {
-    final recipients = userIds
-        .map((id) => id.trim())
-        .where((id) => id.isNotEmpty)
-        .toSet()
-        .toList();
-
-    if (recipients.isEmpty) return;
-
-    if (!PushConfig.hasRemotePushCredentials) {
-      debugPrint(
-        '[PushNotificationService] Missing OneSignal REST API key; '
-        'skipping remote push for "$title".',
-      );
-      return;
-    }
-
-    final client = HttpClient()
-      ..connectionTimeout = const Duration(seconds: 20);
-
-    try {
-      for (final batch in _chunkRecipients(recipients, 200)) {
-        final payload = <String, dynamic>{
-          'app_id': PushConfig.oneSignalAppId,
-          'target_channel': 'push',
-          'include_aliases': {'external_id': batch},
-          'headings': {'en': title},
-          'contents': {'en': body},
-          'data': data,
-          // Route all Android pushes through our vibration-enabled channel.
-          'android_channel_id': _androidAlertChannelId,
-          'android_sound': 'default',
-          'priority': 10,
-          if (collapseId != null && collapseId.trim().isNotEmpty)
-            'collapse_id': collapseId.trim(),
-        };
-
-        final request = await client.postUrl(
-          Uri.parse(PushConfig.oneSignalNotificationsApiUrl),
-        );
-        request.headers.set(
-          HttpHeaders.authorizationHeader,
-          'Key ${PushConfig.oneSignalRestApiKey}',
-        );
-        request.headers.contentType = ContentType.json;
-        request.write(jsonEncode(payload));
-
-        final response = await request.close();
-        final responseBody = await utf8.decodeStream(response);
-        if (response.statusCode < 200 || response.statusCode >= 300) {
-          debugPrint(
-            '[PushNotificationService] Remote push failed '
-            '(${response.statusCode}): $responseBody',
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint('[PushNotificationService] sendNotificationToUsers error: $e');
-    } finally {
-      client.close(force: true);
-    }
+    debugPrint(
+      '[PushNotificationService] Direct client push is disabled. '
+      'Create a Supabase notification row and dispatch it server-side.',
+    );
   }
 
   static void _registerListeners() {
     if (_listenersRegistered) return;
 
-    OneSignal.Notifications.addClickListener(_handleNotificationClick);
-    OneSignal.Notifications.addForegroundWillDisplayListener(
-      _handleForegroundNotification,
-    );
+    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      _queueNavigation(message.data);
+    });
     _listenersRegistered = true;
   }
 
-  static void _handleForegroundNotification(
-    OSNotificationWillDisplayEvent event,
-  ) {
-    // Display the push notification banner even when the app is in the foreground
-    event.notification.display();
+  static Future<void> _handleForegroundMessage(RemoteMessage message) async {
+    _rememberHandledNotification(message.data['notification_id']?.toString());
+    final title =
+        message.notification?.title ?? message.data['title']?.toString();
+    final body = message.notification?.body ?? message.data['body']?.toString();
+
+    if (title != null && body != null) {
+      await LocalNotificationService.show(
+        title: title,
+        body: body,
+        payload: message.data['notification_id']?.toString(),
+      );
+    }
   }
 
-  static void _handleNotificationClick(OSNotificationClickEvent event) {
-    final request = _PushNavigationRequest.fromAdditionalData(
-      event.notification.additionalData,
-    );
+  static void _queueNavigation(Map<String, dynamic> data) {
+    _rememberHandledNotification(data['notification_id']?.toString());
+    final request = _PushNavigationRequest.fromData(data);
     if (request == null) return;
 
     _pendingNavigation = request;
@@ -196,18 +255,93 @@ class PushNotificationService {
     }
   }
 
-  static List<List<String>> _chunkRecipients(
-    List<String> recipients,
-    int size,
-  ) {
-    final chunks = <List<String>>[];
-    for (var index = 0; index < recipients.length; index += size) {
-      final end = (index + size < recipients.length)
-          ? index + size
-          : recipients.length;
-      chunks.add(recipients.sublist(index, end));
+  static Future<void> _registerCurrentFcmToken(String userId) async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token == null || token.trim().isEmpty) return;
+      await _saveFcmToken(userId: userId, token: token);
+    } catch (e) {
+      debugPrint('[PushNotificationService] get token error: $e');
     }
-    return chunks;
+  }
+
+  static Future<void> _saveFcmToken({
+    required String userId,
+    required String token,
+  }) async {
+    final now = DateTime.now().toUtc().toIso8601String();
+    final row = {
+      'user_id': userId,
+      'platform': Platform.isAndroid ? 'android' : Platform.operatingSystem,
+      'provider': 'fcm',
+      'token': token,
+      'is_active': true,
+      'last_seen_at': now,
+      'updated_at': now,
+      'device_info': {
+        'os': Platform.operatingSystem,
+        'os_version': Platform.operatingSystemVersion,
+      },
+    };
+
+    try {
+      await SupabaseCore.from(
+        'device_push_tokens',
+      ).upsert(row, onConflict: 'token');
+      _lastRegisteredToken = token;
+    } catch (e) {
+      debugPrint('[PushNotificationService] token upsert fallback: $e');
+      await _saveFcmTokenWithoutUniqueIndex(row, token);
+    }
+  }
+
+  static Future<void> _saveFcmTokenWithoutUniqueIndex(
+    Map<String, Object?> row,
+    String token,
+  ) async {
+    try {
+      final existing = await SupabaseCore.from(
+        'device_push_tokens',
+      ).select('id').eq('token', token).eq('provider', 'fcm').maybeSingle();
+
+      if (existing != null) {
+        await SupabaseCore.from(
+          'device_push_tokens',
+        ).update(row).eq('id', existing['id']);
+      } else {
+        await SupabaseCore.from('device_push_tokens').insert(row);
+      }
+      _lastRegisteredToken = token;
+    } catch (e) {
+      debugPrint('[PushNotificationService] save token error: $e');
+    }
+  }
+
+  static bool hasRecentlyHandledNotification(String? notificationId) {
+    _cleanupRecentlyHandledNotifications();
+    final normalized = notificationId?.trim();
+    if (normalized == null || normalized.isEmpty) return false;
+    return _recentHandledNotificationIds.containsKey(normalized);
+  }
+
+  static void _rememberHandledNotification(String? notificationId) {
+    final normalized = notificationId?.trim();
+    if (normalized == null || normalized.isEmpty) return;
+    _cleanupRecentlyHandledNotifications();
+    _recentHandledNotificationIds[normalized] = DateTime.now();
+  }
+
+  static void _cleanupRecentlyHandledNotifications() {
+    if (_recentHandledNotificationIds.isEmpty) return;
+
+    final now = DateTime.now();
+    final expired = _recentHandledNotificationIds.entries
+        .where((entry) => now.difference(entry.value) > _recentHandledTtl)
+        .map((entry) => entry.key)
+        .toList();
+    for (final key in expired) {
+      _recentHandledNotificationIds.remove(key);
+    }
   }
 }
 
@@ -224,24 +358,17 @@ class _PushNavigationRequest {
   factory _PushNavigationRequest.notificationInbox() =>
       const _PushNavigationRequest._(_PushNavigationType.notificationInbox);
 
-  static _PushNavigationRequest? fromAdditionalData(
-    Map<String, dynamic>? data,
-  ) {
+  static _PushNavigationRequest? fromData(Map<String, dynamic>? data) {
     final type =
         _readString(data, 'type') ?? _readString(data, 'notification_type');
-    final openScreen = _readString(data, 'open_screen');
+    final openScreen =
+        _readString(data, 'open_screen') ?? _readString(data, 'target_screen');
 
-    // Geo-attendance: open attendance submission screen directly
     if (type == 'geo_attendance_open' ||
         openScreen == 'student_geo_attendance') {
       return _PushNavigationRequest.studentGeoAttendance();
     }
 
-    // All other notification types (announcement, room_allocated,
-    // notice_posted, exam_scheduled, assignment_due, class_rescheduled,
-    // class_cancelled, makeup_class, term_upgrade, optional_course, …)
-    // → open the notification inbox so users see all details.
-    // Also open inbox when no type is present (generic FCM tap).
     return _PushNavigationRequest.notificationInbox();
   }
 

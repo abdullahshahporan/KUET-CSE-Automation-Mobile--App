@@ -1,10 +1,19 @@
 class PushConfig {
   PushConfig._();
 
-  // Replace with your OneSignal App ID from OneSignal dashboard.
-  static const String oneSignalAppId = 'YOUR_ONESIGNAL_APP_ID';
+  // FCM server credentials stay in Supabase Edge Function secrets / web env.
+  // The app only reads its own Firebase config from android/app/google-services.json.
+  static const bool enableFcmPush = true;
+  static const String supabaseEdgeFunctionName = 'send-push-notification';
+  // Optional: only set this if you intentionally allow the mobile app to
+  // call the protected Supabase Edge Function directly.
+  static const String notificationDispatchKey = '';
 
-  // Required to actually send remote push when notifications are created.
-  // Keep this out of source control in real production setups if possible.
-  static const String oneSignalRestApiKey = 'YOUR_ONESIGNAL_REST_API_KEY';
+  static bool get hasRemotePushCredentials => enableFcmPush;
+
+  static Future<void> initialize() async {}
+
+  static void loginUser(String externalId) {}
+
+  static void logoutUser() {}
 }

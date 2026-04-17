@@ -10,6 +10,7 @@ import '../services/class_reminder_service.dart';
 import '../services/exam_reminder_service.dart';
 import '../services/local_notification_service.dart';
 import '../services/notification_service.dart';
+import '../services/push_notification_service.dart';
 import '../services/session_service.dart';
 import '../services/supabase_core.dart';
 
@@ -50,8 +51,6 @@ class NotificationProvider extends ChangeNotifier {
 
   bool get hasUnread => _unreadCount > 0;
   bool get _shouldUseFallbackBackgroundSync =>
-      !PushConfig.hasRemotePushCredentials;
-  bool get _shouldShowFallbackLocalAlerts =>
       !PushConfig.hasRemotePushCredentials;
 
   // ── Initialize: load + subscribe to realtime ───────────────
@@ -94,12 +93,7 @@ class NotificationProvider extends ChangeNotifier {
         ? _foregroundFallbackPollInterval
         : _foregroundHealthPollInterval;
     _notificationSyncTimer = Timer.periodic(pollInterval, (_) {
-      unawaited(
-        _loadNotifications(
-          silent: true,
-          notifyForNew: _shouldUseFallbackBackgroundSync,
-        ),
-      );
+      unawaited(_loadNotifications(silent: true, notifyForNew: true));
     });
 
     _subscribeRealtime();
@@ -140,7 +134,8 @@ class NotificationProvider extends ChangeNotifier {
       }
 
       // For teachers, also include courses they teach
-      if (role?.toUpperCase() == 'TEACHER') {
+      final roleUpper = role?.toUpperCase();
+      if (roleUpper == 'TEACHER' || roleUpper == 'HEAD') {
         final teacherOfferings = await SupabaseCore.from(
           'course_offerings',
         ).select('courses!inner(code)').eq('teacher_user_id', userId);
@@ -221,11 +216,14 @@ class NotificationProvider extends ChangeNotifier {
             createdAt: notification.createdAt,
             isRead: notification.isRead,
           );
-          // Show a real local push notification so the user sees it immediately,
-          // even if OneSignal push delivery is delayed or fails.
-          // _alertedNotificationIds prevents duplicates across polling ticks.
-          if (_shouldShowFallbackLocalAlerts &&
-              !_silentLocalAlertTypes.contains(notification.type)) {
+          // Always surface a realtime local alert for a newly visible
+          // notification unless the same notification was just delivered by
+          // Firebase Messaging. This closes the gap where the inbox updates
+          // immediately but no popup appears while the app is open.
+          if (!_silentLocalAlertTypes.contains(notification.type) &&
+              !PushNotificationService.hasRecentlyHandledNotification(
+                notification.id,
+              )) {
             await LocalNotificationService.show(
               title: notification.title,
               body: notification.body,

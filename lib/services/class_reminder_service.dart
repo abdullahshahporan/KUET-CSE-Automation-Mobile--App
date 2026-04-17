@@ -36,6 +36,7 @@ class ClassReminderService {
     final leadMinutes = await getLeadMinutes();
     final plans = switch (role) {
       'TEACHER' => await _buildTeacherPlans(leadMinutes),
+      'HEAD' => await _buildTeacherPlans(leadMinutes),
       'STUDENT' => await _buildStudentPlans(leadMinutes),
       _ => <_ClassReminderPlan>[],
     };
