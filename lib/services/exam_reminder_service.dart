@@ -10,6 +10,7 @@ class ExamReminderService {
   ExamReminderService._();
 
   static const _leadMinutesKey = 'exam_reminder_lead_minutes';
+  static const _signatureKeyPrefix = 'exam_reminder_signature_v2_';
   static const int defaultLeadMinutes = 180;
 
   static Future<int> getLeadMinutes() async {
@@ -29,7 +30,6 @@ class ExamReminderService {
     if (userId == null) return;
 
     final leadMinutes = await getLeadMinutes();
-    await LocalNotificationService.cancelExamReminders();
 
     try {
       final List<ExamSchedule> exams;
@@ -40,21 +40,54 @@ class ExamReminderService {
       }
 
       final now = DateTime.now();
-
+      final plans = <_ExamReminderPlan>[];
       for (final exam in exams) {
         final examStartsAt = _parseExamDateTime(exam);
         if (examStartsAt == null || !examStartsAt.isAfter(now)) continue;
+        if (!examStartsAt
+            .subtract(Duration(minutes: leadMinutes))
+            .isAfter(now)) {
+          continue;
+        }
 
-        final reminderKey = '${exam.id}|${_dateKey(examStartsAt)}';
-        await LocalNotificationService.scheduleExamReminder(
-          reminderKey: reminderKey,
-          examStartsAt: examStartsAt,
-          leadMinutes: leadMinutes,
-          courseCode: exam.courseCode,
-          examLabel: '${exam.examType} exam',
-          room: exam.room,
+        plans.add(
+          _ExamReminderPlan(
+            reminderKey: '${exam.id}|${_dateKey(examStartsAt)}',
+            examStartsAt: examStartsAt,
+            courseCode: exam.courseCode,
+            examLabel: '${exam.examType} exam',
+            room: exam.room,
+          ),
         );
       }
+      plans.sort((a, b) => a.examStartsAt.compareTo(b.examStartsAt));
+
+      final signature = _buildSignature(
+        userId: userId,
+        role: role ?? '',
+        leadMinutes: leadMinutes,
+        plans: plans,
+      );
+      final prefs = await SupabaseCore.ensurePrefs();
+      final signatureKey = _signatureKey(userId);
+      final previousSignature = prefs.getString(signatureKey);
+      if (previousSignature == signature) {
+        return;
+      }
+
+      await LocalNotificationService.cancelExamReminders();
+      for (final plan in plans) {
+        await LocalNotificationService.scheduleExamReminder(
+          reminderKey: plan.reminderKey,
+          examStartsAt: plan.examStartsAt,
+          leadMinutes: leadMinutes,
+          courseCode: plan.courseCode,
+          examLabel: plan.examLabel,
+          room: plan.room,
+        );
+      }
+
+      await prefs.setString(signatureKey, signature);
     } catch (e) {
       debugPrint('[ExamReminderService] syncUpcomingReminders error: $e');
     }
@@ -65,14 +98,17 @@ class ExamReminderService {
     String teacherUserId,
   ) async {
     try {
-      final response = await SupabaseCore.from('course_offerings').select('''
+      final response = await SupabaseCore.from('course_offerings')
+          .select('''
           id, term,
           courses ( id, code, title, course_type ),
           exams (
             id, name, exam_type, max_marks, exam_date,
             exam_time, duration_minutes, room_numbers, created_at
           )
-        ''').eq('teacher_user_id', teacherUserId).eq('is_active', true);
+        ''')
+          .eq('teacher_user_id', teacherUserId)
+          .eq('is_active', true);
 
       final exams = <ExamSchedule>[];
       for (final offering in response as List) {
@@ -119,4 +155,60 @@ class ExamReminderService {
     final day = date.day.toString().padLeft(2, '0');
     return '${date.year}-$month-$day';
   }
+
+  static String _buildSignature({
+    required String userId,
+    required String role,
+    required int leadMinutes,
+    required List<_ExamReminderPlan> plans,
+  }) {
+    final buffer = StringBuffer()
+      ..write(userId)
+      ..write('|')
+      ..write(role)
+      ..write('|')
+      ..write(leadMinutes)
+      ..write('|')
+      ..write(plans.length);
+
+    for (final plan in plans) {
+      buffer
+        ..write('|')
+        ..write(plan.reminderKey)
+        ..write('@')
+        ..write(plan.examStartsAt.toIso8601String())
+        ..write('@')
+        ..write(plan.courseCode)
+        ..write('@')
+        ..write(plan.room);
+    }
+
+    return 'v2:${_stableHash(buffer.toString())}';
+  }
+
+  static String _signatureKey(String userId) => '$_signatureKeyPrefix$userId';
+
+  static String _stableHash(String input) {
+    var hash = 0;
+    for (final rune in input.runes) {
+      hash = ((hash * 31) + rune) & 0x7fffffff;
+    }
+    return hash.toRadixString(16);
+  }
+}
+
+class _ExamReminderPlan {
+  final String reminderKey;
+  final DateTime examStartsAt;
+  final String courseCode;
+  final String examLabel;
+  final String room;
+
+  const _ExamReminderPlan({
+    required this.reminderKey,
+    required this.examStartsAt,
+    required this.courseCode,
+    required this.examLabel,
+    required this.room,
+  });
 }
