@@ -484,7 +484,7 @@ class _StudentGeoAttendanceScreenState extends State<StudentGeoAttendanceScreen>
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'You must be within 30m of the room to submit attendance.',
+              'You must be within 30m of the room and pass biometric verification to submit attendance.',
               style: TextStyle(
                 fontSize: 13,
                 color: AppColors.textPrimary(isDarkMode),
@@ -717,9 +717,7 @@ class _StudentGeoAttendanceScreenState extends State<StudentGeoAttendanceScreen>
                             )
                           : const Icon(Icons.location_on, size: 20),
                       label: Text(
-                        isSubmitting
-                            ? 'Checking Location...'
-                            : 'Submit Attendance',
+                        isSubmitting ? 'Submitting...' : 'Submit Attendance',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,

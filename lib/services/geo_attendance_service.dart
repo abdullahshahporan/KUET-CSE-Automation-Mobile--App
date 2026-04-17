@@ -1,5 +1,6 @@
 import 'dart:math' show pi, sin, cos, sqrt, atan2;
 import 'package:flutter/foundation.dart';
+import 'biometric_auth_service.dart';
 import 'supabase_service.dart';
 
 /// Service for geo-attendance room management and attendance submission.
@@ -438,7 +439,10 @@ class GeoAttendanceService {
       studentUserId: studentUserId,
     );
 
-    // 5. Save geo-attendance log
+    // 5. Require biometric verification before writing attendance.
+    await BiometricAuthService.requireBiometricForAttendance();
+
+    // 6. Save geo-attendance log
     await SupabaseService.from('geo_attendance_logs').insert({
       'geo_room_id': geoRoomId,
       'student_user_id': studentUserId,
@@ -448,7 +452,7 @@ class GeoAttendanceService {
       'status': 'PRESENT',
     });
 
-    // 6. Save to main attendance_records
+    // 7. Save to main attendance_records
     try {
       await _syncAttendanceRecordStatus(
         sessionId: roomData['session_id'] as String,
@@ -461,7 +465,7 @@ class GeoAttendanceService {
       debugPrint('Warning: Could not save attendance_record: $e');
     }
 
-    // 7. Save to flat `attendance` table (same as manual/CSV attendance)
+    // 8. Save to flat `attendance` table (same as manual/CSV attendance)
     try {
       final offering = roomData['course_offerings'] as Map<String, dynamic>?;
       final courseCode =

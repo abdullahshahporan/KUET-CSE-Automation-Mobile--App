@@ -151,6 +151,24 @@ class BiometricAuthService {
     return result;
   }
 
+  static Future<void> requireBiometricForAttendance() async {
+    final supported = await isSupported();
+    if (!supported) {
+      throw const BiometricRequirementException(
+        'Set up fingerprint or face unlock on this device to submit attendance.',
+      );
+    }
+
+    final authenticated = await _authenticate(
+      reason: 'Verify your identity to submit attendance.',
+    );
+    if (!authenticated) {
+      throw const BiometricRequirementException(
+        'Biometric verification is required to submit attendance.',
+      );
+    }
+  }
+
   static Future<void> syncStoredPasswordIfEnabled({
     required String email,
     required String newPassword,
@@ -202,4 +220,13 @@ class BiometricAuthService {
         type == BiometricType.weak ||
         type == BiometricType.face;
   }
+}
+
+class BiometricRequirementException implements Exception {
+  final String message;
+
+  const BiometricRequirementException(this.message);
+
+  @override
+  String toString() => message;
 }
