@@ -85,13 +85,6 @@ class AppNotification {
   };
 }
 
-class _RollRange {
-  final int min;
-  final int max;
-
-  const _RollRange(this.min, this.max);
-}
-
 // ─────────────────────────────────────────────────────────────
 // NotificationService
 // ─────────────────────────────────────────────────────────────
@@ -101,6 +94,12 @@ class NotificationService {
 
   static RealtimeChannel? _channel;
   static const int _maxLocalNotifications = 200;
+  static const Duration _visibilityContextTtl = Duration(minutes: 10);
+  static const int _readQueryChunkSize = 100;
+  static _NotificationVisibilityContext? _cachedVisibilityContext;
+  static String? _cachedLocalUserId;
+  static String? _cachedLocalRaw;
+  static List<AppNotification> _cachedLocalNotifications = const [];
 
   // ── Fetch notifications visible to the current user ───────
 
@@ -113,74 +112,42 @@ class NotificationService {
     if (userId == null) return [];
 
     try {
-      // Get user context for visibility filtering
-      final profile = await SupabaseCore.from(
-        'profiles',
-      ).select('role').eq('user_id', userId).maybeSingle();
-
-      final student = await SupabaseCore.from(
-        'students',
-      ).select('term, section').eq('user_id', userId).maybeSingle();
-
-      final String? role = profile?['role'] as String?;
-      final String? term = student?['term'] as String?;
-      final String? section = student?['section'] as String?;
-
-      // Build enrolled course codes for COURSE-targeted notifications
-      List<String> enrolledCodes = [];
-      if (term != null) {
-        try {
-          final offerings = await SupabaseCore.from(
-            'course_offerings',
-          ).select('courses!inner(code)').eq('term', term);
-
-          enrolledCodes = (offerings as List)
-              .map((o) {
-                final courses = o['courses'] as Map<String, dynamic>?;
-                return courses?['code'] as String?;
-              })
-              .whereType<String>()
-              .toList();
-        } catch (e) {
-          debugPrint('[NotificationService] enrolledCodes error: $e');
-        }
-      }
-
-      // Fetch read receipt IDs
-      final reads = await SupabaseCore.from(
-        'notification_reads',
-      ).select('notification_id').eq('user_id', userId);
-
-      final readIds = <String>{
-        for (final r in (reads as List)) r['notification_id'] as String,
-      };
+      final context = await _getVisibilityContext(userId: userId);
 
       // Build the query with server-side OR targeting
       // We fetch and filter client-side since OR clauses get complex
       final now = DateTime.now().toIso8601String();
+      final fetchSize = _computeFetchSize(limit);
 
       // Base query — fetch recent notifications (all types for server efficiency)
       final data = await SupabaseCore.from('notifications')
           .select()
           .or('expires_at.is.null,expires_at.gt.$now')
           .order('created_at', ascending: false)
-          .range(offset, offset + limit - 1 + 50); // over-fetch and filter
+          .range(offset, offset + fetchSize - 1); // over-fetch and filter
 
       final all = (data as List)
           .map((e) => AppNotification.fromMap(e as Map<String, dynamic>))
           .toList();
 
       // Filter by visibility rules
-      final visible = all.where((n) {
-        return _isVisible(
-          n,
-          userId: userId,
-          role: role,
-          term: term,
-          section: section,
-          enrolledCodes: enrolledCodes,
-        );
-      }).toList();
+      final visible = all
+          .where(
+            (n) => _isVisible(
+              n,
+              userId: userId,
+              role: context.role,
+              term: context.term,
+              section: context.section,
+              enrolledCodesUpper: context.enrolledCodesUpper,
+            ),
+          )
+          .toList();
+
+      final readIds = await _fetchReadIdsForNotifications(
+        userId: userId,
+        notificationIds: visible.map((n) => n.id).toList(),
+      );
 
       // Annotate is_read
       for (final n in visible) {
@@ -211,7 +178,7 @@ class NotificationService {
     String? role,
     String? term,
     String? section,
-    List<String> enrolledCodes = const [],
+    Set<String> enrolledCodesUpper = const <String>{},
   }) {
     String? normalize(String? value) => value?.trim();
     String? normalizeUpper(String? value) => normalize(value)?.toUpperCase();
@@ -224,9 +191,6 @@ class NotificationService {
     final userRole = normalizeUpper(role);
     final userTerm = normalize(term);
     final userSection = normalizeUpper(section);
-    final enrolledCodesUpper = enrolledCodes
-        .map((code) => code.trim().toUpperCase())
-        .toSet();
 
     return switch (targetType) {
       'ALL' => true,
@@ -264,6 +228,7 @@ class NotificationService {
       final localIds = notificationIds.where(_isLocalNotificationId).toList();
       final remoteIds = notificationIds
           .where((id) => !_isLocalNotificationId(id))
+          .toSet()
           .toList();
 
       if (localIds.isNotEmpty) {
@@ -299,7 +264,16 @@ class NotificationService {
     try {
       final prefs = await SupabaseCore.ensurePrefs();
       final raw = prefs.getString(_localNotificationStorageKey(userId));
-      if (raw == null || raw.isEmpty) return [];
+      if (raw == null || raw.isEmpty) {
+        _cachedLocalUserId = userId;
+        _cachedLocalRaw = raw;
+        _cachedLocalNotifications = const [];
+        return [];
+      }
+
+      if (_cachedLocalUserId == userId && _cachedLocalRaw == raw) {
+        return List<AppNotification>.from(_cachedLocalNotifications);
+      }
 
       final decoded = jsonDecode(raw);
       if (decoded is! List) return [];
@@ -313,6 +287,9 @@ class NotificationService {
               )
               .toList()
             ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      _cachedLocalUserId = userId;
+      _cachedLocalRaw = raw;
+      _cachedLocalNotifications = list;
       return list;
     } catch (e) {
       debugPrint('[NotificationService] fetchLocalNotifications error: $e');
@@ -361,12 +338,7 @@ class NotificationService {
       final merged = _mergeNotifications([notification], existing)
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       final trimmed = merged.take(_maxLocalNotifications).toList();
-
-      final prefs = await SupabaseCore.ensurePrefs();
-      await prefs.setString(
-        _localNotificationStorageKey(userId),
-        jsonEncode(trimmed.map((item) => item.toMap()).toList()),
-      );
+      await _persistLocalNotifications(userId, trimmed);
     } catch (e) {
       debugPrint('[NotificationService] saveLocalInboxNotification error: $e');
     }
@@ -391,18 +363,22 @@ class NotificationService {
     final createdByRole = role == 'STUDENT' ? 'STUDENT_CR' : 'TEACHER';
 
     try {
-      await SupabaseCore.from('notifications').insert({
-        'type': type,
-        'title': title,
-        'body': body,
-        'target_type': targetType,
-        'target_value': targetValue,
-        'target_year_term': targetYearTerm,
-        'created_by': userId,
-        'created_by_role': createdByRole,
-        'metadata': metadata,
-        'expires_at': expiresAt,
-      });
+      final inserted = await SupabaseCore.from('notifications')
+          .insert({
+            'type': type,
+            'title': title,
+            'body': body,
+            'target_type': targetType,
+            'target_value': targetValue,
+            'target_year_term': targetYearTerm,
+            'created_by': userId,
+            'created_by_role': createdByRole,
+            'metadata': metadata,
+            'expires_at': expiresAt,
+          })
+          .select('id')
+          .single();
+      final notificationId = inserted['id'] as String?;
 
       final recipientIds = await _resolveTargetRecipientIds(
         targetType: targetType,
@@ -414,7 +390,12 @@ class NotificationService {
         userIds: recipientIds,
         title: title,
         body: body,
-        data: {'type': type, ...metadata},
+        data: {
+          'type': type,
+          if (notificationId != null) 'notification_id': notificationId,
+          ...metadata,
+        },
+        collapseId: notificationId == null ? null : 'notif_$notificationId',
       );
     } catch (e) {
       debugPrint('[NotificationService] createNotification error: $e');
@@ -472,21 +453,26 @@ class NotificationService {
         metadata: metadata,
         expiresAt: expiresAt,
       ).then((_) => null).onError((e, _) {
-        debugPrint('[NotificationService] geo_attendance COURSE notify error: $e');
+        debugPrint(
+          '[NotificationService] geo_attendance COURSE notify error: $e',
+        );
         return null;
       }),
       // 2. In-app notification for the teacher who opened the room (USER target)
       createNotification(
         type: 'geo_attendance_open',
         title: '📍 Attendance Room Opened — $courseCode$sectionLabel',
-        body: 'You opened attendance for $courseCode. '
+        body:
+            'You opened attendance for $courseCode. '
             'Window closes at $endHour:$endMinute ($durationMinutes min).',
         targetType: 'USER',
         targetValue: userId,
         metadata: metadata,
         expiresAt: expiresAt,
       ).then((_) => null).onError((e, _) {
-        debugPrint('[NotificationService] geo_attendance USER notify error: $e');
+        debugPrint(
+          '[NotificationService] geo_attendance USER notify error: $e',
+        );
         return null;
       }),
     ]);
@@ -819,6 +805,131 @@ class NotificationService {
     return result;
   }
 
+  static Future<_NotificationVisibilityContext> _getVisibilityContext({
+    required String userId,
+  }) async {
+    final now = DateTime.now();
+    final cached = _cachedVisibilityContext;
+    if (cached != null &&
+        cached.userId == userId &&
+        now.difference(cached.fetchedAt) <= _visibilityContextTtl) {
+      return cached;
+    }
+
+    final profileFuture = SupabaseCore.from(
+      'profiles',
+    ).select('role').eq('user_id', userId).maybeSingle();
+    final studentFuture = SupabaseCore.from(
+      'students',
+    ).select('term, section').eq('user_id', userId).maybeSingle();
+
+    final results = await Future.wait<dynamic>([profileFuture, studentFuture]);
+    final profile = results[0] as Map<String, dynamic>?;
+    final student = results[1] as Map<String, dynamic>?;
+
+    final role = (profile?['role'] as String?)?.trim();
+    final term = (student?['term'] as String?)?.trim();
+    final section = (student?['section'] as String?)?.trim();
+
+    final enrolledCodesUpper = <String>{};
+    if (term != null && term.isNotEmpty) {
+      try {
+        final offerings = await SupabaseCore.from(
+          'course_offerings',
+        ).select('courses!inner(code)').eq('term', term);
+
+        for (final offering in offerings as List) {
+          final map = offering as Map<String, dynamic>;
+          final courses = map['courses'] as Map<String, dynamic>?;
+          final code = courses?['code'] as String?;
+          if (code != null && code.trim().isNotEmpty) {
+            enrolledCodesUpper.add(code.trim().toUpperCase());
+          }
+        }
+      } catch (e) {
+        debugPrint('[NotificationService] enrolledCodes error: $e');
+      }
+    }
+
+    final context = _NotificationVisibilityContext(
+      userId: userId,
+      role: role,
+      term: term,
+      section: section,
+      enrolledCodesUpper: enrolledCodesUpper,
+      fetchedAt: now,
+    );
+    _cachedVisibilityContext = context;
+    return context;
+  }
+
+  static Future<Set<String>> _fetchReadIdsForNotifications({
+    required String userId,
+    required List<String> notificationIds,
+  }) async {
+    if (notificationIds.isEmpty) return const <String>{};
+
+    final remoteIds = notificationIds
+        .where((id) => !_isLocalNotificationId(id))
+        .toSet()
+        .toList();
+    if (remoteIds.isEmpty) return const <String>{};
+
+    final readIds = <String>{};
+    for (final chunk in _chunkStrings(remoteIds, _readQueryChunkSize)) {
+      final reads = await SupabaseCore.from('notification_reads')
+          .select('notification_id')
+          .eq('user_id', userId)
+          .inFilter('notification_id', chunk);
+
+      for (final row in reads as List) {
+        final map = row as Map<String, dynamic>;
+        final id = map['notification_id'] as String?;
+        if (id != null && id.isNotEmpty) {
+          readIds.add(id);
+        }
+      }
+    }
+
+    return readIds;
+  }
+
+  static int _computeFetchSize(int limit) {
+    final safeLimit = limit < 1 ? 1 : limit;
+    final extra = (safeLimit ~/ 2) + 24;
+    final size = safeLimit + extra;
+    if (size < safeLimit) return safeLimit;
+    if (size > 250) return 250;
+    return size;
+  }
+
+  static List<List<String>> _chunkStrings(List<String> items, int size) {
+    if (items.isEmpty) return const <List<String>>[];
+
+    final chunkSize = size < 1 ? 1 : size;
+    final chunks = <List<String>>[];
+    for (var i = 0; i < items.length; i += chunkSize) {
+      final end = (i + chunkSize < items.length) ? i + chunkSize : items.length;
+      chunks.add(items.sublist(i, end));
+    }
+    return chunks;
+  }
+
+  static Future<void> _persistLocalNotifications(
+    String userId,
+    List<AppNotification> notifications,
+  ) async {
+    final serialized = jsonEncode(
+      notifications.map((item) => item.toMap()).toList(),
+    );
+    final prefs = await SupabaseCore.ensurePrefs();
+    await prefs.setString(_localNotificationStorageKey(userId), serialized);
+
+    _cachedLocalUserId = userId;
+    _cachedLocalRaw = serialized;
+    _cachedLocalNotifications = List<AppNotification>.from(notifications);
+  }
+
   static Future<void> _markLocalNotificationsAsRead(List<String> ids) async {
     final userId = SessionService.currentUserId;
     if (userId == null || ids.isEmpty) return;
@@ -833,10 +944,24 @@ class NotificationService {
         )
         .toList();
 
-    final prefs = await SupabaseCore.ensurePrefs();
-    await prefs.setString(
-      _localNotificationStorageKey(userId),
-      jsonEncode(updated.map((item) => item.toMap()).toList()),
-    );
+    await _persistLocalNotifications(userId, updated);
   }
+}
+
+class _NotificationVisibilityContext {
+  final String userId;
+  final String? role;
+  final String? term;
+  final String? section;
+  final Set<String> enrolledCodesUpper;
+  final DateTime fetchedAt;
+
+  const _NotificationVisibilityContext({
+    required this.userId,
+    required this.role,
+    required this.term,
+    required this.section,
+    required this.enrolledCodesUpper,
+    required this.fetchedAt,
+  });
 }

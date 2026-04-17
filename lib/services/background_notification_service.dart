@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -12,11 +11,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/supabase_config.dart';
 
-/// Background service that polls Supabase for new notifications every 30 seconds
+/// Background service that polls Supabase for new notifications periodically
 /// and shows them as local push notifications even when the app is in background.
 @pragma('vm:entry-point')
 class BackgroundNotificationService {
   BackgroundNotificationService._();
+  static const Duration _pollInterval = Duration(minutes: 2);
 
   // SharedPreferences keys for background isolate
   static const _kLastBgCheckTs = 'bg_notif_last_check_ts';
@@ -35,10 +35,7 @@ class BackgroundNotificationService {
 
   /// Call once in main() before runApp().
   static Future<void> initialize() async {
-    // Create the foreground-service notification channel BEFORE configuring the
-    // service. On Android 8+ the channel must exist when startForeground() is
-    // called, and on Android 14+ a missing channel throws
-    // CannotPostForegroundServiceNotificationException and kills the process.
+    // Keep this channel for optional fallback background sync mode.
     final notifPlugin = FlutterLocalNotificationsPlugin();
     await notifPlugin.initialize(
       const InitializationSettings(
@@ -47,7 +44,8 @@ class BackgroundNotificationService {
     );
     await notifPlugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(
           const AndroidNotificationChannel(
             'kuet_bg_sync',
@@ -66,10 +64,10 @@ class BackgroundNotificationService {
       androidConfiguration: AndroidConfiguration(
         onStart: _onStart,
         autoStart: false,
-        isForegroundMode: true,
+        isForegroundMode: false,
         notificationChannelId: 'kuet_bg_sync',
-        initialNotificationTitle: 'KUET CSE Automation',
-        initialNotificationContent: 'Notification sync active',
+        initialNotificationTitle: 'KUET CSE',
+        initialNotificationContent: 'Sync service',
         foregroundServiceNotificationId: 9999,
       ),
       iosConfiguration: IosConfiguration(
@@ -88,6 +86,7 @@ class BackgroundNotificationService {
     String? term,
     String? section,
     List<String> enrolledCodes = const [],
+
     /// The JSON-encoded Supabase Session (session.toJson()) so the background
     /// isolate can authenticate its own SupabaseClient and read RLS-protected
     /// notification rows.
@@ -162,8 +161,10 @@ class BackgroundNotificationService {
       // to create them here.  This avoids a redundant IPC round-trip.
       notifPlugin = plugin;
     } catch (e) {
-      debugPrint('[BackgroundNotificationService] notifications unavailable in '
-          'background isolate: $e');
+      debugPrint(
+        '[BackgroundNotificationService] notifications unavailable in '
+        'background isolate: $e',
+      );
     }
 
     // Create a Supabase client for this isolate (can't share with main)
@@ -189,14 +190,11 @@ class BackgroundNotificationService {
 
     // Set initial last-check time so first tick doesn't flood
     if (prefs.getString(_kLastBgCheckTs) == null) {
-      await prefs.setString(
-        _kLastBgCheckTs,
-        DateTime.now().toIso8601String(),
-      );
+      await prefs.setString(_kLastBgCheckTs, DateTime.now().toIso8601String());
     }
 
-    // ── Poll every 30 seconds ──────────────────────────────
-    Timer.periodic(const Duration(seconds: 30), (timer) async {
+    // ── Poll every 2 minutes (fallback mode only) ─────────
+    Timer.periodic(_pollInterval, (timer) async {
       try {
         // Re-read prefs each tick (main isolate may update them)
         await prefs.reload();
@@ -218,7 +216,8 @@ class BackgroundNotificationService {
             ? Set<String>.from(jsonDecode(alertedRaw) as List)
             : <String>{};
 
-        final lastCheck = prefs.getString(_kLastBgCheckTs) ??
+        final lastCheck =
+            prefs.getString(_kLastBgCheckTs) ??
             DateTime.now()
                 .subtract(const Duration(minutes: 1))
                 .toIso8601String();
@@ -263,10 +262,7 @@ class BackgroundNotificationService {
               ..clear()
               ..addAll(trimmed);
           }
-          await prefs.setString(
-            _kBgAlertedIds,
-            jsonEncode(alerted.toList()),
-          );
+          await prefs.setString(_kBgAlertedIds, jsonEncode(alerted.toList()));
 
           for (final notif in newNotifications) {
             final title = notif['title'] as String? ?? 'New Notification';
@@ -281,13 +277,18 @@ class BackgroundNotificationService {
                 android: AndroidNotificationDetails(
                   'kuet_notifications',
                   'KUET Notifications',
-                  channelDescription:
-                      'Real-time department updates and alerts',
+                  channelDescription: 'Real-time department updates and alerts',
                   importance: Importance.high,
                   priority: Priority.high,
                   enableVibration: true,
-                  vibrationPattern:
-                      Int64List.fromList([0, 400, 200, 400, 200, 600]),
+                  vibrationPattern: Int64List.fromList([
+                    0,
+                    400,
+                    200,
+                    400,
+                    200,
+                    600,
+                  ]),
                   playSound: true,
                   visibility: NotificationVisibility.public,
                 ),
@@ -298,23 +299,9 @@ class BackgroundNotificationService {
 
         // Update last check timestamp
         await prefs.setString(_kLastBgCheckTs, now);
-
-        // Update the persistent foreground notification info
-        if (service is AndroidServiceInstance) {
-          if (newNotifications.isNotEmpty) {
-            final latest = newNotifications.first;
-            final latestTitle =
-                latest['title'] as String? ?? 'New Notice';
-            final latestBody = latest['body'] as String? ?? '';
-            service.setForegroundNotificationInfo(
-              title: latestTitle,
-              content: latestBody,
-            );
-          }
-        }
       } catch (e) {
         debugPrint('[BackgroundNotificationService] poll error: $e');
-        // Will retry next tick (30s)
+        // Will retry next tick.
       }
     });
   }
@@ -339,8 +326,9 @@ class BackgroundNotificationService {
 
     final roleUpper = role.toUpperCase();
     final sectionUpper = section.toUpperCase();
-    final enrolledUpper =
-        enrolledCodes.map((c) => c.trim().toUpperCase()).toSet();
+    final enrolledUpper = enrolledCodes
+        .map((c) => c.trim().toUpperCase())
+        .toSet();
 
     return switch (targetType) {
       'ALL' => true,

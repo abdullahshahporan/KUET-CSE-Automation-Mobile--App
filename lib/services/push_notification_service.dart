@@ -13,6 +13,7 @@ import 'session_service.dart';
 class PushNotificationService {
   PushNotificationService._();
 
+  static const String _androidAlertChannelId = 'kuet_notifications';
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
 
@@ -132,6 +133,10 @@ class PushNotificationService {
           'headings': {'en': title},
           'contents': {'en': body},
           'data': data,
+          // Route all Android pushes through our vibration-enabled channel.
+          'android_channel_id': _androidAlertChannelId,
+          'android_sound': 'default',
+          'priority': 10,
           if (collapseId != null && collapseId.trim().isNotEmpty)
             'collapse_id': collapseId.trim(),
         };
@@ -172,7 +177,9 @@ class PushNotificationService {
     _listenersRegistered = true;
   }
 
-  static void _handleForegroundNotification(OSNotificationWillDisplayEvent event) {
+  static void _handleForegroundNotification(
+    OSNotificationWillDisplayEvent event,
+  ) {
     // Display the push notification banner even when the app is in the foreground
     event.notification.display();
   }

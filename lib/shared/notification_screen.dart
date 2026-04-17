@@ -192,7 +192,9 @@ class NotificationScreen extends StatelessWidget {
 
     if (applied != true || !context.mounted) return;
 
-    final granted = await LocalNotificationService.requestPermission();
+    final granted = await LocalNotificationService.requestPermission(
+      includeExactAlarms: true,
+    );
     await ClassReminderService.setLeadMinutes(selectedMinutes);
     await ClassReminderService.syncTodayReminders();
 

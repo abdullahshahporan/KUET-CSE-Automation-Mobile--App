@@ -15,6 +15,10 @@ class LocalNotificationService {
       FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
   static bool _tzInitialized = false;
+  static bool? _cachedNotificationPermission;
+  static DateTime? _lastPermissionCheckedAt;
+  static const Duration _permissionCacheTtl = Duration(minutes: 2);
+  static bool? _cachedCanScheduleExact;
   static const _classReminderPayloadPrefix = 'class_reminder|';
   static const _examReminderPayloadPrefix = 'exam_reminder|';
 
@@ -34,21 +38,23 @@ class LocalNotificationService {
   // Reminder-specific channel (lower priority)
   static const AndroidNotificationChannel _reminderChannel =
       AndroidNotificationChannel(
-    'kuet_reminders',
-    'Class & Exam Reminders',
-    description: 'Scheduled class and exam reminders',
-    importance: Importance.high,
-    enableVibration: true,
-    enableLights: true,
-    ledColor: Color(0xFF0EA5E9), // cyan
-    playSound: true,
-    showBadge: true,
-  );
+        'kuet_reminders',
+        'Class & Exam Reminders',
+        description: 'Scheduled class and exam reminders',
+        importance: Importance.high,
+        enableVibration: true,
+        enableLights: true,
+        ledColor: Color(0xFF0EA5E9), // cyan
+        playSound: true,
+        showBadge: true,
+      );
 
   static Future<void> initialize() async {
     if (_initialized) return;
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
@@ -70,24 +76,55 @@ class LocalNotificationService {
 
     final androidImpl = _plugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     await androidImpl?.createNotificationChannel(_channel);
     await androidImpl?.createNotificationChannel(_reminderChannel);
 
     _initialized = true;
   }
 
-  static Future<bool> requestPermission() async {
+  static Future<bool> requestPermission({
+    bool includeExactAlarms = false,
+  }) async {
     try {
-      final status = await Permission.notification.status;
-      if (status.isGranted) return true;
+      final now = DateTime.now();
+      final checkedAt = _lastPermissionCheckedAt;
+      final hasFreshPermissionCache =
+          checkedAt != null &&
+          now.difference(checkedAt) <= _permissionCacheTtl &&
+          _cachedNotificationPermission != null;
 
-      final result = await Permission.notification.request();
-      return result.isGranted;
+      if (hasFreshPermissionCache) {
+        final granted = _cachedNotificationPermission!;
+        if (granted && includeExactAlarms) {
+          await _ensureExactAlarmCapability(requestIfMissing: true);
+        }
+        return granted;
+      }
+
+      final status = await Permission.notification.status;
+      var granted = status.isGranted;
+      if (!granted) {
+        final result = await Permission.notification.request();
+        granted = result.isGranted;
+      }
+      _cachedNotificationPermission = granted;
+      _lastPermissionCheckedAt = now;
+      if (!granted) return false;
+
+      if (includeExactAlarms) {
+        await _ensureExactAlarmCapability(requestIfMissing: true);
+      }
+      return true;
     } catch (e) {
       debugPrint('[LocalNotificationService] requestPermission error: $e');
       return false;
     }
+  }
+
+  static Future<void> ensureReminderPermissions() async {
+    await requestPermission(includeExactAlarms: true);
   }
 
   static Future<void> show({
@@ -98,8 +135,8 @@ class LocalNotificationService {
     try {
       if (!_initialized) await initialize();
 
-      final status = await Permission.notification.status;
-      if (!status.isGranted) return;
+      final granted = await requestPermission();
+      if (!granted) return;
 
       final details = NotificationDetails(
         android: AndroidNotificationDetails(
@@ -115,6 +152,7 @@ class LocalNotificationService {
           ledOffMs: 500,
           color: const Color(0xFF6366F1),
           playSound: true,
+          vibrationPattern: Int64List.fromList([0, 300, 120, 300, 120, 450]),
           // Show heads-up notification even on lock screen
           fullScreenIntent: true,
           visibility: NotificationVisibility.public,
@@ -176,14 +214,15 @@ class LocalNotificationService {
     try {
       if (!_initialized) await initialize();
 
-      final status = await Permission.notification.status;
-      if (!status.isGranted) return;
+      final granted = await requestPermission(includeExactAlarms: true);
+      if (!granted) return;
 
       final reminderAt = classStartAt.subtract(Duration(minutes: leadMinutes));
       final now = DateTime.now();
       if (!reminderAt.isAfter(now)) return;
 
       final id = _stableNotificationId('class|$reminderKey|$leadMinutes');
+      final scheduleMode = await _resolveReminderScheduleMode();
       final classTime =
           '${classStartAt.hour.toString().padLeft(2, '0')}:${classStartAt.minute.toString().padLeft(2, '0')}';
       final rolePrefix = isTeacher ? 'Teacher reminder' : 'Class reminder';
@@ -205,6 +244,7 @@ class LocalNotificationService {
           ledOffMs: 500,
           color: const Color(0xFF6366F1),
           playSound: true,
+          vibrationPattern: Int64List.fromList([0, 280, 120, 280, 120, 420]),
           visibility: NotificationVisibility.public,
         ),
         iOS: const DarwinNotificationDetails(
@@ -220,7 +260,7 @@ class LocalNotificationService {
         '$courseTitle at $classTime, Room $room$sectionText',
         tz.TZDateTime.from(reminderAt, tz.local),
         details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: scheduleMode,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         payload: '$_classReminderPayloadPrefix$reminderKey',
@@ -241,14 +281,15 @@ class LocalNotificationService {
     try {
       if (!_initialized) await initialize();
 
-      final status = await Permission.notification.status;
-      if (!status.isGranted) return;
+      final granted = await requestPermission(includeExactAlarms: true);
+      if (!granted) return;
 
       final reminderAt = examStartsAt.subtract(Duration(minutes: leadMinutes));
       final now = DateTime.now();
       if (!reminderAt.isAfter(now)) return;
 
       final id = _stableNotificationId('exam|$reminderKey|$leadMinutes');
+      final scheduleMode = await _resolveReminderScheduleMode();
       final examTime =
           '${examStartsAt.hour.toString().padLeft(2, '0')}:${examStartsAt.minute.toString().padLeft(2, '0')}';
       final details = NotificationDetails(
@@ -265,6 +306,7 @@ class LocalNotificationService {
           ledOffMs: 500,
           color: const Color(0xFF6366F1),
           playSound: true,
+          vibrationPattern: Int64List.fromList([0, 280, 120, 280, 120, 420]),
           visibility: NotificationVisibility.public,
         ),
         iOS: const DarwinNotificationDetails(
@@ -280,7 +322,7 @@ class LocalNotificationService {
         '$examLabel at $examTime, Room $room',
         tz.TZDateTime.from(reminderAt, tz.local),
         details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: scheduleMode,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         payload: '$_examReminderPayloadPrefix$reminderKey',
@@ -296,5 +338,49 @@ class LocalNotificationService {
       hash = ((hash * 31) + rune) & 0x7fffffff;
     }
     return hash;
+  }
+
+  static Future<AndroidScheduleMode> _resolveReminderScheduleMode() async {
+    final canExact = await _ensureExactAlarmCapability(requestIfMissing: false);
+    return canExact
+        ? AndroidScheduleMode.exactAllowWhileIdle
+        : AndroidScheduleMode.inexactAllowWhileIdle;
+  }
+
+  static Future<bool> _ensureExactAlarmCapability({
+    required bool requestIfMissing,
+  }) async {
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      return true;
+    }
+
+    if (_cachedCanScheduleExact != null &&
+        (_cachedCanScheduleExact == true || !requestIfMissing)) {
+      return _cachedCanScheduleExact!;
+    }
+
+    final androidImpl = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    if (androidImpl == null) {
+      return true;
+    }
+
+    final dynamic platform = androidImpl;
+    try {
+      var canExact = (await platform.canScheduleExactNotifications()) == true;
+      if (!canExact && requestIfMissing) {
+        await platform.requestExactAlarmsPermission();
+        canExact = (await platform.canScheduleExactNotifications()) == true;
+      }
+      _cachedCanScheduleExact = canExact;
+      return canExact;
+    } catch (e) {
+      debugPrint(
+        '[LocalNotificationService] exact alarm capability check failed: $e',
+      );
+      return true;
+    }
   }
 }
