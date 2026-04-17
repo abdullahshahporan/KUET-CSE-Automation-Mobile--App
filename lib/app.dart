@@ -23,6 +23,7 @@ class CSEApp extends StatelessWidget {
           builder: (context, themeProvider, child) {
             return MaterialApp(
               debugShowCheckedModeBanner: false,
+              title: 'KUET CSE',
               navigatorKey: PushNotificationService.navigatorKey,
               theme: AppTheme.lightTheme,
               darkTheme: AppTheme.darkTheme,
