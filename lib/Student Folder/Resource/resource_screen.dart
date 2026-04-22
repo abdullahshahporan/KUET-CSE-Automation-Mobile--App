@@ -316,7 +316,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
                           crossAxisCount: 2,
                           crossAxisSpacing: 14,
                           mainAxisSpacing: 14,
-                          childAspectRatio: 0.82,
+                          childAspectRatio: 0.72,
                         ),
                     delegate: SliverChildBuilderDelegate((context, index) {
                       final category = visibleCategories[index];
@@ -444,7 +444,7 @@ class _CategoryCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const Spacer(),
+              const SizedBox(height: 18),
               Text(
                 category.title,
                 style: TextStyle(
@@ -455,24 +455,36 @@ class _CategoryCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                category.subtitle,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  height: 1.5,
-                  color: AppColors.textSecondary(isDark),
+              Expanded(
+                child: Text(
+                  category.subtitle,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.5,
+                    color: AppColors.textSecondary(isDark),
+                  ),
                 ),
               ),
               const SizedBox(height: 14),
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
-                  Expanded(
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: category.accentColor.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
                     child: Text(
                       '${category.totalItems} items',
                       style: GoogleFonts.ibmPlexMono(
-                        fontSize: 12,
+                        fontSize: 11.5,
                         fontWeight: FontWeight.w700,
                         color: category.accentColor,
                       ),
@@ -491,7 +503,7 @@ class _CategoryCard extends StatelessWidget {
                       child: Text(
                         '${category.featuredCount} featured',
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 10.5,
                           fontWeight: FontWeight.w700,
                           color: category.accentColor,
                         ),
