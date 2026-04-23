@@ -119,7 +119,15 @@ class CRExamService {
 
       final term = student['term'] as String? ?? '';
 
-      // Fetch all exams for the current term's offerings
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final todayIso =
+          '${today.year.toString().padLeft(4, '0')}-'
+          '${today.month.toString().padLeft(2, '0')}-'
+          '${today.day.toString().padLeft(2, '0')}';
+
+        // Fetch upcoming exams for the current term's offerings.
+        // Keep TBA (null date) rows, but remove exams with dates before today.
       final data = await SupabaseCore.from('exams')
           .select('''
             id,
@@ -144,11 +152,24 @@ class CRExamService {
             )
           ''')
           .eq('course_offerings.term', term)
+          .or('exam_date.is.null,exam_date.gte.$todayIso')
           .order('exam_date', ascending: true);
 
-      return (data as List)
+      final exams = (data as List)
           .map((e) => CRExam.fromMap(e as Map<String, dynamic>))
+          .where((exam) {
+            final raw = exam.examDate;
+            if (raw == null || raw.isEmpty) return true;
+
+            final parsed = DateTime.tryParse(raw);
+            if (parsed == null) return true;
+
+            final examDay = DateTime(parsed.year, parsed.month, parsed.day);
+            return !examDay.isBefore(today);
+          })
           .toList();
+
+      return exams;
     } catch (e) {
       debugPrint('[CRExamService] fetchMyExams error: $e');
       return [];
