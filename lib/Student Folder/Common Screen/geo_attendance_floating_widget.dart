@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../config/push_config.dart';
+import '../../services/geo_attendance_presence_monitor_service.dart';
 import '../../services/geo_attendance_service.dart';
 import '../../services/local_notification_service.dart';
 import '../../services/notification_provider.dart';
@@ -50,6 +51,7 @@ class _GeoAttendanceFloatingWidgetState
     _fetchRooms();
     _subscribeRealtime();
     _requestLocationPermission();
+    GeoAttendancePresenceMonitorService.instance.setMonitoringEnabled(true);
     // Re-fetch every minute as a fallback for expiry handling.
     _refreshTimer = Timer.periodic(
       const Duration(minutes: 1),
@@ -66,6 +68,7 @@ class _GeoAttendanceFloatingWidgetState
     WidgetsBinding.instance.removeObserver(this);
     _refreshTimer?.cancel();
     _countdownTimer?.cancel();
+    GeoAttendancePresenceMonitorService.instance.stop();
     final channel = _realtimeChannel;
     if (channel != null) {
       unawaited(SupabaseService.removeChannel(channel));
@@ -76,6 +79,9 @@ class _GeoAttendanceFloatingWidgetState
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    GeoAttendancePresenceMonitorService.instance.setMonitoringEnabled(
+      state == AppLifecycleState.resumed,
+    );
     if (state != AppLifecycleState.resumed) return;
 
     unawaited(_fetchRooms());
@@ -89,6 +95,7 @@ class _GeoAttendanceFloatingWidgetState
       final userId = SupabaseService.currentUserId;
       if (userId == null) {
         debugPrint('GeoFloatingWidget: no userId, skipping fetch');
+        GeoAttendancePresenceMonitorService.instance.stop();
         return;
       }
       debugPrint('GeoFloatingWidget: fetching rooms for $userId');
@@ -96,6 +103,10 @@ class _GeoAttendanceFloatingWidgetState
         studentUserId: userId,
       );
       debugPrint('GeoFloatingWidget: got ${rooms.length} rooms');
+      GeoAttendancePresenceMonitorService.instance.updateRooms(
+        studentUserId: userId,
+        rooms: rooms,
+      );
       final pending = rooms
           .where((r) => r['already_submitted'] != true)
           .toList();
@@ -136,6 +147,10 @@ class _GeoAttendanceFloatingWidgetState
     try {
       final rooms = await GeoAttendanceService.getOpenRoomsForStudent(
         studentUserId: userId,
+      );
+      GeoAttendancePresenceMonitorService.instance.updateRooms(
+        studentUserId: userId,
+        rooms: rooms,
       );
       final pending = rooms
           .where((r) => r['already_submitted'] != true)
