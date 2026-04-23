@@ -5,17 +5,15 @@ import 'supabase_service.dart';
 
 /// Service for geo-attendance room management and attendance submission.
 ///
-/// Geo-attendance now requires a mapped room with GPS coordinates so the
-/// 30-meter radius can be enforced consistently.
+/// Geo-attendance now requires a mapped room with GPS coordinates so each room
+/// can enforce its configured radius consistently.
 class GeoAttendanceService {
   static const double buildingLat = 22.8993;
   static const double buildingLng = 89.5023;
 
-  /// Radius when the room has its own stored coordinates.
-  static const double roomMaxDistanceMeters = 30;
-
-  /// Fallback radius when a room has no stored coordinates.
-  static const double buildingMaxDistanceMeters = 100;
+  static const double defaultRoomMaxDistanceMeters = 30;
+  static const int defaultDurationMinutes = 50;
+  static const int defaultAbsenceGraceMinutes = 5;
   static const int maxTheoryRooms = 2;
   static const int maxLabRooms = 4;
 
@@ -26,6 +24,9 @@ class GeoAttendanceService {
     required String teacherUserId,
     required DateTime startTime,
     required DateTime endTime,
+    required int rangeMeters,
+    required int durationMinutes,
+    required int absenceGraceMinutes,
     String? roomNumber,
     String? section,
   }) async {
@@ -36,6 +37,13 @@ class GeoAttendanceService {
       }
 
       await _resolveRoomTarget(cleanedRoomNumber);
+
+      final safeRangeMeters = rangeMeters.clamp(1, 500);
+      final safeDurationMinutes = durationMinutes.clamp(1, 600);
+      final safeAbsenceGraceMinutes = absenceGraceMinutes.clamp(
+        1,
+        safeDurationMinutes,
+      );
 
       // Auto-close expired rooms first
       await SupabaseService.from('geo_attendance_rooms')
@@ -95,6 +103,9 @@ class GeoAttendanceService {
       if (section != null && section.isNotEmpty) {
         roomInsert['section'] = section;
       }
+      roomInsert['range_meters'] = safeRangeMeters;
+      roomInsert['duration_minutes'] = safeDurationMinutes;
+      roomInsert['absence_grace_minutes'] = safeAbsenceGraceMinutes;
 
       final data = await SupabaseService.from(
         'geo_attendance_rooms',
@@ -408,6 +419,7 @@ class GeoAttendanceService {
     // 2. Calculate distance – prefer room-specific coordinates, fallback to building
     final locationCheck = await _buildLocationCheck(
       roomNumber: roomData['room_number'] as String?,
+      rangeMeters: (roomData['range_meters'] as num?)?.toDouble(),
       latitude: latitude,
       longitude: longitude,
     );
@@ -502,10 +514,11 @@ class GeoAttendanceService {
   }) async {
     final roomData = await SupabaseService.from(
       'geo_attendance_rooms',
-    ).select('room_number').eq('id', geoRoomId).single();
+    ).select('room_number, range_meters').eq('id', geoRoomId).single();
 
     return _buildLocationCheck(
       roomNumber: roomData['room_number'] as String?,
+      rangeMeters: (roomData['range_meters'] as num?)?.toDouble(),
       latitude: latitude,
       longitude: longitude,
     );
@@ -588,10 +601,14 @@ class GeoAttendanceService {
 
   static Future<GeoAttendanceLocationCheck> _buildLocationCheck({
     required String? roomNumber,
+    required double? rangeMeters,
     required double latitude,
     required double longitude,
   }) async {
-    final target = await _resolveRoomTarget(roomNumber);
+    final target = await _resolveRoomTarget(
+      roomNumber,
+      maxDistanceMeters: rangeMeters,
+    );
     final distance = _haversineDistance(
       latitude,
       longitude,
@@ -608,8 +625,9 @@ class GeoAttendanceService {
   }
 
   static Future<_GeoAttendanceTarget> _resolveRoomTarget(
-    String? roomNumber,
-  ) async {
+    String? roomNumber, {
+    double? maxDistanceMeters,
+  }) async {
     final cleanedRoomNumber = roomNumber?.trim();
     if (cleanedRoomNumber == null || cleanedRoomNumber.isEmpty) {
       throw Exception(
@@ -630,7 +648,7 @@ class GeoAttendanceService {
         return _GeoAttendanceTarget(
           latitude: roomLat,
           longitude: roomLng,
-          maxDistance: roomMaxDistanceMeters,
+          maxDistance: _normalizeRangeMeters(maxDistanceMeters),
           roomNumber: room['room_number'] as String? ?? cleanedRoomNumber,
         );
       }
@@ -803,6 +821,13 @@ class GeoAttendanceService {
     final c = 2 * atan2(sqrt(a), sqrt(1 - a));
     return r * c;
   }
+
+  static double _normalizeRangeMeters(double? value) {
+    if (value == null || !value.isFinite || value <= 0) {
+      return defaultRoomMaxDistanceMeters;
+    }
+    return value;
+  }
 }
 
 /// Custom exception for distance violations
@@ -815,7 +840,7 @@ class GeoDistanceException implements Exception {
   GeoDistanceException(
     this.message,
     this.distance, {
-    this.maxDistance = GeoAttendanceService.roomMaxDistanceMeters,
+    this.maxDistance = GeoAttendanceService.defaultRoomMaxDistanceMeters,
     this.targetLabel = 'room',
   });
 

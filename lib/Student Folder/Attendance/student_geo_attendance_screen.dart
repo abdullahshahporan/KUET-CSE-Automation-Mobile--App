@@ -484,7 +484,7 @@ class _StudentGeoAttendanceScreenState extends State<StudentGeoAttendanceScreen>
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'You must be within 30m of the room and pass biometric verification to submit attendance.',
+              'Each room shows its own teacher-set radius, open time, and absent-after rule. You also need biometric verification to submit attendance.',
               style: TextStyle(
                 fontSize: 13,
                 color: AppColors.textPrimary(isDarkMode),
@@ -499,7 +499,9 @@ class _StudentGeoAttendanceScreenState extends State<StudentGeoAttendanceScreen>
   Widget _buildRoomCard(Map<String, dynamic> room, bool isDarkMode) {
     final offering = room['course_offerings'] as Map<String, dynamic>?;
     final course = offering?['courses'] as Map<String, dynamic>?;
-    final teacher = room['teachers'] as Map<String, dynamic>?;
+    final teacher =
+        (offering?['teachers'] as Map<String, dynamic>?) ??
+        (room['teachers'] as Map<String, dynamic>?);
     final code = course?['code'] ?? 'Course';
     final title = course?['title'] ?? '';
     final teacherName = teacher?['full_name'] ?? 'Teacher';
@@ -507,6 +509,12 @@ class _StudentGeoAttendanceScreenState extends State<StudentGeoAttendanceScreen>
     final roomSection = room['section'] as String? ?? '';
     final endTime = room['end_time'] as String? ?? '';
     final startTime = room['start_time'] as String? ?? '';
+    final rangeMeters =
+        (room['range_meters'] as num?)?.round() ??
+        GeoAttendanceService.defaultRoomMaxDistanceMeters.round();
+    final absenceGraceMinutes =
+        (room['absence_grace_minutes'] as num?)?.round() ??
+        GeoAttendanceService.defaultAbsenceGraceMinutes;
     final alreadySubmitted = room['already_submitted'] == true;
     final roomId = room['id'] as String;
     final isSubmitting = _submittingRoomId == roomId;
@@ -672,6 +680,30 @@ class _StudentGeoAttendanceScreenState extends State<StudentGeoAttendanceScreen>
               ],
             ),
 
+            const SizedBox(height: 12),
+
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _ruleChip(
+                  Icons.radar,
+                  '$rangeMeters m radius',
+                  AppColors.primary,
+                ),
+                _ruleChip(
+                  Icons.schedule,
+                  '${_timeRemaining(endTime)} open',
+                  AppColors.success,
+                ),
+                _ruleChip(
+                  Icons.timer_off_outlined,
+                  '$absenceGraceMinutes min absent',
+                  AppColors.warning,
+                ),
+              ],
+            ),
+
             const SizedBox(height: 14),
 
             // Action button
@@ -755,5 +787,30 @@ class _StudentGeoAttendanceScreenState extends State<StudentGeoAttendanceScreen>
     final amPm = dt.hour >= 12 ? 'PM' : 'AM';
     final min = dt.minute.toString().padLeft(2, '0');
     return '$hour:$min $amPm';
+  }
+
+  Widget _ruleChip(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

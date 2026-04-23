@@ -29,10 +29,12 @@ class GeoAttendanceRoomScreen extends StatefulWidget {
 class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
   TeacherCourse? _selectedCourse;
   String? _selectedSection;
-  int _durationMinutes = 50;
   Map<String, dynamic>? _selectedRoom;
   bool _isOpening = false;
   bool _isLoading = true;
+  late final TextEditingController _rangeMetersController;
+  late final TextEditingController _durationMinutesController;
+  late final TextEditingController _absenceGraceMinutesController;
 
   List<TeacherCourse> _courses = [];
   String _teacherUserId = '';
@@ -53,12 +55,38 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
   void initState() {
     super.initState();
     _selectedCourse = widget.preSelectedCourse;
+    _rangeMetersController = TextEditingController(
+      text: GeoAttendanceService.defaultRoomMaxDistanceMeters
+          .round()
+          .toString(),
+    );
+    _durationMinutesController = TextEditingController(
+      text: GeoAttendanceService.defaultDurationMinutes.toString(),
+    );
+    _absenceGraceMinutesController = TextEditingController(
+      text: GeoAttendanceService.defaultAbsenceGraceMinutes.toString(),
+    );
     _initData();
   }
 
   @override
   void dispose() {
+    _rangeMetersController.dispose();
+    _durationMinutesController.dispose();
+    _absenceGraceMinutesController.dispose();
     super.dispose();
+  }
+
+  int? _parseBoundedMinutes(
+    String value, {
+    required int min,
+    required int max,
+  }) {
+    final parsed = int.tryParse(value.trim());
+    if (parsed == null || parsed < min || parsed > max) {
+      return null;
+    }
+    return parsed;
   }
 
   Future<void> _initData() async {
@@ -147,21 +175,52 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
   Future<void> _openRoom() async {
     if (_selectedCourse == null || _selectedCourse!.offeringId == null) return;
 
+    final rangeMeters = _parseBoundedMinutes(
+      _rangeMetersController.text,
+      min: 1,
+      max: 500,
+    );
+    final durationMinutes = _parseBoundedMinutes(
+      _durationMinutesController.text,
+      min: 1,
+      max: 600,
+    );
+    final absenceGraceMinutes = _parseBoundedMinutes(
+      _absenceGraceMinutesController.text,
+      min: 1,
+      max: 600,
+    );
+
+    if (rangeMeters == null ||
+        durationMinutes == null ||
+        absenceGraceMinutes == null ||
+        absenceGraceMinutes > durationMinutes) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Enter valid room radius, open time, and absent-after minutes.',
+          ),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isOpening = true);
     try {
       final now = DateTime.now();
-      final endTime = now.add(Duration(minutes: _durationMinutes));
+      final endTime = now.add(Duration(minutes: durationMinutes));
 
       final roomNo = _selectedRoom?['room_number'] as String? ?? '';
-      final hasCoords =
-          _selectedRoom?['latitude'] != null &&
-          _selectedRoom?['longitude'] != null;
 
       final roomData = await GeoAttendanceService.openRoom(
         offeringId: _selectedCourse!.offeringId!,
         teacherUserId: _teacherUserId,
         startTime: now,
         endTime: endTime,
+        rangeMeters: rangeMeters,
+        durationMinutes: durationMinutes,
+        absenceGraceMinutes: absenceGraceMinutes,
         roomNumber: roomNo.isNotEmpty ? roomNo : null,
         section: _selectedSection,
       );
@@ -171,15 +230,14 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
         final courseCode = _selectedCourse!.code;
         final term = _selectedCourse!.shortSemester; // e.g., "3-2"
         final section = _selectedSection;
-        final durationMin = _durationMinutes;
         final sectionLabel = section != null ? ' ($section)' : '';
-        final distLabel = hasCoords
-            ? '30m of room $roomNo'
-            : '100m of CSE Building';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Room opened for $courseCode$sectionLabel! Students within $distLabel can submit attendance.',
+              'Room opened for $courseCode$sectionLabel. '
+              'Students must stay within $rangeMeters m, the room stays open '
+              'for $durationMinutes min, and leaving the area for '
+              '$absenceGraceMinutes min marks them absent.',
             ),
             backgroundColor: AppColors.success,
           ),
@@ -189,13 +247,23 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
           term: term,
           section: section,
           roomNumber: roomNo.isNotEmpty ? roomNo : null,
-          durationMinutes: durationMin,
+          durationMinutes: durationMinutes,
           endTime: endTime,
           roomId: roomData['id']?.toString(),
         );
         if (!_isCourseScoped) _selectedCourse = null;
         _selectedSection = null;
         _selectedRoom = null;
+        _rangeMetersController.text = GeoAttendanceService
+            .defaultRoomMaxDistanceMeters
+            .round()
+            .toString();
+        _durationMinutesController.text = GeoAttendanceService
+            .defaultDurationMinutes
+            .toString();
+        _absenceGraceMinutesController.text = GeoAttendanceService
+            .defaultAbsenceGraceMinutes
+            .toString();
         await _loadRooms();
       }
     } catch (e) {
@@ -735,7 +803,7 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                       ),
                     ),
                     Text(
-                      'Students must be within 30m of the selected room to submit',
+                      'Set the room radius, open time, and absent-after timer before opening attendance.',
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary(isDarkMode),
@@ -804,6 +872,24 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
     );
   }
 
+  Widget _infoChip(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+
   Widget _buildActiveRoomCard(Map<String, dynamic> room, bool isDarkMode) {
     final offering = room['course_offerings'] as Map<String, dynamic>?;
     final course = offering?['courses'] as Map<String, dynamic>?;
@@ -812,6 +898,15 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
     final roomNum = room['room_number'] as String? ?? '';
     final roomSection = room['section'] as String? ?? '';
     final endTime = room['end_time'] as String? ?? '';
+    final rangeMeters =
+        (room['range_meters'] as num?)?.round() ??
+        GeoAttendanceService.defaultRoomMaxDistanceMeters.round();
+    final durationMinutes =
+        (room['duration_minutes'] as num?)?.round() ??
+        GeoAttendanceService.defaultDurationMinutes;
+    final absenceGraceMinutes =
+        (room['absence_grace_minutes'] as num?)?.round() ??
+        GeoAttendanceService.defaultAbsenceGraceMinutes;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -896,6 +991,16 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _infoChip('$rangeMeters m radius', AppColors.primary),
+              _infoChip('$durationMinutes min open', AppColors.info),
+              _infoChip('$absenceGraceMinutes min absent', AppColors.warning),
+            ],
+          ),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -953,6 +1058,23 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
     final selectedRoomHasCoords =
         _selectedRoom?['latitude'] != null &&
         _selectedRoom?['longitude'] != null;
+    final hasValidRange =
+        _parseBoundedMinutes(_rangeMetersController.text, min: 1, max: 500) !=
+        null;
+    final validDuration = _parseBoundedMinutes(
+      _durationMinutesController.text,
+      min: 1,
+      max: 600,
+    );
+    final validAbsenceGrace = _parseBoundedMinutes(
+      _absenceGraceMinutesController.text,
+      min: 1,
+      max: 600,
+    );
+    final hasValidAbsenceGrace =
+        validDuration != null &&
+        validAbsenceGrace != null &&
+        validAbsenceGrace <= validDuration;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1125,7 +1247,7 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              '30m',
+                              'GPS',
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
@@ -1151,7 +1273,7 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
           if (_selectedRoom != null && !selectedRoomHasCoords) ...[
             const SizedBox(height: 8),
             Text(
-              'This room has no GPS coordinates yet, so the 30m radius cannot be enforced. Choose a room with the GPS badge.',
+              'This room has no GPS coordinates yet. Choose a room with the GPS badge so the selected radius can be enforced.',
               style: TextStyle(
                 fontSize: 12,
                 color: AppColors.warning,
@@ -1161,9 +1283,8 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
           ],
           const SizedBox(height: 14),
 
-          // Duration
           Text(
-            'Duration',
+            'Geo Rules',
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
@@ -1171,34 +1292,61 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
             ),
           ),
           const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.border(isDarkMode)),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<int>(
-                isExpanded: true,
-                value: _durationMinutes,
-                items: const [
-                  DropdownMenuItem(value: 30, child: Text('30 min')),
-                  DropdownMenuItem(value: 50, child: Text('50 min (1 period)')),
-                  DropdownMenuItem(value: 80, child: Text('80 min')),
-                  DropdownMenuItem(
-                    value: 100,
-                    child: Text('100 min (2 periods)'),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _rangeMetersController,
+                  keyboardType: TextInputType.number,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    labelText: 'Radius (m)',
+                    helperText: '1-500',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
                   ),
-                  DropdownMenuItem(
-                    value: 150,
-                    child: Text('150 min (3 periods)'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextField(
+                  controller: _durationMinutesController,
+                  keyboardType: TextInputType.number,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    labelText: 'Open Time',
+                    helperText: '1-600 min',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
                   ),
-                ],
-                onChanged: (v) {
-                  if (v != null) {
-                    setState(() => _durationMinutes = v);
-                  }
-                },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _absenceGraceMinutesController,
+            keyboardType: TextInputType.number,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              labelText: 'Make Absent After (minutes)',
+              helperText: 'Must be less than or equal to open time',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
               ),
             ),
           ),
@@ -1230,6 +1378,9 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                   (_selectedCourse == null ||
                       _selectedRoom == null ||
                       !selectedRoomHasCoords ||
+                      !hasValidRange ||
+                      validDuration == null ||
+                      !hasValidAbsenceGrace ||
                       _isOpening)
                   ? null
                   : _openRoom,
@@ -1254,6 +1405,15 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
     final course = offering?['courses'] as Map<String, dynamic>?;
     final code = course?['code'] ?? '';
     final date = room['date'] as String? ?? '';
+    final rangeMeters =
+        (room['range_meters'] as num?)?.round() ??
+        GeoAttendanceService.defaultRoomMaxDistanceMeters.round();
+    final durationMinutes =
+        (room['duration_minutes'] as num?)?.round() ??
+        GeoAttendanceService.defaultDurationMinutes;
+    final absenceGraceMinutes =
+        (room['absence_grace_minutes'] as num?)?.round() ??
+        GeoAttendanceService.defaultAbsenceGraceMinutes;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -1282,6 +1442,15 @@ class _GeoAttendanceRoomScreenState extends State<GeoAttendanceRoomScreen> {
                   date,
                   style: TextStyle(
                     fontSize: 12,
+                    color: AppColors.textSecondary(isDarkMode),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$rangeMeters m radius • $durationMinutes min open • '
+                  '$absenceGraceMinutes min absent',
+                  style: TextStyle(
+                    fontSize: 11,
                     color: AppColors.textSecondary(isDarkMode),
                   ),
                 ),
