@@ -68,9 +68,8 @@ class _HomeScreenState extends State<HomeScreen>
     try {
       final summaries = await StudentAttendanceService.getAttendanceSummaries();
       if (summaries.isNotEmpty && mounted) {
-        final avg = summaries
-                .map((s) => s.percentage)
-                .reduce((a, b) => a + b) /
+        final avg =
+            summaries.map((s) => s.percentage).reduce((a, b) => a + b) /
             summaries.length;
         setState(() => _avgAttendance = avg);
       }
@@ -125,19 +124,19 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final dotColor = (isDark ? Colors.white : Colors.black)
-        .withValues(alpha: isDark ? 0.06 : 0.04);
+    final dotColor = (isDark ? Colors.white : Colors.black).withValues(
+      alpha: isDark ? 0.06 : 0.04,
+    );
 
     return Scaffold(
-      backgroundColor:
-          isDark ? AppColors.darkBackground : AppColors.lightBackground,
+      backgroundColor: isDark
+          ? AppColors.darkBackground
+          : AppColors.lightBackground,
       body: Stack(
         children: [
           // Dot-grid background
           Positioned.fill(
-            child: CustomPaint(
-              painter: DotGridPainter(dotColor: dotColor),
-            ),
+            child: CustomPaint(painter: DotGridPainter(dotColor: dotColor)),
           ),
           RefreshIndicator(
             color: AppColors.primary,
@@ -184,14 +183,12 @@ class _HomeScreenState extends State<HomeScreen>
                   sliver: SliverGrid(
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 1.0,
-                    ),
-                    delegate: SliverChildListDelegate(
-                      _buildBentoTiles(isDark),
-                    ),
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 1.0,
+                        ),
+                    delegate: SliverChildListDelegate(_buildBentoTiles(isDark)),
                   ),
                 ),
 
@@ -199,8 +196,7 @@ class _HomeScreenState extends State<HomeScreen>
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 28, 16, 0),
-                    child:
-                        UpcomingScheduleSection(key: _upcomingScheduleKey),
+                    child: UpcomingScheduleSection(key: _upcomingScheduleKey),
                   ),
                 ),
               ],
@@ -270,8 +266,9 @@ class _HomeScreenState extends State<HomeScreen>
 
   // ── Quick Stats Row ──────────────────────────────────────────────────
   Widget _buildQuickStatsRow(bool isDark) {
-    final surface =
-        isDark ? AppColors.darkSurfaceElevated : AppColors.lightSurface;
+    final surface = isDark
+        ? AppColors.darkSurfaceElevated
+        : AppColors.lightSurface;
     final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
 
     return Row(
@@ -285,10 +282,10 @@ class _HomeScreenState extends State<HomeScreen>
             icon: Icons.bar_chart_rounded,
             color: _avgAttendance != null
                 ? (_avgAttendance! >= 75
-                    ? AppColors.success
-                    : _avgAttendance! >= 60
-                        ? AppColors.warning
-                        : AppColors.danger)
+                      ? AppColors.success
+                      : _avgAttendance! >= 60
+                      ? AppColors.warning
+                      : AppColors.danger)
                 : AppColors.primary,
             surface: surface,
             border: border,
@@ -299,9 +296,7 @@ class _HomeScreenState extends State<HomeScreen>
         Expanded(
           child: _StatChip(
             label: 'Today\'s Classes',
-            value: _todayClassCount != null
-                ? '$_todayClassCount'
-                : '—',
+            value: _todayClassCount != null ? '$_todayClassCount' : '—',
             icon: Icons.today_rounded,
             color: AppColors.primary,
             surface: surface,
@@ -317,12 +312,7 @@ class _HomeScreenState extends State<HomeScreen>
   List<Widget> _buildBentoTiles(bool isDark) {
     int idx = 0;
 
-    Widget tile(
-      IconData icon,
-      String title,
-      String sub,
-      VoidCallback onTap,
-    ) {
+    Widget tile(IconData icon, String title, String sub, VoidCallback onTap) {
       final w = _buildFeatureTile(
         isDark: isDark,
         icon: icon,
@@ -335,35 +325,48 @@ class _HomeScreenState extends State<HomeScreen>
 
     return [
       tile(Icons.fact_check_rounded, 'Attendance', 'Track presence', () {
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const AttendanceScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AttendanceScreen()),
+        );
       }),
       tile(Icons.menu_book_rounded, 'Course Info', 'Syllabus & credits', () {
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const CourseInfoScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const CourseInfoScreen()),
+        );
       }),
       tile(Icons.calendar_month_rounded, 'Schedule', 'Class timetable', () {
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const UnifiedScheduleScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const UnifiedScheduleScreen()),
+        );
       }),
       tile(Icons.campaign_rounded, 'Notices', 'Dept. updates', () {
-        Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const NoticeScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const NoticeScreen()),
+        );
       }),
       tile(Icons.location_on_rounded, 'Geo-Attend', 'Location check-in', () {
-        Navigator.push(context,
-            MaterialPageRoute(
-                builder: (_) => const StudentGeoAttendanceScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const StudentGeoAttendanceScreen()),
+        );
       }),
       if (_isCR)
         tile(Icons.meeting_room_rounded, 'Room Request', 'CR booking', () {
-          Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const CRRoomRequestScreen()));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CRRoomRequestScreen()),
+          );
         }),
       if (_isCR)
         tile(Icons.edit_calendar_rounded, 'Manage Exams', 'CT & exams', () {
-          Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const CRExamScreen()));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CRExamScreen()),
+          );
         }),
     ];
   }
@@ -376,8 +379,9 @@ class _HomeScreenState extends State<HomeScreen>
     required String subtitle,
     required VoidCallback onTap,
   }) {
-    final surface =
-        isDark ? AppColors.darkSurfaceElevated : AppColors.lightSurface;
+    final surface = isDark
+        ? AppColors.darkSurfaceElevated
+        : AppColors.lightSurface;
     final borderColor = isDark ? AppColors.darkBorder : AppColors.lightBorder;
 
     return Material(
@@ -398,16 +402,16 @@ class _HomeScreenState extends State<HomeScreen>
             children: [
               // Icon box — monochromatic teal
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [AppColors.primary, AppColors.primaryDark],
                   ),
-                  borderRadius: BorderRadius.circular(11),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(icon, size: 32, color: Colors.white),
+                child: Icon(icon, size: 40, color: Colors.white),
               ),
               // Labels
               Column(
