@@ -100,21 +100,25 @@ class CRRoomRequestService {
       }
 
       // No conflict — auto-approve (FCFS: first request wins)
-      await SupabaseCore.from('cr_room_requests').insert({
-        'student_user_id': userId,
-        'course_code': courseCode,
-        'teacher_user_id': teacherUserId,
-        'day_of_week': dayOfWeek,
-        'start_time': startTime,
-        'end_time': endTime,
-        'term': term,
-        'session': session,
-        'section': section,
-        'reason': reason,
-        'status': 'approved',
-        'room_number': roomNumber,
-        'request_date': requestDate,
-      });
+      final insertedRequest = await SupabaseCore.from('cr_room_requests')
+          .insert({
+            'student_user_id': userId,
+            'course_code': courseCode,
+            'teacher_user_id': teacherUserId,
+            'day_of_week': dayOfWeek,
+            'start_time': startTime,
+            'end_time': endTime,
+            'term': term,
+            'session': session,
+            'section': section,
+            'reason': reason,
+            'status': 'approved',
+            'room_number': roomNumber,
+            'request_date': requestDate,
+          })
+          .select('id')
+          .single();
+      final requestId = insertedRequest['id']?.toString();
 
       // Sync to routine_slots so Schedule & TV Display show this CR booking
       await _syncToRoutineSlot(
@@ -142,6 +146,8 @@ class CRRoomRequestService {
       ];
       final dayLabel = dayNames.elementAtOrNull(dayOfWeek) ?? 'Day $dayOfWeek';
       final notifMetadata = {
+        if (requestId != null && requestId.isNotEmpty)
+          'cr_room_request_id': requestId,
         'course_code': courseCode,
         'room_number': roomNumber,
         'start_time': startTime,
@@ -149,26 +155,53 @@ class CRRoomRequestService {
         'request_date': requestDate,
         'open_screen': 'room_booking',
       };
+      final recipientUserIds = await _getStudentRecipientUserIds(
+        term: term,
+        session: session,
+        section: section,
+      );
+
+      // Use USER-target notifications for students to ensure push is resolved
+      // against explicit user IDs and active device tokens.
+      final uniqueRecipients = <String>{
+        ...recipientUserIds,
+        userId,
+      }.toList(growable: false);
+
+      final studentNotificationFutures = uniqueRecipients
+          .map(
+            (recipientUserId) => NotificationService.createNotification(
+              type: 'room_allocated',
+              title: '🏫 Room $roomNumber Booked — $courseCode',
+              body:
+                  'CR booked Room $roomNumber for $courseCode on '
+                  '$dayLabel ($requestDate, $startTime–$endTime).',
+              targetType: 'USER',
+              targetValue: recipientUserId,
+              metadata: notifMetadata,
+            ),
+          )
+          .toList(growable: true);
+
+      // Fallback broadcast to preserve in-app visibility when direct recipient
+      // resolution misses due inconsistent student profile data.
       final normalizedSection = section?.trim();
       final hasSection =
           normalizedSection != null && normalizedSection.isNotEmpty;
-      final studentTargetType = hasSection ? 'SECTION' : 'YEAR_TERM';
-      final studentTargetValue = hasSection ? normalizedSection : term;
-      final studentTargetYearTerm = hasSection ? term : null;
-
-      // Notify the CR's classmates directly so push delivery does not depend
-      // on course-offering section metadata being present.
-      await NotificationService.createNotification(
-        type: 'room_allocated',
-        title: '🏫 Room $roomNumber Booked — $courseCode',
-        body:
-            'CR booked Room $roomNumber for $courseCode on '
-            '$dayLabel ($requestDate, $startTime–$endTime).',
-        targetType: studentTargetType,
-        targetValue: studentTargetValue,
-        targetYearTerm: studentTargetYearTerm,
-        metadata: notifMetadata,
+      studentNotificationFutures.add(
+        NotificationService.createNotification(
+          type: 'room_allocated',
+          title: '🏫 Room $roomNumber Booked — $courseCode',
+          body:
+              'CR booked Room $roomNumber for $courseCode on '
+              '$dayLabel ($requestDate, $startTime–$endTime).',
+          targetType: hasSection ? 'SECTION' : 'YEAR_TERM',
+          targetValue: hasSection ? normalizedSection : term,
+          targetYearTerm: hasSection ? term : null,
+          metadata: notifMetadata,
+        ),
       );
+      await Future.wait(studentNotificationFutures);
 
       // Also notify the course teacher directly (in-app + push)
       await NotificationService.createNotification(
@@ -420,6 +453,42 @@ class CRRoomRequestService {
     } catch (e) {
       debugPrint('CR sync to routine_slots failed: $e');
       // Non-fatal: the CR booking itself succeeded
+    }
+  }
+
+  static Future<List<String>> _getStudentRecipientUserIds({
+    required String term,
+    required String session,
+    String? section,
+  }) async {
+    final cleanedTerm = term.trim();
+    final cleanedSession = session.trim();
+    final cleanedSection = section?.trim();
+
+    if (cleanedTerm.isEmpty || cleanedSession.isEmpty) {
+      return const [];
+    }
+
+    try {
+      var query = SupabaseCore.from(
+        'students',
+      ).select('user_id').eq('term', cleanedTerm).eq('session', cleanedSession);
+
+      if (cleanedSection != null && cleanedSection.isNotEmpty) {
+        query = query.eq('section', cleanedSection);
+      }
+
+      final rows = await query;
+      final ids = (rows as List)
+          .map((row) => (row as Map<String, dynamic>)['user_id']?.toString())
+          .whereType<String>()
+          .where((id) => id.trim().isNotEmpty)
+          .toSet()
+          .toList(growable: false);
+      return ids;
+    } catch (e) {
+      debugPrint('Error fetching CR room notification recipients: $e');
+      return const [];
     }
   }
 
