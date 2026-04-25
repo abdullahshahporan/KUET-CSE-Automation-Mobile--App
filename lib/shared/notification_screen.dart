@@ -16,6 +16,192 @@ import '../../theme/app_colors.dart';
 class NotificationScreen extends StatelessWidget {
   const NotificationScreen({super.key});
 
+  Future<void> _handleNotificationTap(
+    BuildContext context,
+    AppNotification notification,
+    NotificationProvider provider,
+    bool isDarkMode,
+  ) async {
+    await provider.markRead(notification.id);
+    if (!context.mounted) return;
+
+    if (notification.type == 'geo_attendance_open') {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const StudentGeoAttendanceScreen(),
+        ),
+      );
+      return;
+    }
+
+    _showNotificationDetails(context, notification, isDarkMode);
+  }
+
+  void _showNotificationDetails(
+    BuildContext context,
+    AppNotification notification,
+    bool isDarkMode,
+  ) {
+    final config = _typeConfig(notification.type);
+    final metadata = notification.metadata;
+    final courseCode = metadata['course_code']?.toString();
+    final roomNumber = metadata['room_number']?.toString();
+    final endTime = metadata['end_time_label']?.toString();
+    final section = metadata['geo_room_section']?.toString();
+    final scheduledDate = metadata['scheduled_date']?.toString();
+
+    final detailLines = <String>[
+      if (courseCode != null && courseCode.isNotEmpty) 'Course: $courseCode',
+      if (section != null && section.isNotEmpty) 'Section: $section',
+      if (roomNumber != null && roomNumber.isNotEmpty) 'Room: $roomNumber',
+      if (scheduledDate != null && scheduledDate.isNotEmpty)
+        'Scheduled: $scheduledDate',
+      if (endTime != null && endTime.isNotEmpty) 'Ends: $endTime',
+    ];
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.55,
+          minChildSize: 0.4,
+          maxChildSize: 0.85,
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: BoxDecoration(
+                color: isDarkMode
+                    ? AppColors.darkSurfaceElevated
+                    : AppColors.lightSurface,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
+              ),
+              child: ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: isDarkMode
+                            ? AppColors.darkBorder
+                            : AppColors.lightBorder,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: config.color.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(
+                          config.icon,
+                          color: config.color,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              config.label,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: config.color,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              DateFormat('MMM d, yyyy • h:mm a')
+                                  .format(notification.createdAt),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDarkMode
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.lightTextSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    notification.title,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: isDarkMode ? Colors.white : Colors.black87,
+                      height: 1.25,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isDarkMode
+                          ? AppColors.darkSurface
+                          : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: isDarkMode
+                            ? AppColors.darkBorder
+                            : AppColors.lightBorder,
+                      ),
+                    ),
+                    child: Text(
+                      notification.body,
+                      style: TextStyle(
+                        fontSize: 15,
+                        height: 1.7,
+                        color: isDarkMode
+                            ? AppColors.darkTextSecondary
+                            : AppColors.lightTextSecondary,
+                      ),
+                    ),
+                  ),
+                  if (detailLines.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    ...detailLines.map(
+                      (line) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          line,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isDarkMode
+                                ? AppColors.darkTextSecondary
+                                : AppColors.lightTextSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -262,7 +448,7 @@ class NotificationScreen extends StatelessWidget {
           return _NotificationCard(
             notification: n,
             isDarkMode: isDarkMode,
-            onTap: () => provider.markRead(n.id),
+            onTap: () => _handleNotificationTap(context, n, provider, isDarkMode),
           );
         },
       ),
@@ -371,17 +557,7 @@ class _NotificationCard extends StatelessWidget {
     final isUnread = !notification.isRead;
 
     return InkWell(
-      onTap: () async {
-        onTap();
-        if (notification.type == 'geo_attendance_open') {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const StudentGeoAttendanceScreen(),
-            ),
-          );
-        }
-      },
+      onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

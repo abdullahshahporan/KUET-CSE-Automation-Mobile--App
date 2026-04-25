@@ -17,6 +17,236 @@ class GeoAttendanceService {
   static const int maxTheoryRooms = 2;
   static const int maxLabRooms = 4;
 
+  // ── Shared target resolution for teacher + student flows ──────────────
+
+  static String? _cleanText(String? value) {
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
+  static String? _normalizeSection(String? section) {
+    final cleaned = _cleanText(section);
+    if (cleaned == null) return null;
+
+    final normalized = cleaned.toUpperCase();
+    if (RegExp(r'^[A-Z]\d?$').hasMatch(normalized)) {
+      return normalized;
+    }
+
+    final named = RegExp(r'\b(section|group)\s+([A-Za-z]\d?)\b', caseSensitive: false)
+        .firstMatch(cleaned);
+    if (named != null) {
+      return named.group(2)?.toUpperCase();
+    }
+
+    return normalized;
+  }
+
+  static ({int min, int max})? _getRollRange(String? section) {
+    switch (_normalizeSection(section)) {
+      case 'A':
+        return (min: 1, max: 60);
+      case 'B':
+        return (min: 61, max: 120);
+      case 'A1':
+        return (min: 1, max: 30);
+      case 'A2':
+        return (min: 31, max: 60);
+      case 'B1':
+        return (min: 61, max: 90);
+      case 'B2':
+        return (min: 91, max: 120);
+      default:
+        return null;
+    }
+  }
+
+  static int? _extractRollSuffix(String? rollNo) {
+    final digits = (rollNo ?? '').replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) return null;
+    return int.tryParse(digits.substring(digits.length >= 3 ? digits.length - 3 : 0));
+  }
+
+  static bool _isTargetStudentForSection(
+    Map<String, dynamic> student,
+    String? section,
+  ) {
+    final normalizedSection = _normalizeSection(section);
+    if (normalizedSection == null) return true;
+
+    final studentSection =
+        _cleanText(student['section'] as String?)?.toUpperCase();
+    if (studentSection == normalizedSection) {
+      return true;
+    }
+
+    final rollRange = _getRollRange(section);
+    final rollSuffix = _extractRollSuffix(student['roll_no'] as String?);
+    if (rollRange == null || rollSuffix == null) {
+      return false;
+    }
+
+    return rollSuffix >= rollRange.min && rollSuffix <= rollRange.max;
+  }
+
+  static Future<List<Map<String, dynamic>>> _resolveGeoAttendanceTargetStudents({
+    required String offeringId,
+    required String? term,
+    String? section,
+  }) async {
+    final enrollmentRows = await SupabaseService.from('enrollments')
+        .select('student_user_id')
+        .eq('offering_id', offeringId);
+
+    final enrolledUserIds = (enrollmentRows as List)
+        .map((row) => _cleanText((row as Map<String, dynamic>)['student_user_id'] as String?))
+        .whereType<String>()
+        .toSet()
+        .toList();
+
+    if (enrolledUserIds.isNotEmpty) {
+      final studentRows = await SupabaseService.from('students')
+          .select('user_id, roll_no, section')
+          .inFilter('user_id', enrolledUserIds);
+
+      return List<Map<String, dynamic>>.from(studentRows as List)
+          .where((row) =>
+              _cleanText(row['user_id'] as String?) != null &&
+              _cleanText(row['roll_no'] as String?) != null)
+          .where((row) => _isTargetStudentForSection(row, section))
+          .toList();
+    }
+
+    final normalizedTerm = _cleanText(term);
+    if (normalizedTerm == null) {
+      return [];
+    }
+
+    final fallbackRows = await SupabaseService.from('students')
+        .select('user_id, roll_no, section')
+        .eq('term', normalizedTerm);
+
+    return List<Map<String, dynamic>>.from(fallbackRows as List)
+        .where((row) =>
+            _cleanText(row['user_id'] as String?) != null &&
+            _cleanText(row['roll_no'] as String?) != null)
+        .where((row) => _isTargetStudentForSection(row, section))
+        .toList();
+  }
+
+  static Future<void> _seedDefaultGeoAttendanceAbsences({
+    required String offeringId,
+    required String sessionId,
+    required String teacherUserId,
+    required String? courseCode,
+    required String? term,
+    required String attendanceDate,
+    String? section,
+  }) async {
+    final targetStudents = await _resolveGeoAttendanceTargetStudents(
+      offeringId: offeringId,
+      term: term,
+      section: section,
+    );
+
+    if (targetStudents.isEmpty) return;
+
+    final studentUserIds = targetStudents
+        .map((student) => _cleanText(student['user_id'] as String?))
+        .whereType<String>()
+        .toList();
+
+    final existingEnrollments = await SupabaseService.from('enrollments')
+        .select('id, student_user_id')
+        .eq('offering_id', offeringId)
+        .inFilter('student_user_id', studentUserIds);
+
+    final enrollmentByStudentId = <String, String>{};
+    for (final row in existingEnrollments as List) {
+      final map = row as Map<String, dynamic>;
+      final studentUserId = _cleanText(map['student_user_id'] as String?);
+      final enrollmentId = _cleanText(map['id'] as String?);
+      if (studentUserId != null && enrollmentId != null) {
+        enrollmentByStudentId[studentUserId] = enrollmentId;
+      }
+    }
+
+    final missingStudentUserIds = studentUserIds
+        .where((studentUserId) => !enrollmentByStudentId.containsKey(studentUserId))
+        .toList();
+
+    if (missingStudentUserIds.isNotEmpty) {
+      final insertedEnrollments = await SupabaseService.from('enrollments')
+          .insert(
+            missingStudentUserIds
+                .map((studentUserId) => {
+                      'offering_id': offeringId,
+                      'student_user_id': studentUserId,
+                      'enrollment_status': 'ENROLLED',
+                    })
+                .toList(),
+          )
+          .select('id, student_user_id');
+
+      for (final row in insertedEnrollments as List) {
+        final map = row as Map<String, dynamic>;
+        final studentUserId = _cleanText(map['student_user_id'] as String?);
+        final enrollmentId = _cleanText(map['id'] as String?);
+        if (studentUserId != null && enrollmentId != null) {
+          enrollmentByStudentId[studentUserId] = enrollmentId;
+        }
+      }
+    }
+
+    final attendanceRows = targetStudents
+        .map((student) {
+          final studentUserId = _cleanText(student['user_id'] as String?);
+          final enrollmentId =
+              studentUserId == null ? null : enrollmentByStudentId[studentUserId];
+          if (enrollmentId == null) return null;
+          return {
+            'session_id': sessionId,
+            'enrollment_id': enrollmentId,
+            'status': 'ABSENT',
+            'marked_by_teacher_user_id': teacherUserId,
+            'remarks': 'No geo-attendance response received.',
+          };
+        })
+        .whereType<Map<String, dynamic>>()
+        .toList();
+
+    if (attendanceRows.isNotEmpty) {
+      await SupabaseService.from('attendance_records').upsert(
+        attendanceRows,
+        onConflict: 'session_id,enrollment_id',
+      );
+    }
+
+    if (courseCode != null && courseCode.isNotEmpty) {
+      final flatAttendanceRows = targetStudents
+          .map((student) {
+            final studentRoll = _cleanText(student['roll_no'] as String?);
+            if (studentRoll == null) return null;
+            return {
+              'course_code': courseCode,
+              'student_roll': studentRoll,
+              'date': attendanceDate,
+              'status': 'absent',
+              'section_or_group': section,
+            };
+          })
+          .whereType<Map<String, dynamic>>()
+          .toList();
+
+      if (flatAttendanceRows.isNotEmpty) {
+        await SupabaseService.from('attendance').upsert(
+          flatAttendanceRows,
+          onConflict: 'course_code,student_roll,date',
+        );
+      }
+    }
+  }
+
   // ── Teacher: Open a geo-attendance room ──────────────────
 
   static Future<Map<String, dynamic>> openRoom({
@@ -74,44 +304,91 @@ class GeoAttendanceService {
         );
       }
 
-      // Create a class_session for this geo-attendance
-      // NOTE: room_number is NOT inserted here because class_sessions has a FK
-      // to the rooms table. The room_number is stored on geo_attendance_rooms instead.
-      final sessionInsert = <String, dynamic>{
-        'offering_id': offeringId,
-        'starts_at': startTime.toUtc().toIso8601String(),
-        'ends_at': endTime.toUtc().toIso8601String(),
-        'topic': 'Geo-Attendance Session',
-      };
+      final offeringMeta = await SupabaseService.from(
+        'course_offerings',
+      ).select('term, course_id').eq('id', offeringId).single();
+      final offeringTerm = offeringMeta['term'] as String?;
 
-      final sessionData = await SupabaseService.from(
-        'class_sessions',
-      ).insert(sessionInsert).select('id').single();
-      final sessionId = sessionData['id'] as String;
-
-      // Create the geo-attendance room
-      final roomInsert = <String, dynamic>{
-        'offering_id': offeringId,
-        'session_id': sessionId,
-        'teacher_user_id': teacherUserId,
-        'date': DateTime.now().toIso8601String().split('T')[0],
-        'start_time': startTime.toUtc().toIso8601String(),
-        'end_time': endTime.toUtc().toIso8601String(),
-        'is_active': true,
-      };
-      roomInsert['room_number'] = cleanedRoomNumber;
-      if (section != null && section.isNotEmpty) {
-        roomInsert['section'] = section;
+      String? courseCode;
+      final courseId = offeringMeta['course_id'] as String?;
+      if (courseId != null && courseId.isNotEmpty) {
+        final courseData = await SupabaseService.from('courses')
+            .select('code')
+            .eq('id', courseId)
+            .single();
+        courseCode = courseData['code'] as String?;
       }
-      roomInsert['range_meters'] = safeRangeMeters;
-      roomInsert['duration_minutes'] = safeDurationMinutes;
-      roomInsert['absence_grace_minutes'] = safeAbsenceGraceMinutes;
 
-      final data = await SupabaseService.from(
-        'geo_attendance_rooms',
-      ).insert(roomInsert).select('*').single();
+      String? sessionId;
+      String? roomId;
 
-      return data;
+      try {
+        final attendanceDate = startTime.toUtc().toIso8601String().split('T')[0];
+
+        // Create a class_session for this geo-attendance
+        // NOTE: room_number is NOT inserted here because class_sessions has a FK
+        // to the rooms table. The room_number is stored on geo_attendance_rooms instead.
+        final sessionInsert = <String, dynamic>{
+          'offering_id': offeringId,
+          'starts_at': startTime.toUtc().toIso8601String(),
+          'ends_at': endTime.toUtc().toIso8601String(),
+          'topic': 'Geo-Attendance Session',
+        };
+
+        final sessionData = await SupabaseService.from(
+          'class_sessions',
+        ).insert(sessionInsert).select('id').single();
+        final createdSessionId = sessionData['id'] as String;
+        sessionId = createdSessionId;
+
+        // Create the geo-attendance room
+        final roomInsert = <String, dynamic>{
+          'offering_id': offeringId,
+          'session_id': createdSessionId,
+          'teacher_user_id': teacherUserId,
+          'date': attendanceDate,
+          'start_time': startTime.toUtc().toIso8601String(),
+          'end_time': endTime.toUtc().toIso8601String(),
+          'is_active': true,
+        };
+        roomInsert['room_number'] = cleanedRoomNumber;
+        if (section != null && section.isNotEmpty) {
+          roomInsert['section'] = section;
+        }
+        roomInsert['range_meters'] = safeRangeMeters;
+        roomInsert['duration_minutes'] = safeDurationMinutes;
+        roomInsert['absence_grace_minutes'] = safeAbsenceGraceMinutes;
+
+        final data = await SupabaseService.from(
+          'geo_attendance_rooms',
+        ).insert(roomInsert).select('*').single();
+
+        roomId = data['id'] as String?;
+
+        await _seedDefaultGeoAttendanceAbsences(
+          offeringId: offeringId,
+          sessionId: createdSessionId,
+          teacherUserId: teacherUserId,
+          courseCode: courseCode,
+          term: offeringTerm,
+          attendanceDate: attendanceDate,
+          section: section,
+        );
+
+        return data;
+      } catch (e) {
+        if (roomId != null && roomId.isNotEmpty) {
+          await SupabaseService.from('geo_attendance_rooms')
+              .delete()
+              .eq('id', roomId);
+        }
+        if (sessionId != null && sessionId.isNotEmpty) {
+          await SupabaseService.from('class_sessions')
+              .delete()
+              .eq('id', sessionId);
+        }
+        rethrow;
+      }
     } catch (e) {
       debugPrint('Error opening geo room: $e');
       rethrow;

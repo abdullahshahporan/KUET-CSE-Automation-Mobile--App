@@ -21,6 +21,53 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
   TeacherCourse get course => widget.course!;
 
   @override
+  void initState() {
+    super.initState();
+    _loadAnnouncements();
+  }
+
+  Future<void> _loadAnnouncements() async {
+    try {
+      final rows = await SupabaseService.from('cms_tv_announcements')
+          .select()
+          .eq('course_code', course.code)
+          .order('created_at', ascending: false);
+
+      if (!mounted) return;
+
+      setState(() {
+        _announcements
+          ..clear()
+          ..addAll(
+            List<Map<String, dynamic>>.from(rows as List).map((row) {
+              final type = (row['type'] as String? ?? 'notice')
+                  .replaceAll('-', ' ')
+                  .split(' ')
+                  .map((part) => part.isEmpty
+                      ? part
+                      : '${part[0].toUpperCase()}${part.substring(1)}')
+                  .join(' ');
+              final createdAt = DateTime.tryParse(
+                row['created_at'] as String? ?? '',
+              );
+              return {
+                'id': row['id'],
+                'type': type,
+                'title': row['title'] as String? ?? '',
+                'content': row['content'] as String? ?? '',
+                'date': createdAt != null
+                    ? '${createdAt.day}/${createdAt.month}/${createdAt.year}'
+                    : 'Recently',
+              };
+            }),
+          );
+      });
+    } catch (e) {
+      debugPrint('[AnnouncementsScreen] load error: $e');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
@@ -342,9 +389,9 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                     onPressed: () async {
                       if (titleController.text.isNotEmpty &&
                           contentController.text.isNotEmpty) {
-                        // Save to announcements table
+                        // Save to the shared announcements table used by web + app.
                         try {
-                          await SupabaseService.from('announcements').insert({
+                          await SupabaseService.from('cms_tv_announcements').insert({
                             'title': titleController.text,
                             'content': contentController.text,
                             'type': selectedType.toLowerCase().replaceAll(' ', '-'),
@@ -387,6 +434,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                           Navigator.pop(context);
                           showAppSnackBar(context, message: 'Announcement posted!');
                         }
+                        await _loadAnnouncements();
                       }
                     },
                     style: ElevatedButton.styleFrom(

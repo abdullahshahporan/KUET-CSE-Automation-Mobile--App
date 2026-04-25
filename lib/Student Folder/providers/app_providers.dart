@@ -206,6 +206,51 @@ Future<List<Notice>> _fetchNotices() async {
       }
     } catch (_) {}
 
+    // Also fetch shared teacher/web announcements from the announcements table.
+    try {
+      final courseCodes = offeringMeta.values
+          .map((m) => m['code']!)
+          .where((c) => c.isNotEmpty)
+          .toSet()
+          .toList();
+
+      final announcementRows = await SupabaseCore.from('cms_tv_announcements')
+          .select()
+          .eq('is_active', true)
+          .order('created_at', ascending: false)
+          .limit(80);
+      for (final row in (announcementRows as List)) {
+        final m = Map<String, dynamic>.from(row as Map);
+        final courseCode = m['course_code'] as String?;
+        if (courseCode != null &&
+            courseCode.isNotEmpty &&
+            !courseCodes.contains(courseCode)) {
+          continue;
+        }
+
+        final createdAt =
+            DateTime.tryParse(m['created_at'] as String? ?? '');
+        final scheduledDate = m['scheduled_date'] as String?;
+        final descParts = <String>[
+          m['content'] as String? ?? '',
+          if (courseCode != null && courseCode.isNotEmpty) 'Course: $courseCode',
+          if (scheduledDate != null && scheduledDate.isNotEmpty)
+            'Scheduled: $scheduledDate',
+        ]..removeWhere((part) => part.trim().isEmpty);
+
+        notices.add(Notice(
+          id: 'announcement_${m['id'] ?? ''}',
+          title: m['title'] as String? ?? '',
+          description: descParts.join('\n\n'),
+          date: createdAt != null
+              ? DateFormat('MMMM d, yyyy').format(createdAt)
+              : '',
+          category: 'Academic',
+          isImportant: (m['priority'] as String? ?? '').toLowerCase() == 'high',
+        ));
+      }
+    } catch (_) {}
+
     return notices;
   } catch (e) {
     debugPrint('[noticesProvider] error: $e');
