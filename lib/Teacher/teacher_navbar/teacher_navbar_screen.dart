@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../Assistant/ai_chatbot_widget.dart';
 import '../../services/notification_provider.dart';
 import '../../services/push_notification_service.dart';
 import '../../theme/app_colors.dart';
@@ -101,7 +102,12 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: IndexedStack(index: _currentIndex, children: _screens),
+      body: Stack(
+        children: [
+          IndexedStack(index: _currentIndex, children: _screens),
+          const AiChatbotWidget(),
+        ],
+      ),
       bottomNavigationBar: _buildBottomNavBar(isDarkMode),
       floatingActionButton: _currentIndex == 0 ? const TeacherFabMenu() : null,
     );
@@ -113,7 +119,7 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
         color: AppColors.surface(isDarkMode),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -171,7 +177,9 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
     final isSelected = _currentIndex == index;
     final color = isSelected
         ? AppColors.primary
-        : (isDarkMode ? AppColors.darkNavUnselected : AppColors.textSecondary(isDarkMode));
+        : (isDarkMode
+              ? AppColors.darkNavUnselected
+              : AppColors.textSecondary(isDarkMode));
 
     return GestureDetector(
       onTap: () => setState(() => _currentIndex = index),
@@ -181,7 +189,7 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withOpacity(0.1)
+              ? AppColors.primary.withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),

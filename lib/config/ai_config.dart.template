@@ -1,0 +1,15 @@
+/// Runtime settings for the mobile assistant.
+///
+/// Do not put Gemini/provider API keys in the Flutter app.
+/// Add the real Gemini key only to the web project's `.env.local`:
+/// AI_PROVIDER='gemini'
+/// GEMINI_API_KEY='your_api_key_here'
+/// GEMINI_MODEL='gemini-2.5-flash'
+///
+/// The mobile app should call your deployed web assistant endpoint.
+class AiConfig {
+  AiConfig._();
+
+  /// Example: https://your-domain.com/api/assistant/chat
+  static const String assistantEndpoint = '';
+}

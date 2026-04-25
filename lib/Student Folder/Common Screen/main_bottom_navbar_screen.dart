@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kuet_cse_automation/Assistant/ai_chatbot_widget.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Common%20Screen/appbar_screen.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Hamburger%20Menu/hamburger_screen.dart';
 import 'package:kuet_cse_automation/Student%20Folder/Home/Features/Schedule/unified_schedule_screen.dart';
@@ -58,6 +59,9 @@ class _MainBottomNavBarScreenState extends State<MainBottomNavBarScreen> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
+    final role = (SupabaseService.currentRole ?? '').toUpperCase();
+    final canUseAssistant =
+        role == 'ADMIN' || role == 'TEACHER' || role == 'HEAD';
 
     return Scaffold(
       backgroundColor: isDarkMode
@@ -86,6 +90,7 @@ class _MainBottomNavBarScreenState extends State<MainBottomNavBarScreen> {
             bottom: 0,
             child: GeoAttendanceFloatingWidget(),
           ),
+          if (canUseAssistant) const AiChatbotWidget(),
         ],
       ),
       bottomNavigationBar: Container(
@@ -94,8 +99,8 @@ class _MainBottomNavBarScreenState extends State<MainBottomNavBarScreen> {
           boxShadow: [
             BoxShadow(
               color: isDarkMode
-                  ? Colors.black.withOpacity(0.4)
-                  : Colors.grey.withOpacity(0.15),
+                  ? Colors.black.withValues(alpha: 0.4)
+                  : Colors.grey.withValues(alpha: 0.15),
               blurRadius: 20,
               offset: const Offset(0, -4),
             ),
@@ -163,7 +168,7 @@ class _MainBottomNavBarScreenState extends State<MainBottomNavBarScreen> {
         ),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withOpacity(0.12)
+              ? AppColors.primary.withValues(alpha: 0.12)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(14),
         ),
@@ -205,10 +210,7 @@ class _FadeIndexedStack extends StatelessWidget {
   final int index;
   final List<Widget> children;
 
-  const _FadeIndexedStack({
-    required this.index,
-    required this.children,
-  });
+  const _FadeIndexedStack({required this.index, required this.children});
 
   @override
   Widget build(BuildContext context) {
