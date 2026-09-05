@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../services/notification_service.dart';
 import '../../shared/ui_helpers.dart';
 import '../../theme/app_colors.dart';
 import '../services/teacher_course_service.dart';
@@ -138,50 +137,60 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
                   ),
                   child: Row(
                     children: [
-                      const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
                       const SizedBox(width: 12),
-                      Text('Loading courses...', style: TextStyle(color: AppColors.textSecondary(isDarkMode))),
+                      Text(
+                        'Loading courses...',
+                        style: TextStyle(
+                          color: AppColors.textSecondary(isDarkMode),
+                        ),
+                      ),
                     ],
                   ),
                 )
               else
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: AppColors.surface(isDarkMode),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border(isDarkMode)),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _selectedCourse,
-                    isExpanded: true,
-                    hint: Text(
-                      'Choose a course',
-                      style: TextStyle(
-                        color: AppColors.textSecondary(isDarkMode),
-                      ),
-                    ),
-                    dropdownColor: AppColors.surface(isDarkMode),
-                    items: _courses.map((offering) {
-                      final course = offering['courses'] as Map<String, dynamic>?;
-                      final code = course?['code'] as String? ?? '';
-                      final title = course?['title'] as String? ?? '';
-                      return DropdownMenuItem(
-                        value: code,
-                        child: Text(
-                          '$code - $title',
-                          style: TextStyle(
-                            color: AppColors.textPrimary(isDarkMode),
-                          ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface(isDarkMode),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border(isDarkMode)),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedCourse,
+                      isExpanded: true,
+                      hint: Text(
+                        'Choose a course',
+                        style: TextStyle(
+                          color: AppColors.textSecondary(isDarkMode),
                         ),
-                      );
-                    }).toList(),
-                    onChanged: (value) =>
-                        setState(() => _selectedCourse = value),
+                      ),
+                      dropdownColor: AppColors.surface(isDarkMode),
+                      items: _courses.map((offering) {
+                        final course =
+                            offering['courses'] as Map<String, dynamic>?;
+                        final code = course?['code'] as String? ?? '';
+                        final title = course?['title'] as String? ?? '';
+                        return DropdownMenuItem(
+                          value: code,
+                          child: Text(
+                            '$code - $title',
+                            style: TextStyle(
+                              color: AppColors.textPrimary(isDarkMode),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) =>
+                          setState(() => _selectedCourse = value),
+                    ),
                   ),
                 ),
-              ),
               const SizedBox(height: 20),
 
               // Announcement Type
@@ -394,27 +403,15 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
     }
   }
 
-  /// Map announcement type to notification type used in the notifications table.
-  String _toNotificationType(AnnouncementType type) {
-    switch (type) {
-      case AnnouncementType.classTest:
-      case AnnouncementType.labTest:
-      case AnnouncementType.quiz:
-        return 'exam_scheduled';
-      case AnnouncementType.assignment:
-        return 'assignment_due';
-      case AnnouncementType.notice:
-        return 'notice_posted';
-      case AnnouncementType.other:
-        return 'announcement';
-    }
-  }
-
   Future<void> _sendAnnouncement() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedCourse == null) {
-      showAppSnackBar(context, message: 'Please select a course', isSuccess: false);
+      showAppSnackBar(
+        context,
+        message: 'Please select a course',
+        isSuccess: false,
+      );
       return;
     }
 
@@ -422,13 +419,14 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
 
     try {
       // Determine priority from type
-      final priority = _selectedType == AnnouncementType.classTest ||
+      final priority =
+          _selectedType == AnnouncementType.classTest ||
               _selectedType == AnnouncementType.labTest
           ? 'high'
           : _selectedType == AnnouncementType.assignment ||
-                  _selectedType == AnnouncementType.quiz
-              ? 'medium'
-              : 'normal';
+                _selectedType == AnnouncementType.quiz
+          ? 'medium'
+          : 'normal';
 
       final typeName = _getTypeName(_selectedType);
       final title = '[$typeName] ${_titleController.text}';
@@ -436,30 +434,11 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
       final success = await TeacherCourseService.saveAnnouncement(
         title: title,
         body: _contentController.text,
+        courseCode: _selectedCourse!,
         targetTerm: null,
         targetSession: null,
         priority: priority,
       );
-
-      if (success) {
-        // Fire push + in-app notification to all students enrolled in the
-        // selected course (or all students if no course is selected).
-        final notifType = _toNotificationType(_selectedType);
-        final courseCode = _selectedCourse;
-        await NotificationService.createNotification(
-          type: notifType,
-          title: title,
-          body: _contentController.text,
-          targetType: courseCode != null ? 'COURSE' : 'ROLE',
-          targetValue: courseCode ?? 'STUDENT',
-          metadata: {
-            if (courseCode != null) 'course_code': courseCode,
-            'announcement_type': typeName,
-            if (_scheduledDate != null)
-              'scheduled_date': _scheduledDate!.toIso8601String(),
-          },
-        );
-      }
 
       if (mounted) {
         setState(() => _isLoading = false);
@@ -468,7 +447,11 @@ class _SendAnnouncementScreenState extends State<SendAnnouncementScreen> {
           showAppSnackBar(context, message: 'Announcement sent successfully!');
           Navigator.pop(context);
         } else {
-          showAppSnackBar(context, message: 'Failed to send announcement', isSuccess: false);
+          showAppSnackBar(
+            context,
+            message: 'Failed to send announcement',
+            isSuccess: false,
+          );
         }
       }
     } catch (e) {

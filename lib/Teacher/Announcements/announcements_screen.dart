@@ -1,8 +1,8 @@
+import '../../services/authenticated_api.dart';
 import 'package:flutter/material.dart';
 import '../models/teacher_course.dart';
 import '../../shared/ui_helpers.dart';
 import '../../theme/app_colors.dart';
-import '../../services/notification_service.dart';
 import '../../services/supabase_service.dart';
 
 /// Course-specific Announcements Screen
@@ -43,9 +43,11 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
               final type = (row['type'] as String? ?? 'notice')
                   .replaceAll('-', ' ')
                   .split(' ')
-                  .map((part) => part.isEmpty
-                      ? part
-                      : '${part[0].toUpperCase()}${part.substring(1)}')
+                  .map(
+                    (part) => part.isEmpty
+                        ? part
+                        : '${part[0].toUpperCase()}${part.substring(1)}',
+                  )
                   .join(' ');
               final createdAt = DateTime.tryParse(
                 row['created_at'] as String? ?? '',
@@ -391,17 +393,35 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                           contentController.text.isNotEmpty) {
                         // Save to the shared announcements table used by web + app.
                         try {
-                          await SupabaseService.from('cms_tv_announcements').insert({
-                            'title': titleController.text,
-                            'content': contentController.text,
-                            'type': selectedType.toLowerCase().replaceAll(' ', '-'),
-                            'course_code': course.code,
-                            'priority': selectedType == 'Class Test' || selectedType == 'Quiz' ? 'high' : 'medium',
-                            'created_by': SupabaseService.currentUserId,
-                            'is_active': true,
-                          });
+                          final result = await AuthenticatedApi.post(
+                            '/api/teacher-portal/announcements',
+                            {
+                              'title': titleController.text,
+                              'content': contentController.text,
+                              'type': selectedType.toLowerCase().replaceAll(
+                                ' ',
+                                '-',
+                              ),
+                              'course_code': course.code,
+                              'priority':
+                                  selectedType == 'Class Test' ||
+                                      selectedType == 'Quiz'
+                                  ? 'high'
+                                  : 'medium',
+                              'created_by': SupabaseService.currentUserId,
+                              'is_active': true,
+                            },
+                          );
+                          if (result['success'] != true)
+                            throw Exception(result['message']);
                         } catch (e) {
-                          debugPrint('[AnnouncementsScreen] save error: $e');
+                          if (context.mounted)
+                            showAppSnackBar(
+                              context,
+                              message: 'Could not post announcement',
+                              isSuccess: false,
+                            );
+                          return;
                         }
 
                         setState(() {
@@ -412,27 +432,12 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                             'date': 'Just now',
                           });
                         });
-                        // Fire push + in-app notification to enrolled students
-                        final typeMap = {
-                          'Class Test': 'exam_scheduled',
-                          'Assignment': 'assignment_due',
-                          'Quiz': 'exam_scheduled',
-                          'Notice': 'notice_posted',
-                        };
-                        await NotificationService.createNotification(
-                          type: typeMap[selectedType] ?? 'announcement',
-                          title: '[${course.code}] ${titleController.text}',
-                          body: contentController.text,
-                          targetType: 'COURSE',
-                          targetValue: course.code,
-                          metadata: {
-                            'course_code': course.code,
-                            'announcement_type': selectedType,
-                          },
-                        );
                         if (context.mounted) {
                           Navigator.pop(context);
-                          showAppSnackBar(context, message: 'Announcement posted!');
+                          showAppSnackBar(
+                            context,
+                            message: 'Announcement posted!',
+                          );
                         }
                         await _loadAnnouncements();
                       }

@@ -4,7 +4,6 @@ import 'dart:io';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:functions_client/functions_client.dart';
 import 'package:flutter/material.dart';
 
 import '../Student Folder/Attendance/student_geo_attendance_screen.dart';
@@ -177,46 +176,8 @@ class PushNotificationService {
     }
   }
 
-  static Future<void> dispatchNotification(String notificationId) async {
-    if (notificationId.trim().isEmpty) return;
-
-    try {
-      final headers = <String, String>{};
-      final dispatchKey = PushConfig.notificationDispatchKey.trim();
-      if (dispatchKey.isNotEmpty) {
-        headers['x-notification-dispatch-key'] = dispatchKey;
-      }
-      final response = await SupabaseCore.client.functions.invoke(
-        PushConfig.supabaseEdgeFunctionName,
-        headers: headers.isEmpty ? null : headers,
-        body: {'notification_id': notificationId},
-      );
-      final payload = response.data;
-      final hasExplicitFailure = payload is Map && payload['success'] == false;
-      if (response.status >= 400 || hasExplicitFailure) {
-        debugPrint(
-          '[PushNotificationService] edge dispatch failed '
-          '(${response.status}): $payload',
-        );
-      }
-    } on FunctionException catch (e) {
-      if (e.status == 401 &&
-          PushConfig.notificationDispatchKey.trim().isEmpty) {
-        debugPrint(
-          '[PushNotificationService] edge dispatch unauthorized. '
-          'If the edge function uses NOTIFICATION_DISPATCH_KEY, set '
-          'PushConfig.notificationDispatchKey or move dispatch behind a '
-          'trusted backend.',
-        );
-      }
-      debugPrint(
-        '[PushNotificationService] edge dispatch error '
-        '(${e.status}): ${e.details ?? e.reasonPhrase}',
-      );
-    } catch (e) {
-      debugPrint('[PushNotificationService] edge dispatch error: $e');
-    }
-  }
+  /// Delivery is queued by the authenticated backend when it creates a notification.
+  static Future<void> dispatchNotification(String notificationId) async {}
 
   static Future<void> sendNotificationToUsers({
     required List<String> userIds,

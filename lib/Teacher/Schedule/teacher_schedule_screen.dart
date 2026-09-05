@@ -440,7 +440,7 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
                   OutlinedButton.icon(
                     onPressed: () => _assignSlot(slot),
                     icon: const Icon(Icons.add_business_outlined, size: 16),
-                    label: const Text('Assign Room'),
+                    label: const Text('Request Room'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.primary,
                       side: BorderSide(
@@ -541,7 +541,7 @@ class _AssignRoomSheetState extends State<_AssignRoomSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Assign Room',
+            'Request Room',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,

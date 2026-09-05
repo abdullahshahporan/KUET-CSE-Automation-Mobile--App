@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../services/push_notification_service.dart';
+import 'authenticated_api.dart';
 import '../services/session_service.dart';
 import '../services/supabase_core.dart';
 import '../utils/course_utils.dart';
@@ -198,7 +198,8 @@ class NotificationService {
       n.metadata['geo_room_section']?.toString(),
     );
     final matchesGeoSection =
-        geoSection == null || _sectionMatchesUser(geoSection, userSection, rollNo);
+        geoSection == null ||
+        _sectionMatchesUser(geoSection, userSection, rollNo);
 
     return switch (targetType) {
       'ALL' => true,
@@ -399,30 +400,17 @@ class NotificationService {
     final userId = SessionService.currentUserId;
     if (userId == null) return;
 
-    final role = SessionService.currentRole;
-    final createdByRole = role == 'STUDENT' ? 'STUDENT_CR' : 'TEACHER';
-
     try {
-      final inserted = await SupabaseCore.from('notifications')
-          .insert({
-            'type': type,
-            'title': title,
-            'body': body,
-            'target_type': targetType,
-            'target_value': targetValue,
-            'target_year_term': targetYearTerm,
-            'created_by': userId,
-            'created_by_role': createdByRole,
-            'metadata': metadata,
-            'expires_at': expiresAt,
-          })
-          .select('id')
-          .single();
-      final notificationId = inserted['id'] as String?;
-
-      if (notificationId != null) {
-        await PushNotificationService.dispatchNotification(notificationId);
-      }
+      await AuthenticatedApi.post('/api/notifications', {
+        'type': type,
+        'title': title,
+        'body': body,
+        'target_type': targetType,
+        'target_value': targetValue,
+        'target_year_term': targetYearTerm,
+        'metadata': metadata,
+        'expires_at': expiresAt,
+      });
     } catch (e) {
       debugPrint('[NotificationService] createNotification error: $e');
     }

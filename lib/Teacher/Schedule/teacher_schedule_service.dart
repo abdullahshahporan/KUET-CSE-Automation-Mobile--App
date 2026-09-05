@@ -1,3 +1,4 @@
+import '../../services/authenticated_api.dart';
 import 'package:flutter/foundation.dart';
 import '../../services/supabase_service.dart';
 import '../../services/notification_service.dart';
@@ -245,15 +246,26 @@ class TeacherScheduleService {
         targetYearTerm = null;
       }
 
-      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      final dayLabel = (dayOfWeek != null && dayOfWeek >= 0 && dayOfWeek < days.length)
+      const days = [
+        'Sunday',
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+      ];
+      final dayLabel =
+          (dayOfWeek != null && dayOfWeek >= 0 && dayOfWeek < days.length)
           ? days[dayOfWeek]
           : null;
 
       final when = scheduleDate != null
           ? ' on $scheduleDate'
           : (dayLabel != null ? ' on $dayLabel' : '');
-      final timeStr = (startTime != null && endTime != null) ? ', $startTime–$endTime' : '';
+      final timeStr = (startTime != null && endTime != null)
+          ? ', $startTime–$endTime'
+          : '';
       final roomStr = room != null ? ', Room $room' : '';
 
       final Map<String, Map<String, String>> payloads = {
@@ -263,17 +275,21 @@ class TeacherScheduleService {
         },
         'class_rescheduled': {
           'title': 'Schedule Updated — $courseCode',
-          'body': '$courseTitle class has been rescheduled$when$timeStr$roomStr.',
+          'body':
+              '$courseTitle class has been rescheduled$when$timeStr$roomStr.',
         },
         'new_schedule': {
           'title': 'New Class Scheduled — $courseCode',
-          'body': 'A new class slot for $courseTitle has been added$when$timeStr$roomStr.',
+          'body':
+              'A new class slot for $courseTitle has been added$when$timeStr$roomStr.',
         },
       };
 
       final payload = payloads[changeType] ?? payloads['class_rescheduled']!;
       // 'new_schedule' maps to 'makeup_class' type (used for one-off or new schedule entries)
-      final notifType = changeType == 'new_schedule' ? 'makeup_class' : changeType;
+      final notifType = changeType == 'new_schedule'
+          ? 'makeup_class'
+          : changeType;
 
       await NotificationService.createNotification(
         type: notifType,
@@ -378,57 +394,21 @@ class TeacherScheduleService {
 
     final bookingDate = _dateKey(date);
 
-    try {
-      final matchingData = await SupabaseService.client
-          .from('routine_slots')
-          .select(
-            'id, offering_id, room_number, day_of_week, start_time, end_time, section, valid_from, valid_until',
-          )
-          .eq('offering_id', slot.offeringId)
-          .eq('day_of_week', slot.dayOfWeek)
-          .eq('start_time', slot.startTime)
-          .eq('end_time', slot.endTime)
-          .eq('valid_from', bookingDate)
-          .eq('valid_until', bookingDate);
-
-      final matchingSlots = (matchingData as List)
-          .map((row) => TeacherSlot.fromMap(row as Map<String, dynamic>))
-          .where((candidate) => _sectionsMatch(candidate.section, slot.section))
-          .toList();
-
-      final mutation = buildAssignmentMutationPlan(
-        slot: slot,
-        bookingDate: bookingDate,
-        roomNumber: roomNumber,
-        exactDateScopedSlots: matchingSlots,
-      );
-
-      switch (mutation.type) {
-        case AssignmentMutationType.updateExisting:
-          await SupabaseService.client
-              .from('routine_slots')
-              .update(mutation.payload)
-              .eq('id', mutation.existingSlotId!);
-          break;
-        case AssignmentMutationType.insertNew:
-          await SupabaseService.client
-              .from('routine_slots')
-              .insert(mutation.payload);
-          break;
-      }
-
-      return const RoomAssignmentResult(
-        success: true,
-        message: 'Room assigned successfully.',
-      );
-    } catch (e) {
-      debugPrint('Error assigning room for date: $e');
-      return RoomAssignmentResult(success: false, message: e.toString());
-    }
-  }
-
-  static bool _sectionsMatch(String? a, String? b) {
-    return (a ?? '').trim().toUpperCase() == (b ?? '').trim().toUpperCase();
+    final result =
+        await AuthenticatedApi.post('/api/teacher-portal/room-requests', {
+          'offering_id': slot.offeringId,
+          'room_number': roomNumber,
+          'date': bookingDate,
+          'start_time': slot.startTime,
+          'end_time': slot.endTime,
+          'purpose': 'Room assignment for scheduled class',
+        });
+    return RoomAssignmentResult(
+      success: result['success'] == true,
+      message: result['success'] == true
+          ? 'Room request submitted for approval.'
+          : result['message']?.toString() ?? 'Room request failed.',
+    );
   }
 
   static String _dateKey(DateTime date) {

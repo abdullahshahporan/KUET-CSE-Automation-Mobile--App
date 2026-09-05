@@ -44,8 +44,8 @@ dependencies:
   # Fonts
   google_fonts: ^6.2.1
 
-  # Bcrypt password verification (client-side)
-  bcrypt: ^1.2.0
+  # Authenticated server data transport
+  http: ^1.6.0
   
   # Local session persistence
   shared_preferences: ^2.5.4

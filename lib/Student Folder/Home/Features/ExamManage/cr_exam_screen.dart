@@ -31,7 +31,6 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
   String? _selectedCourseCode;
   String? _selectedExamType;
   String? _selectedTeacherUserId;
-  String? _selectedTeacherName;
   final _marksCtrl = TextEditingController();
   final _dateCtrl = TextEditingController();
   final _syllabusCtrl = TextEditingController();
@@ -70,10 +69,11 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
         });
       }
     } catch (e) {
-      if (mounted) setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+      if (mounted)
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
     }
   }
 
@@ -147,10 +147,10 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
       _selectedCourseCode =
           (off['courses'] as Map<String, dynamic>?)?['code'] as String?;
       _selectedTeacherUserId = off['teacher_user_id']?.toString();
-      _selectedTeacherName = exam.teacherName;
       _selectedExamType = exam.examType;
-      _marksCtrl.text =
-          exam.maxMarks > 0 ? exam.maxMarks.toStringAsFixed(0) : '';
+      _marksCtrl.text = exam.maxMarks > 0
+          ? exam.maxMarks.toStringAsFixed(0)
+          : '';
       _dateCtrl.text = exam.examDate ?? '';
       _syllabusCtrl.text = exam.syllabus ?? '';
     } else {
@@ -158,7 +158,6 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
       _selectedCourseCode = null;
       _selectedExamType = null;
       _selectedTeacherUserId = null;
-      _selectedTeacherName = null;
       _marksCtrl.clear();
       _dateCtrl.clear();
       _syllabusCtrl.clear();
@@ -255,11 +254,12 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
 
                         // Teacher (CT and Term Final only)
                         if (_selectedExamType == 'CT' ||
-                            _selectedExamType == 'TERM_FINAL') ...([
-                          _sectionLabel('Course Teacher', isDarkMode),
-                          _buildTeacherDropdown(isDarkMode, setModalState),
-                          const SizedBox(height: 16),
-                        ]),
+                            _selectedExamType == 'TERM_FINAL')
+                          ...([
+                            _sectionLabel('Course Teacher', isDarkMode),
+                            _buildTeacherDropdown(isDarkMode, setModalState),
+                            const SizedBox(height: 16),
+                          ]),
 
                         // Max marks
                         _sectionLabel('Max Marks *', isDarkMode),
@@ -359,10 +359,9 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
       onTap: () async {
         final picked = await showDatePicker(
           context: context,
-          initialDate:
-              _dateCtrl.text.isNotEmpty
-                  ? DateTime.tryParse(_dateCtrl.text) ?? DateTime.now()
-                  : DateTime.now().add(const Duration(days: 3)),
+          initialDate: _dateCtrl.text.isNotEmpty
+              ? DateTime.tryParse(_dateCtrl.text) ?? DateTime.now()
+              : DateTime.now().add(const Duration(days: 3)),
           firstDate: DateTime.now(),
           lastDate: DateTime.now().add(const Duration(days: 365)),
         );
@@ -416,7 +415,8 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
   /// selections.  Returns null if no course selected yet.
   Map<String, dynamic>? _resolvedOffering() {
     if (_selectedCourseCode == null) return null;
-    final needsTeacher = _selectedExamType == 'CT' || _selectedExamType == 'TERM_FINAL';
+    final needsTeacher =
+        _selectedExamType == 'CT' || _selectedExamType == 'TERM_FINAL';
     for (final o in _offerings) {
       final code =
           (o['courses'] as Map<String, dynamic>?)?['code'] as String? ?? '';
@@ -454,13 +454,10 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
               // Clear teacher when switching to sessional type
               if (value == 'QUIZ_VIVA') {
                 _selectedTeacherUserId = null;
-                _selectedTeacherName = null;
               }
             }),
             child: Container(
-              margin: EdgeInsets.only(
-                right: value != 'QUIZ_VIVA' ? 8 : 0,
-              ),
+              margin: EdgeInsets.only(right: value != 'QUIZ_VIVA' ? 8 : 0),
               padding: const EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(
                 color: selected
@@ -478,8 +475,7 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight:
-                      selected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   color: selected
                       ? Colors.white
                       : (isDarkMode ? Colors.grey[300] : Colors.grey[700]),
@@ -544,8 +540,10 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
                         ),
                       ),
                       trailing: selected
-                          ? Icon(Icons.check_circle_rounded,
-                              color: AppColors.primary)
+                          ? Icon(
+                              Icons.check_circle_rounded,
+                              color: AppColors.primary,
+                            )
                           : null,
                       onTap: () => Navigator.pop(ctx, code),
                     );
@@ -565,13 +563,11 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
           setModalState(() {
             _selectedCourseCode = picked;
             _selectedTeacherUserId = null;
-            _selectedTeacherName = null;
             // Auto-select teacher when only one option
             final teachers = _getTeachersForCourse(picked);
             if (teachers.length == 1) {
               _selectedTeacherUserId =
                   teachers.first['teacher_user_id'] as String?;
-              _selectedTeacherName = teachers.first['full_name'] as String?;
             }
           });
         }
@@ -618,8 +614,7 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
 
     if (teachers.isEmpty) {
       return Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: isDarkMode ? const Color(0xFF252540) : Colors.grey[50],
           borderRadius: BorderRadius.circular(12),
@@ -673,11 +668,6 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
           onChanged: (val) {
             setModalState(() {
               _selectedTeacherUserId = val;
-              _selectedTeacherName = teachers
-                  .firstWhere(
-                    (t) => t['teacher_user_id'] == val,
-                    orElse: () => {'full_name': ''},
-                  )['full_name'] as String?;
             });
           },
         ),
@@ -686,12 +676,14 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
   }
 
   Widget _buildSubmitButton(
-      StateSetter setModalState, bool isDarkMode, BuildContext ctx) {
+    StateSetter setModalState,
+    bool isDarkMode,
+    BuildContext ctx,
+  ) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed:
-            _isSubmitting ? null : () => _submitForm(setModalState, ctx),
+        onPressed: _isSubmitting ? null : () => _submitForm(setModalState, ctx),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
@@ -744,13 +736,13 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
     );
   }
 
-  Future<void> _submitForm(
-      StateSetter setModalState, BuildContext ctx) async {
+  Future<void> _submitForm(StateSetter setModalState, BuildContext ctx) async {
     final isEditing = _editingExam != null;
 
     // Resolve the offering (editing keeps _selectedOffering; new uses 2-step)
-    final offering =
-        isEditing ? (_selectedOffering ?? {}) : (_resolvedOffering() ?? {});
+    final offering = isEditing
+        ? (_selectedOffering ?? {})
+        : (_resolvedOffering() ?? {});
 
     if (offering.isEmpty) {
       await _showModalError(ctx, 'Please select a course first.');
@@ -917,15 +909,20 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_off_rounded, size: 64,
-                color: isDarkMode ? Colors.grey[600] : Colors.grey[400]),
+            Icon(
+              Icons.cloud_off_rounded,
+              size: 64,
+              color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
+            ),
             const SizedBox(height: 16),
-            Text('Failed to load exams',
-                style: TextStyle(
-                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600])),
+            Text(
+              'Failed to load exams',
+              style: TextStyle(
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
             const SizedBox(height: 12),
-            ElevatedButton(
-                onPressed: _loadData, child: const Text('Retry')),
+            ElevatedButton(onPressed: _loadData, child: const Text('Retry')),
           ],
         ),
       );
@@ -942,18 +939,23 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
                 color: AppColors.primary.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.event_note_rounded,
-                  size: 56, color: AppColors.primary),
+              child: Icon(
+                Icons.event_note_rounded,
+                size: 56,
+                color: AppColors.primary,
+              ),
             ),
             const SizedBox(height: 20),
-            const Text('No exams scheduled yet',
-                style: TextStyle(
-                    fontSize: 17, fontWeight: FontWeight.w600)),
+            const Text(
+              'No exams scheduled yet',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 8),
             Text(
               'Tap the + button to add a CT or exam',
               style: TextStyle(
-                  color: isDarkMode ? Colors.grey[500] : Colors.grey[500]),
+                color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+              ),
             ),
             const SizedBox(height: 80),
           ],
@@ -973,7 +975,8 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
 
   Widget _buildExamCard(CRExam exam, bool isDarkMode) {
     final color = _typeColor(exam.examType);
-    final canEdit = true; // CR can edit all their term exams; server validates creator
+    final canEdit =
+        true; // CR can edit all their term exams; server validates creator
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -1007,7 +1010,9 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 6),
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [color, color.withOpacity(0.75)],
@@ -1026,7 +1031,9 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
                 const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 5),
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(8),
@@ -1044,14 +1051,20 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
                 const Spacer(),
                 if (canEdit) ...[
                   IconButton(
-                    icon: Icon(Icons.edit_rounded,
-                        size: 18, color: Colors.blue[400]),
+                    icon: Icon(
+                      Icons.edit_rounded,
+                      size: 18,
+                      color: Colors.blue[400],
+                    ),
                     onPressed: () => _openForm(exam: exam),
                     tooltip: 'Edit',
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline_rounded,
-                        size: 18, color: Colors.red),
+                    icon: const Icon(
+                      Icons.delete_outline_rounded,
+                      size: 18,
+                      color: Colors.red,
+                    ),
                     onPressed: () => _confirmDelete(exam),
                     tooltip: 'Delete',
                   ),
@@ -1088,17 +1101,32 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
                   spacing: 12,
                   runSpacing: 6,
                   children: [
-                    _chip(Icons.calendar_today_rounded,
-                        _formatDate(exam.examDate), isDarkMode, color),
-                    _chip(Icons.access_time_rounded,
-                        _formatTime(exam.examTime), isDarkMode, color),
+                    _chip(
+                      Icons.calendar_today_rounded,
+                      _formatDate(exam.examDate),
+                      isDarkMode,
+                      color,
+                    ),
+                    _chip(
+                      Icons.access_time_rounded,
+                      _formatTime(exam.examTime),
+                      isDarkMode,
+                      color,
+                    ),
                     if (exam.roomNumbers.isNotEmpty)
-                      _chip(Icons.location_on_outlined,
-                          exam.roomNumbers.join(', '), isDarkMode, color),
+                      _chip(
+                        Icons.location_on_outlined,
+                        exam.roomNumbers.join(', '),
+                        isDarkMode,
+                        color,
+                      ),
                     if (exam.maxMarks > 0)
-                      _chip(Icons.star_rounded,
-                          '${exam.maxMarks.toStringAsFixed(0)} marks',
-                          isDarkMode, color),
+                      _chip(
+                        Icons.star_rounded,
+                        '${exam.maxMarks.toStringAsFixed(0)} marks',
+                        isDarkMode,
+                        color,
+                      ),
                   ],
                 ),
                 if (exam.syllabus?.isNotEmpty == true) ...[
@@ -1109,8 +1137,7 @@ class _CRExamScreenState extends ConsumerState<CRExamScreen> {
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.07),
                       borderRadius: BorderRadius.circular(10),
-                      border:
-                          Border.all(color: color.withOpacity(0.2)),
+                      border: Border.all(color: color.withOpacity(0.2)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

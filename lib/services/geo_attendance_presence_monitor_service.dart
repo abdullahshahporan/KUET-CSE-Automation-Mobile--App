@@ -133,11 +133,7 @@ class GeoAttendancePresenceMonitorService {
           continue;
         }
 
-        await GeoAttendanceService.updateRoomAttendanceStatus(
-          roomId: roomId,
-          studentUserId: _studentUserId!,
-          status: 'ABSENT',
-        );
+        // Device monitoring is advisory; only the teacher can change recorded status.
         _markedAbsentRoomIds.add(roomId);
         _outsideSinceByRoomId.remove(roomId);
         await _notifyAbsent(room, graceMinutes);
@@ -158,13 +154,13 @@ class GeoAttendancePresenceMonitorService {
     final courseCode = course?['code'] as String? ?? 'your class';
     final roomId = room['id']?.toString();
 
-    final title = 'Attendance marked absent';
+    final title = 'Check your attendance location';
     final body =
         'You stayed outside the geo-attendance area for $graceMinutes min in '
-        '$courseCode.';
+        '$courseCode. Ask your teacher if the location estimate is inaccurate.';
 
     await NotificationService.saveLocalInboxNotification(
-      type: 'attendance_absent',
+      type: 'announcement',
       title: title,
       body: body,
       metadata: {

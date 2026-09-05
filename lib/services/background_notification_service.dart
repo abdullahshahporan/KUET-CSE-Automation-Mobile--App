@@ -1,3 +1,4 @@
+import 'authenticated_data_client.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
@@ -171,14 +172,15 @@ class BackgroundNotificationService {
     final supabase = SupabaseClient(
       SupabaseConfig.supabaseUrl,
       SupabaseConfig.supabaseAnonKey,
+      httpClient: AuthenticatedDataClient(),
     );
 
     final prefs = await SharedPreferences.getInstance();
 
     // Note: The app uses a custom JWT (not Supabase Auth), so no
-    // supabase.auth session exists. We authenticate with the anon key only,
+    // supabase.auth session exists. Requests pass through the authenticated backend,
     // which is sufficient to read public notification rows. USER-targeted
-    // notifications are filtered locally using the userId stored in prefs.
+    // The gateway authenticates the server session; PostgreSQL restricts the audience before retrieval.
 
     // Set initial last-check time so first tick doesn't flood
     if (prefs.getString(_kLastBgCheckTs) == null) {

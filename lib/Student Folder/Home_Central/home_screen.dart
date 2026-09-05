@@ -37,7 +37,6 @@ class _HomeScreenState extends State<HomeScreen>
 
   // Stagger animation
   late final AnimationController _staggerCtrl;
-  static const int _tileCount = 9; // max tiles incl. CR
 
   @override
   void initState() {
@@ -346,10 +345,7 @@ class _HomeScreenState extends State<HomeScreen>
         );
       }),
       tile(Icons.campaign_rounded, 'Notices', 'Dept. updates', () {
-        Navigator.push(
-          context,
-          SmoothPageRoute(page: const NoticeScreen()),
-        );
+        Navigator.push(context, SmoothPageRoute(page: const NoticeScreen()));
       }),
       tile(Icons.location_on_rounded, 'Geo-Attend', 'Location check-in', () {
         Navigator.push(
@@ -366,10 +362,7 @@ class _HomeScreenState extends State<HomeScreen>
         }),
       if (_isCR)
         tile(Icons.edit_calendar_rounded, 'Manage Exams', 'CT & exams', () {
-          Navigator.push(
-            context,
-            SmoothPageRoute(page: const CRExamScreen()),
-          );
+          Navigator.push(context, SmoothPageRoute(page: const CRExamScreen()));
         }),
     ];
   }

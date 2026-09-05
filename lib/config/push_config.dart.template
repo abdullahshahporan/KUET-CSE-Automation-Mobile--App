@@ -3,10 +3,9 @@ class PushConfig {
 
   // FCM server credentials stay in Supabase Edge Function secrets / web env.
   // The app only reads its own Firebase config from android/app/google-services.json.
-  static const bool enableFcmPush = true;
+  static const bool enableFcmPush = false;
   static const String supabaseEdgeFunctionName = 'send-push-notification';
-  // Optional: only set this if you intentionally allow the mobile app to
-  // call the protected Supabase Edge Function directly.
+  // Server dispatch secrets must never be distributed in the application.
   static const String notificationDispatchKey = '';
 
   static bool get hasRemotePushCredentials => enableFcmPush;

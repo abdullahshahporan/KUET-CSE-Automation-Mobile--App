@@ -5,6 +5,7 @@ import 'package:local_auth/local_auth.dart';
 
 import 'auth_service.dart';
 import 'session_service.dart';
+import 'session_token_store.dart';
 
 /// Handles device biometric availability plus securely stored login credentials.
 class BiometricAuthService {
@@ -17,7 +18,6 @@ class BiometricAuthService {
 
   static const _keyEnabled = 'biometric_login_enabled';
   static const _keyEmail = 'biometric_login_email';
-  static const _keyPassword = 'biometric_login_password';
   static const _keyRole = 'biometric_login_role';
 
   static Future<bool> isSupported() async {
@@ -41,8 +41,8 @@ class BiometricAuthService {
 
   static Future<bool> hasStoredCredentials() async {
     final email = await _storage.read(key: _keyEmail);
-    final password = await _storage.read(key: _keyPassword);
-    return (email?.isNotEmpty ?? false) && (password?.isNotEmpty ?? false);
+    final token = await SessionTokenStore.read();
+    return (email?.isNotEmpty ?? false) && (token?.isNotEmpty ?? false);
   }
 
   static Future<bool> isReadyForBiometricLogin() async {
@@ -93,7 +93,7 @@ class BiometricAuthService {
 
     await _storage.write(key: _keyEnabled, value: 'true');
     await _storage.write(key: _keyEmail, value: email.trim().toLowerCase());
-    await _storage.write(key: _keyPassword, value: currentPassword);
+    await _storage.delete(key: 'biometric_login_password');
     await _storage.write(key: _keyRole, value: role);
 
     return {
@@ -105,7 +105,7 @@ class BiometricAuthService {
   static Future<void> disable() async {
     await _storage.delete(key: _keyEnabled);
     await _storage.delete(key: _keyEmail);
-    await _storage.delete(key: _keyPassword);
+    await _storage.delete(key: 'biometric_login_password');
     await _storage.delete(key: _keyRole);
   }
 
@@ -128,8 +128,8 @@ class BiometricAuthService {
     }
 
     final email = await _storage.read(key: _keyEmail);
-    final password = await _storage.read(key: _keyPassword);
-    if (email == null || password == null) {
+    final token = await SessionTokenStore.read();
+    if (email == null || token == null) {
       await disable();
       return {
         'success': false,
@@ -137,7 +137,7 @@ class BiometricAuthService {
       };
     }
 
-    final result = await AuthService.signIn(email: email, password: password);
+    final result = await AuthService.resumeSession();
     final message = (result['message'] ?? '').toString();
     if (result['success'] != true && message == 'Invalid email or password') {
       await disable();
@@ -190,7 +190,7 @@ class BiometricAuthService {
       return;
     }
 
-    await _storage.write(key: _keyPassword, value: newPassword);
+    await disable();
     if (role != null && role.isNotEmpty) {
       await _storage.write(key: _keyRole, value: role);
     }

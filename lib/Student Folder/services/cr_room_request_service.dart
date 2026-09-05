@@ -1,7 +1,7 @@
+import '../../services/authenticated_api.dart';
 import 'package:flutter/foundation.dart';
 import '../../services/session_service.dart';
 import '../../services/supabase_core.dart';
-import '../../services/notification_service.dart';
 import '../../utils/course_utils.dart';
 import '../../Teacher/Room_info/room_booking_model.dart';
 import '../../Teacher/Room_info/room_model.dart';
@@ -76,162 +76,21 @@ class CRRoomRequestService {
       return (success: false, message: 'Not logged in.');
     }
 
-    // Verify CR status
-    final isCR = await checkIsCR();
-    if (!isCR) {
-      return (success: false, message: 'You are not designated as a CR.');
-    }
-
-    if (roomNumber == null) {
-      return (success: false, message: 'Room is required.');
-    }
-
-    try {
-      // ── FCFS conflict check (date-based) ──
-      final conflict = await _checkSlotConflicts(
-        roomNumber: roomNumber,
-        dayOfWeek: dayOfWeek,
-        startTime: startTime,
-        endTime: endTime,
-        requestDate: requestDate,
-      );
-      if (conflict != null) {
-        return (success: false, message: conflict);
-      }
-
-      // No conflict — auto-approve (FCFS: first request wins)
-      final insertedRequest = await SupabaseCore.from('cr_room_requests')
-          .insert({
-            'student_user_id': userId,
-            'course_code': courseCode,
-            'teacher_user_id': teacherUserId,
-            'day_of_week': dayOfWeek,
-            'start_time': startTime,
-            'end_time': endTime,
-            'term': term,
-            'session': session,
-            'section': section,
-            'reason': reason,
-            'status': 'approved',
-            'room_number': roomNumber,
-            'request_date': requestDate,
-          })
-          .select('id')
-          .single();
-      final requestId = insertedRequest['id']?.toString();
-
-      // Sync to routine_slots so Schedule & TV Display show this CR booking
-      await _syncToRoutineSlot(
-        courseCode: courseCode,
-        teacherUserId: teacherUserId,
-        roomNumber: roomNumber,
-        dayOfWeek: dayOfWeek,
-        startTime: startTime,
-        endTime: endTime,
-        term: term,
-        session: session,
-        section: section,
-        requestDate: requestDate,
-      );
-
-      // Send in-app + push notifications for the room booking
-      const dayNames = [
-        'Sunday',
-        'Monday',
-        'Tuesday',
-        'Wednesday',
-        'Thursday',
-        'Friday',
-        'Saturday',
-      ];
-      final dayLabel = dayNames.elementAtOrNull(dayOfWeek) ?? 'Day $dayOfWeek';
-      final notifMetadata = {
-        if (requestId != null && requestId.isNotEmpty)
-          'cr_room_request_id': requestId,
-        'course_code': courseCode,
-        'room_number': roomNumber,
-        'start_time': startTime,
-        'end_time': endTime,
-        'request_date': requestDate,
-        'open_screen': 'room_booking',
-      };
-      final recipientUserIds = await _getStudentRecipientUserIds(
-        term: term,
-        session: session,
-        section: section,
-      );
-
-      // Use USER-target notifications for students to ensure push is resolved
-      // against explicit user IDs and active device tokens.
-      final uniqueRecipients = <String>{
-        ...recipientUserIds,
-        userId,
-      }.toList(growable: false);
-
-      final studentNotificationFutures = uniqueRecipients
-          .map(
-            (recipientUserId) => NotificationService.createNotification(
-              type: 'room_allocated',
-              title: '🏫 Room $roomNumber Booked — $courseCode',
-              body:
-                  'CR booked Room $roomNumber for $courseCode on '
-                  '$dayLabel ($requestDate, $startTime–$endTime).',
-              targetType: 'USER',
-              targetValue: recipientUserId,
-              metadata: notifMetadata,
-            ),
-          )
-          .toList(growable: true);
-
-      // Fallback broadcast to preserve in-app visibility when direct recipient
-      // resolution misses due inconsistent student profile data.
-      final normalizedSection = section?.trim();
-      final hasSection =
-          normalizedSection != null && normalizedSection.isNotEmpty;
-      studentNotificationFutures.add(
-        NotificationService.createNotification(
-          type: 'room_allocated',
-          title: '🏫 Room $roomNumber Booked — $courseCode',
-          body:
-              'CR booked Room $roomNumber for $courseCode on '
-              '$dayLabel ($requestDate, $startTime–$endTime).',
-          targetType: hasSection ? 'SECTION' : 'YEAR_TERM',
-          targetValue: hasSection ? normalizedSection : term,
-          targetYearTerm: hasSection ? term : null,
-          metadata: notifMetadata,
-        ),
-      );
-      await Future.wait(studentNotificationFutures);
-
-      // Also notify the course teacher directly (in-app + push)
-      await NotificationService.createNotification(
-        type: 'room_allocated',
-        title: '🏫 Room $roomNumber Booked by CR — $courseCode',
-        body:
-            'CR booked Room $roomNumber for your course $courseCode on '
-            '$dayLabel ($requestDate, $startTime–$endTime).',
-        targetType: 'USER',
-        targetValue: teacherUserId,
-        metadata: notifMetadata,
-      );
-
-      return (
-        success: true,
-        message: 'Room booked successfully! (Auto-approved)',
-      );
-    } catch (e) {
-      debugPrint('Error submitting CR room request: $e');
-      String msg = e.toString();
-      if (msg.contains('row-level security') || msg.contains('policy')) {
-        msg = 'Permission denied. Contact admin.';
-      } else if (msg.length > 120) {
-        msg = msg.substring(0, 120);
-      }
-      return (success: false, message: msg);
-    }
+    final result = await AuthenticatedApi.post('/api/cr-room-requests', {
+      'course_code': courseCode,
+      'teacher_user_id': teacherUserId,
+      'room_number': roomNumber,
+      'day_of_week': dayOfWeek,
+      'start_time': startTime,
+      'end_time': endTime,
+      'request_date': requestDate,
+      'reason': reason,
+    });
+    return (
+      success: result['success'] == true,
+      message: (result['message'] ?? 'Room request submitted').toString(),
+    );
   }
-
-  // ── Get courses for student's current term ────────────────
 
   static Future<List<Map<String, dynamic>>> getCoursesForTerm() async {
     final userId = SessionService.currentUserId;
@@ -325,174 +184,13 @@ class CRRoomRequestService {
   // ── Delete a request and clean up synced routine_slot ───
 
   static Future<bool> deleteRequest(String requestId) async {
-    try {
-      // Fetch request details before deleting (to clean up routine_slot)
-      final reqData = await SupabaseCore.from('cr_room_requests')
-          .select(
-            'room_number, day_of_week, start_time, end_time, request_date, status',
-          )
-          .eq('id', requestId)
-          .maybeSingle();
-
-      await SupabaseCore.from('cr_room_requests').delete().eq('id', requestId);
-
-      // Clean up synced routine_slot if the request was approved
-      if (reqData != null &&
-          reqData['status'] == 'approved' &&
-          reqData['request_date'] != null &&
-          reqData['room_number'] != null) {
-        try {
-          await SupabaseCore.from('routine_slots')
-              .delete()
-              .eq('room_number', reqData['room_number'])
-              .eq('day_of_week', reqData['day_of_week'])
-              .eq('start_time', reqData['start_time'])
-              .eq('end_time', reqData['end_time'])
-              .eq('valid_from', reqData['request_date'])
-              .eq('valid_until', reqData['request_date']);
-        } catch (e) {
-          debugPrint('CR delete: failed to clean up routine_slot: $e');
-        }
-      }
-      return true;
-    } catch (e) {
-      debugPrint('Error deleting CR room request: $e');
-      return false;
-    }
+    final response = await AuthenticatedApi.send(
+      'DELETE',
+      '/api/cr-room-requests?id=${Uri.encodeQueryComponent(requestId)}',
+      {},
+    );
+    return response['success'] == true;
   }
-
-  // ── Sync CR booking to routine_slots for Schedule & TV Display ──
-
-  static Future<void> _syncToRoutineSlot({
-    required String courseCode,
-    required String teacherUserId,
-    required String roomNumber,
-    required int dayOfWeek,
-    required String startTime,
-    required String endTime,
-    required String term,
-    required String session,
-    String? section,
-    required String requestDate,
-  }) async {
-    try {
-      // Step 1: Find the course by code
-      final courseRows = await SupabaseCore.from(
-        'courses',
-      ).select('id').eq('code', courseCode).limit(1);
-
-      if ((courseRows as List).isEmpty) {
-        debugPrint('CR sync: course not found for code: $courseCode');
-        return;
-      }
-      final courseId = courseRows[0]['id'] as String;
-
-      // Step 2: Find an active offering for this course + teacher
-      final offerings = await SupabaseCore.from('course_offerings')
-          .select('id')
-          .eq('course_id', courseId)
-          .eq('teacher_user_id', teacherUserId)
-          .eq('term', term)
-          .eq('session', session)
-          .eq('is_active', true)
-          .limit(1);
-
-      String? offeringId;
-      if ((offerings as List).isNotEmpty) {
-        offeringId = offerings[0]['id'] as String;
-      } else {
-        // Create a new offering
-        final newOffering = await SupabaseCore.from('course_offerings')
-            .insert({
-              'course_id': courseId,
-              'teacher_user_id': teacherUserId,
-              'term': term,
-              'session': session,
-              'section': section,
-              'is_active': true,
-            })
-            .select('id')
-            .single();
-        offeringId = newOffering['id'] as String?;
-      }
-
-      if (offeringId == null) {
-        debugPrint('CR sync: could not resolve offering_id');
-        return;
-      }
-
-      // Step 3: Check if a routine_slot already exists for this exact slot
-      final existing = await SupabaseCore.from('routine_slots')
-          .select('id')
-          .eq('offering_id', offeringId)
-          .eq('day_of_week', dayOfWeek)
-          .eq('start_time', startTime)
-          .eq('end_time', endTime)
-          .eq('valid_from', requestDate)
-          .eq('valid_until', requestDate)
-          .limit(1);
-
-      if ((existing as List).isNotEmpty) {
-        // Update room on existing slot
-        await SupabaseCore.from('routine_slots')
-            .update({'room_number': roomNumber, 'section': section})
-            .eq('id', existing[0]['id']);
-      } else {
-        // Insert new date-scoped routine_slot
-        await SupabaseCore.from('routine_slots').insert({
-          'offering_id': offeringId,
-          'room_number': roomNumber,
-          'day_of_week': dayOfWeek,
-          'start_time': startTime,
-          'end_time': endTime,
-          'section': section,
-          'valid_from': requestDate,
-          'valid_until': requestDate,
-        });
-      }
-    } catch (e) {
-      debugPrint('CR sync to routine_slots failed: $e');
-      // Non-fatal: the CR booking itself succeeded
-    }
-  }
-
-  static Future<List<String>> _getStudentRecipientUserIds({
-    required String term,
-    required String session,
-    String? section,
-  }) async {
-    final cleanedTerm = term.trim();
-    final cleanedSession = session.trim();
-    final cleanedSection = section?.trim();
-
-    if (cleanedTerm.isEmpty || cleanedSession.isEmpty) {
-      return const [];
-    }
-
-    try {
-      var query = SupabaseCore.from(
-        'students',
-      ).select('user_id').eq('term', cleanedTerm).eq('session', cleanedSession);
-
-      if (cleanedSection != null && cleanedSection.isNotEmpty) {
-        query = query.eq('section', cleanedSection);
-      }
-
-      final rows = await query;
-      final ids = (rows as List)
-          .map((row) => (row as Map<String, dynamic>)['user_id']?.toString())
-          .whereType<String>()
-          .where((id) => id.trim().isNotEmpty)
-          .toSet()
-          .toList(growable: false);
-      return ids;
-    } catch (e) {
-      debugPrint('Error fetching CR room notification recipients: $e');
-      return const [];
-    }
-  }
-
-  // ── Get unique courses for student's term ─────────────────
 
   static Future<List<Map<String, dynamic>>> getUniqueCourses() async {
     final offerings = await getCoursesForTerm();
@@ -648,114 +346,6 @@ class CRRoomRequestService {
     } catch (e) {
       debugPrint('Error fetching available slots: $e');
       return [];
-    }
-  }
-
-  // ── FCFS: Check for conflicting bookings ──────────────────
-  /// Returns an error message if a conflict exists, or null if free.
-  /// Checks: routine_slots (valid on date), room_booking_requests (by date),
-  /// and cr_room_requests (by date).
-  static Future<String?> _checkSlotConflicts({
-    required String roomNumber,
-    required int dayOfWeek,
-    required String startTime,
-    required String endTime,
-    required String requestDate,
-  }) async {
-    final reqStart = _fmt(startTime);
-    final reqEnd = _fmt(endTime);
-    final roomVariants = RoomService.roomNumberVariants(roomNumber);
-
-    try {
-      // 1. Check routine_slots (permanent class schedule valid on this date)
-      final routineData = await SupabaseCore.from('routine_slots')
-          .select('''
-            id, room_number, day_of_week, start_time, end_time,
-            valid_from, valid_until,
-            course_offerings!inner (
-              is_active,
-              courses ( code, title ),
-              teachers ( full_name )
-            )
-          ''')
-          .inFilter('room_number', roomVariants)
-          .eq('day_of_week', dayOfWeek)
-          .eq('course_offerings.is_active', true);
-
-      final reqDate = DateTime.tryParse(requestDate);
-      for (final row in (routineData as List)) {
-        // Check date validity of the routine slot
-        final vFrom = row['valid_from'] as String?;
-        final vUntil = row['valid_until'] as String?;
-        if (reqDate != null) {
-          final from = vFrom != null ? DateTime.tryParse(vFrom) : null;
-          final until = vUntil != null ? DateTime.tryParse(vUntil) : null;
-          if (from != null && reqDate.isBefore(from)) continue;
-          if (until != null && reqDate.isAfter(until)) continue;
-        }
-        final sStart = _fmt(row['start_time'] as String? ?? '');
-        final sEnd = _fmt(row['end_time'] as String? ?? '');
-        if (sStart.compareTo(reqEnd) < 0 && sEnd.compareTo(reqStart) > 0) {
-          final offering =
-              row['course_offerings'] as Map<String, dynamic>? ?? {};
-          final course = offering['courses'] as Map<String, dynamic>? ?? {};
-          final code = course['code'] ?? 'A class';
-          return 'Slot conflict! $code is permanently scheduled in this room '
-              'during that time.';
-        }
-      }
-
-      // 2. Check room_booking_requests (teacher bookings on this date)
-      final bookingData = await SupabaseCore.from('room_booking_requests')
-          .select('''
-            id, start_time, end_time, requested_at,
-            course_offerings ( courses ( code, title ) ),
-            teachers!rbr_teacher_fkey ( full_name )
-          ''')
-          .inFilter('room_number', roomVariants)
-          .eq('booking_date', requestDate)
-          .eq('status', 'approved')
-          .order('requested_at', ascending: true);
-
-      for (final row in (bookingData as List)) {
-        final bStart = _fmt(row['start_time'] as String? ?? '');
-        final bEnd = _fmt(row['end_time'] as String? ?? '');
-        if (bStart.compareTo(reqEnd) < 0 && bEnd.compareTo(reqStart) > 0) {
-          final offering =
-              row['course_offerings'] as Map<String, dynamic>? ?? {};
-          final course = offering['courses'] as Map<String, dynamic>? ?? {};
-          final teacher = row['teachers'] as Map<String, dynamic>? ?? {};
-          final code = course['code'] ?? 'A course';
-          final name = teacher['full_name'] ?? 'a teacher';
-          return 'Slot already booked! $code was booked by $name '
-              '(requested first). FCFS — only one booking per slot.';
-        }
-      }
-
-      // 3. Check cr_room_requests (other CR bookings on this date)
-      final crData = await SupabaseCore.from('cr_room_requests')
-          .select('''
-            id, course_code, start_time, end_time, created_at,
-            teachers!cr_room_requests_teacher_user_id_fkey ( full_name )
-          ''')
-          .inFilter('room_number', roomVariants)
-          .eq('request_date', requestDate)
-          .eq('status', 'approved')
-          .order('created_at', ascending: true);
-
-      for (final row in (crData as List)) {
-        final cStart = _fmt(row['start_time'] as String? ?? '');
-        final cEnd = _fmt(row['end_time'] as String? ?? '');
-        if (cStart.compareTo(reqEnd) < 0 && cEnd.compareTo(reqStart) > 0) {
-          final code = row['course_code'] ?? 'A course';
-          return 'Slot already taken! $code was booked earlier (FCFS).';
-        }
-      }
-
-      return null; // No conflicts
-    } catch (e) {
-      debugPrint('Error checking slot conflicts: $e');
-      return 'Failed to verify slot availability. Please try again.';
     }
   }
 

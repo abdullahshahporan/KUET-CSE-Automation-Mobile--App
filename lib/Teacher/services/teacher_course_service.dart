@@ -1,3 +1,4 @@
+import '../../services/authenticated_api.dart';
 import 'package:flutter/foundation.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/course_utils.dart';
@@ -158,7 +159,7 @@ class TeacherCourseService {
   /// Save attendance for a class session.
   ///
   /// [attendance] maps **student_user_id** → status string.
-  /// Auto-creates enrollment records when they don't exist.
+  /// Requires existing active enrolments; all writes commit atomically.
   /// Throws on failure so the caller can show the real error.
   static Future<void> saveAttendance({
     required String offeringId,
@@ -166,81 +167,22 @@ class TeacherCourseService {
     required String? roomNumber,
     required Map<String, String> attendance, // studentUserId -> status
   }) async {
-    final teacherId = SupabaseService.currentUserId;
-    if (teacherId == null) throw Exception('Not logged in');
-
-    // 1. Create class session
-    final sessionInsert = <String, dynamic>{
-      'offering_id': offeringId,
-      'starts_at': date.toIso8601String(),
-      'ends_at': date.add(const Duration(hours: 1)).toIso8601String(),
-    };
-    // Only set room_number if valid (FK constraint)
-    if (roomNumber != null && roomNumber.isNotEmpty) {
-      sessionInsert['room_number'] = roomNumber;
-    }
-
-    final sessionData = await SupabaseService.from(
-      'class_sessions',
-    ).insert(sessionInsert).select('id').single();
-    final sessionId = sessionData['id'] as String;
-
-    // 2. Ensure enrollment records exist (upsert)
-    final studentIds = attendance.keys.toList();
-    final existingEnrollments = await SupabaseService.from('enrollments')
-        .select('id, student_user_id')
-        .eq('offering_id', offeringId)
-        .inFilter('student_user_id', studentIds);
-
-    final enrollmentMap = <String, String>{}; // studentUserId -> enrollmentId
-    for (final e in (existingEnrollments as List)) {
-      enrollmentMap[e['student_user_id'] as String] = e['id'] as String;
-    }
-
-    // Create missing enrollments
-    final missing = studentIds
-        .where((id) => !enrollmentMap.containsKey(id))
-        .toList();
-    if (missing.isNotEmpty) {
-      final toInsert = missing
-          .map(
-            (sid) => {
-              'offering_id': offeringId,
-              'student_user_id': sid,
-              'enrollment_status': 'ENROLLED',
-            },
-          )
-          .toList();
-
-      final inserted = await SupabaseService.from(
-        'enrollments',
-      ).insert(toInsert).select('id, student_user_id');
-
-      for (final e in (inserted as List)) {
-        enrollmentMap[e['student_user_id'] as String] = e['id'] as String;
-      }
-    }
-
-    // 3. Insert attendance records
-    final records = attendance.entries
-        .where((e) => enrollmentMap.containsKey(e.key))
-        .map(
-          (e) => {
-            'session_id': sessionId,
-            'enrollment_id': enrollmentMap[e.key],
-            'status': e.value,
-            'marked_by_teacher_user_id': teacherId,
-          },
-        )
-        .toList();
-
-    await SupabaseService.from('attendance_records').insert(records);
+    final result =
+        await AuthenticatedApi.post('/api/teacher-portal/attendance/session', {
+          'offering_id': offeringId,
+          'starts_at': date.toUtc().toIso8601String(),
+          'room_number': roomNumber,
+          'attendance': attendance,
+        });
+    if (result['success'] != true)
+      throw Exception(result['message'] ?? 'Could not save attendance');
   }
 
   /// Save announcement to Supabase notices table
   static Future<bool> saveAnnouncement({
     required String title,
     required String body,
+    required String courseCode,
     required String? targetTerm,
     required String? targetSession,
     String? priority,
@@ -249,17 +191,15 @@ class TeacherCourseService {
       final userId = SupabaseService.currentUserId;
       if (userId == null) return false;
 
-      await SupabaseService.from('notices').insert({
-        'title': title,
-        'body': body,
-        'author_user_id': userId,
-        'target_term': targetTerm,
-        'target_session': targetSession,
-        'priority': priority ?? 'NORMAL',
-        'is_published': true,
-        'published_at': DateTime.now().toIso8601String(),
-      });
-      return true;
+      final result =
+          await AuthenticatedApi.post('/api/teacher-portal/announcements', {
+            'title': title,
+            'content': body,
+            'course_code': courseCode,
+            'priority': priority ?? 'medium',
+            'type': 'notice',
+          });
+      return result['success'] == true;
     } catch (e) {
       debugPrint('Error saving announcement: $e');
       return false;

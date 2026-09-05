@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'supabase_core.dart';
+import 'session_token_store.dart';
 
 /// Manages local session state (SharedPreferences).
 ///
@@ -40,6 +41,8 @@ class SessionService {
   /// Clear the local session (logout).
   static Future<void> clearSession() async {
     final prefs = await SupabaseCore.ensurePrefs();
+    await SessionTokenStore.clear();
+    await prefs.remove('user_token');
     await prefs.remove(_keyIsLoggedIn);
     await prefs.remove(_keyUserId);
     await prefs.remove(_keyEmail);

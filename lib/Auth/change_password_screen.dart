@@ -159,8 +159,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   if (value == null || value.isEmpty) {
                     return 'Please enter a new password';
                   }
-                  if (value.length < 6) {
-                    return 'Password must be at least 6 characters';
+                  if (value.length < 12) {
+                    return 'Password must be at least 12 characters';
                   }
                   if (value == _currentPasswordController.text) {
                     return 'New password must be different from current';

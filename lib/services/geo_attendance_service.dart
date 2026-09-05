@@ -1,3 +1,4 @@
+import 'authenticated_api.dart';
 import 'dart:math' show pi, sin, cos, sqrt, atan2;
 import 'package:flutter/foundation.dart';
 import '../utils/course_utils.dart';
@@ -483,36 +484,7 @@ class GeoAttendanceService {
       }
     }
 
-    final missingStudentUserIds = studentUserIds
-        .where(
-          (studentUserId) => !enrollmentByStudentId.containsKey(studentUserId),
-        )
-        .toList();
-
-    if (missingStudentUserIds.isNotEmpty) {
-      final insertedEnrollments = await SupabaseService.from('enrollments')
-          .insert(
-            missingStudentUserIds
-                .map(
-                  (studentUserId) => {
-                    'offering_id': offeringId,
-                    'student_user_id': studentUserId,
-                    'enrollment_status': 'ENROLLED',
-                  },
-                )
-                .toList(),
-          )
-          .select('id, student_user_id');
-
-      for (final row in insertedEnrollments as List) {
-        final map = row as Map<String, dynamic>;
-        final studentUserId = _cleanText(map['student_user_id'] as String?);
-        final enrollmentId = _cleanText(map['id'] as String?);
-        if (studentUserId != null && enrollmentId != null) {
-          enrollmentByStudentId[studentUserId] = enrollmentId;
-        }
-      }
-    }
+    // Only pre-existing active enrolments may receive attendance records.
 
     final attendanceRows = targetStudents
         .map((student) {
@@ -1087,7 +1059,7 @@ class GeoAttendanceService {
       debugPrint('GeoService: fetched ${(rooms as List).length} active rooms');
 
       final roomList = List<Map<String, dynamic>>.from(rooms);
-      await _attachGeoRoomDetails(roomList, includeCodes: true);
+      await _attachGeoRoomDetails(roomList);
 
       // Filter rooms whose offering matches the student's enrolled courses,
       // offering term, or derived term from the course code.
@@ -1127,7 +1099,7 @@ class GeoAttendanceService {
       if (data == null) return null;
 
       final room = Map<String, dynamic>.from(data);
-      await _attachGeoRoomDetails([room], includeCodes: true);
+      await _attachGeoRoomDetails([room]);
       _applyRoomCourseFallback(
         room,
         courseCode: fallbackCourseCode,
@@ -1153,124 +1125,16 @@ class GeoAttendanceService {
     required double longitude,
     String? verificationCode,
   }) async {
-    // 1. Check room is active
-    final rawRoomData = await SupabaseService.from(
-      'geo_attendance_rooms',
-    ).select('*').eq('id', geoRoomId).single();
-    final roomData = Map<String, dynamic>.from(rawRoomData);
-    await _attachGeoRoomDetails([roomData]);
-
-    if (roomData['is_active'] != true) {
-      throw Exception('This attendance room is no longer active');
-    }
-
-    final endTime = DateTime.parse(roomData['end_time'] as String);
-    if (endTime.isBefore(DateTime.now())) {
-      await SupabaseService.from(
-        'geo_attendance_rooms',
-      ).update({'is_active': false}).eq('id', geoRoomId);
-      await GeoAttendanceCodeService.deleteCode(geoRoomId);
-      throw Exception('This attendance room has expired');
-    }
-
-    // Extra Security: Verification Code check
-    final dbCode = await GeoAttendanceCodeService.getCode(geoRoomId);
-    if (dbCode != null && dbCode.isNotEmpty) {
-      if (verificationCode == null ||
-          verificationCode.trim() != dbCode.trim()) {
-        throw Exception('Incorrect verification code. Please ask the teacher.');
-      }
-    }
-
-    // 2. Calculate distance – prefer room-specific coordinates, fallback to building
-    final locationCheck = await _buildLocationCheck(
-      roomNumber: roomData['room_number'] as String?,
-      rangeMeters: (roomData['range_meters'] as num?)?.toDouble(),
-      latitude: latitude,
-      longitude: longitude,
-    );
-    final distance = locationCheck.distance;
-
-    if (!locationCheck.isWithinRange) {
-      throw GeoDistanceException(
-        locationCheck.message,
-        distance,
-        maxDistance: locationCheck.maxDistance,
-        targetLabel: locationCheck.targetLabel,
-      );
-    }
-
-    // 3. Check for duplicate submission
-    final existing = await SupabaseService.from('geo_attendance_logs')
-        .select('id')
-        .eq('geo_room_id', geoRoomId)
-        .eq('student_user_id', studentUserId)
-        .maybeSingle();
-
-    if (existing != null) {
-      throw Exception('You have already submitted attendance for this session');
-    }
-
-    // 4. Ensure enrollment exists
-    final enrollmentId = await _ensureEnrollmentId(
-      offeringId: roomData['offering_id'] as String,
-      studentUserId: studentUserId,
-    );
-
-    // 5. Require biometric verification before writing attendance.
     await BiometricAuthService.requireBiometricForAttendance();
-
-    // 6. Save geo-attendance log
-    await SupabaseService.from('geo_attendance_logs').insert({
+    final result = await AuthenticatedApi.post('/api/student/geo-attendance', {
       'geo_room_id': geoRoomId,
-      'student_user_id': studentUserId,
       'latitude': latitude,
       'longitude': longitude,
-      'distance_meters': distance.round(),
-      'status': 'PRESENT',
+      'verification_code': verificationCode,
     });
-
-    // 7. Save to main attendance_records
-    try {
-      await _syncAttendanceRecordStatus(
-        sessionId: roomData['session_id'] as String,
-        enrollmentId: enrollmentId,
-        status: 'PRESENT',
-        teacherUserId: roomData['teacher_user_id'] as String,
-        remarks: 'Geo-attendance: ${distance.round()}m',
-      );
-    } catch (e) {
-      debugPrint('Warning: Could not save attendance_record: $e');
-    }
-
-    // 8. Save to flat `attendance` table (same as manual/CSV attendance)
-    try {
-      final offering = roomData['course_offerings'] as Map<String, dynamic>?;
-      final courseCode =
-          (offering?['courses'] as Map<String, dynamic>?)?['code'] as String?;
-
-      final attendanceDate =
-          roomData['date'] as String? ??
-          DateTime.now().toIso8601String().split('T')[0];
-
-      if (courseCode != null) {
-        await _syncFlatAttendanceStatus(
-          courseCode: courseCode,
-          studentUserId: studentUserId,
-          attendanceDate: attendanceDate,
-          status: 'present',
-          sectionOrGroup: roomData['section'] as String?,
-        );
-      }
-    } catch (e) {
-      debugPrint('Warning: Could not save to flat attendance table: $e');
-    }
-
-    return {
-      'success': true,
-      'distance': distance.round(),
-      'message': 'Attendance recorded successfully',
-    };
+    if (result['success'] != true)
+      throw Exception(result['message'] ?? 'Attendance submission failed');
+    return result;
   }
 
   static Future<GeoAttendanceLocationCheck> checkAttendanceLocation({
@@ -1439,26 +1303,14 @@ class GeoAttendanceService {
     required String offeringId,
     required String studentUserId,
   }) async {
-    final enrollmentData = await SupabaseService.from('enrollments')
+    final row = await SupabaseService.from('enrollments')
         .select('id')
         .eq('offering_id', offeringId)
         .eq('student_user_id', studentUserId)
+        .eq('enrollment_status', 'ENROLLED')
         .maybeSingle();
-
-    if (enrollmentData != null) {
-      return enrollmentData['id'] as String;
-    }
-
-    final newEnrollment = await SupabaseService.from('enrollments')
-        .insert({
-          'offering_id': offeringId,
-          'student_user_id': studentUserId,
-          'enrollment_status': 'ENROLLED',
-        })
-        .select('id')
-        .single();
-
-    return newEnrollment['id'] as String;
+    if (row == null) throw StateError('Active enrolment required');
+    return row['id'] as String;
   }
 
   static Future<void> _syncAttendanceRecordStatus({

@@ -9,11 +9,10 @@ class GeoAttendanceCodeService {
   /// Generates a random 6-digit code and associates it with the given [roomId].
   static Future<String> generateCode(String roomId) async {
     try {
-      final code = (100000 + Random().nextInt(900000)).toString();
-      await SupabaseService.from('geo_attendance_codes').insert({
-        'room_id': roomId,
-        'code': code,
-      });
+      final code = (100000 + Random.secure().nextInt(900000)).toString();
+      await SupabaseService.from(
+        'geo_attendance_codes',
+      ).insert({'room_id': roomId, 'code': code});
       return code;
     } catch (e) {
       debugPrint('Error generating verification code: $e');
@@ -24,10 +23,9 @@ class GeoAttendanceCodeService {
   /// Retrieves the verification code for the given [roomId].
   static Future<String?> getCode(String roomId) async {
     try {
-      final data = await SupabaseService.from('geo_attendance_codes')
-          .select('code')
-          .eq('room_id', roomId)
-          .maybeSingle();
+      final data = await SupabaseService.from(
+        'geo_attendance_codes',
+      ).select('code').eq('room_id', roomId).maybeSingle();
       return data?['code'] as String?;
     } catch (e) {
       debugPrint('Error fetching verification code: $e');
@@ -38,9 +36,9 @@ class GeoAttendanceCodeService {
   /// Deletes the verification code for the given [roomId].
   static Future<void> deleteCode(String roomId) async {
     try {
-      await SupabaseService.from('geo_attendance_codes')
-          .delete()
-          .eq('room_id', roomId);
+      await SupabaseService.from(
+        'geo_attendance_codes',
+      ).delete().eq('room_id', roomId);
     } catch (e) {
       debugPrint('Error deleting verification code: $e');
     }
@@ -50,9 +48,9 @@ class GeoAttendanceCodeService {
   static Future<void> deleteCodes(List<String> roomIds) async {
     if (roomIds.isEmpty) return;
     try {
-      await SupabaseService.from('geo_attendance_codes')
-          .delete()
-          .inFilter('room_id', roomIds);
+      await SupabaseService.from(
+        'geo_attendance_codes',
+      ).delete().inFilter('room_id', roomIds);
     } catch (e) {
       debugPrint('Error bulk deleting verification codes: $e');
     }

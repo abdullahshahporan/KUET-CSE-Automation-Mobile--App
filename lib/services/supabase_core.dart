@@ -1,3 +1,5 @@
+import 'authenticated_data_client.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -22,9 +24,14 @@ class SupabaseCore {
       url: supabaseUrl ?? SupabaseConfig.supabaseUrl,
       anonKey: supabaseAnonKey ?? SupabaseConfig.supabaseAnonKey,
       debug: kDebugMode,
+      httpClient: AuthenticatedDataClient(),
     );
     _client = Supabase.instance.client;
     _prefs = await SharedPreferences.getInstance();
+    await _prefs!.remove('user_token');
+    await const FlutterSecureStorage(
+      aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    ).delete(key: 'biometric_login_password');
   }
 
   /// Ensure SharedPreferences is ready (safety net).

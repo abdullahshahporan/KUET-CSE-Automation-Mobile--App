@@ -1,10 +1,9 @@
+import '../../services/session_token_store.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show TimeOfDay;
 import '../../config/supabase_config.dart';
-import '../../services/notification_service.dart';
-import '../../services/supabase_core.dart';
 import '../../services/supabase_service.dart';
 import 'room_booking_model.dart';
 import 'room_model.dart';
@@ -87,21 +86,27 @@ class RoomBookingService {
     }
   }
 
-  static Future<Map<String, dynamic>> _postToBackend(String path, Map<String, dynamic> body) async {
+  static Future<Map<String, dynamic>> _postToBackend(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
     final client = HttpClient();
     try {
-      final prefs = await SupabaseCore.ensurePrefs();
-      final token = prefs.getString('user_token') ?? '';
+      final token = await SessionTokenStore.read() ?? '';
 
       final uri = Uri.parse('${SupabaseConfig.backendUrl}$path');
-      final request = await client.postUrl(uri).timeout(const Duration(seconds: 15));
+      final request = await client
+          .postUrl(uri)
+          .timeout(const Duration(seconds: 15));
       request.headers.contentType = ContentType.json;
       request.headers.set('Authorization', 'Bearer $token');
       request.headers.set('x-client-type', 'mobile');
 
       request.write(jsonEncode(body));
 
-      final response = await request.close().timeout(const Duration(seconds: 15));
+      final response = await request.close().timeout(
+        const Duration(seconds: 15),
+      );
       final responseBody = await response.transform(utf8.decoder).join();
 
       if (response.statusCode != 200 && response.statusCode != 201) {
@@ -109,7 +114,8 @@ class RoomBookingService {
           final errJson = jsonDecode(responseBody);
           return {
             'success': false,
-            'message': errJson['error'] ?? 'Request failed (${response.statusCode})',
+            'message':
+                errJson['error'] ?? 'Request failed (${response.statusCode})',
           };
         } catch (_) {
           return {
@@ -120,10 +126,7 @@ class RoomBookingService {
       }
 
       final resJson = jsonDecode(responseBody);
-      return {
-        'success': true,
-        'data': resJson['data'],
-      };
+      return {'success': true, 'data': resJson['data']};
     } catch (e) {
       return {'success': false, 'message': 'Connection error: ${e.toString()}'};
     } finally {
@@ -238,109 +241,7 @@ class RoomBookingService {
   }
 
   // ─── Check for conflicts across all occupancy sources ───────────────────
-  static Future<String?> _findConflictMessage({
-    required String roomNumber,
-    required int dayOfWeek,
-    required String startTime,
-    required String endTime,
-    required String bookingDate,
-  }) async {
-    final reqStart = _fmt(startTime);
-    final reqEnd = _fmt(endTime);
-    final roomVariants = RoomService.roomNumberVariants(roomNumber);
 
-    try {
-      final routineData = await SupabaseService.client
-          .from('routine_slots')
-          .select('''
-            id, room_number, day_of_week, start_time, end_time,
-            valid_from, valid_until,
-            course_offerings!inner (
-              is_active,
-              courses ( code, title ),
-              teachers ( full_name )
-            )
-          ''')
-          .inFilter('room_number', roomVariants)
-          .eq('day_of_week', dayOfWeek)
-          .eq('course_offerings.is_active', true);
-
-      final requestDateValue = DateTime.tryParse(bookingDate);
-      for (final row in (routineData as List)) {
-        final vFrom = row['valid_from'] as String?;
-        final vUntil = row['valid_until'] as String?;
-        if (requestDateValue != null) {
-          final from = vFrom != null ? DateTime.tryParse(vFrom) : null;
-          final until = vUntil != null ? DateTime.tryParse(vUntil) : null;
-          if (from != null && requestDateValue.isBefore(from)) continue;
-          if (until != null && requestDateValue.isAfter(until)) continue;
-        }
-
-        final sStart = _fmt(row['start_time'] as String? ?? '');
-        final sEnd = _fmt(row['end_time'] as String? ?? '');
-        if (sStart.compareTo(reqEnd) < 0 && sEnd.compareTo(reqStart) > 0) {
-          final offering =
-              row['course_offerings'] as Map<String, dynamic>? ?? {};
-          final course = offering['courses'] as Map<String, dynamic>? ?? {};
-          final code = course['code'] ?? 'A class';
-          return 'Slot conflict! $code is already scheduled in this room during that time.';
-        }
-      }
-
-      final teacherBookingData = await SupabaseService.client
-          .from('room_booking_requests')
-          .select('''
-            id, start_time, end_time, requested_at,
-            course_offerings ( courses ( code, title ) ),
-            teachers!rbr_teacher_fkey ( full_name )
-          ''')
-          .inFilter('room_number', roomVariants)
-          .eq('booking_date', bookingDate)
-          .eq('status', 'approved')
-          .order('requested_at', ascending: true);
-
-      for (final row in (teacherBookingData as List)) {
-        final bStart = _fmt(row['start_time'] as String? ?? '');
-        final bEnd = _fmt(row['end_time'] as String? ?? '');
-        if (bStart.compareTo(reqEnd) < 0 && bEnd.compareTo(reqStart) > 0) {
-          final offering =
-              row['course_offerings'] as Map<String, dynamic>? ?? {};
-          final course = offering['courses'] as Map<String, dynamic>? ?? {};
-          final teacher = row['teachers'] as Map<String, dynamic>? ?? {};
-          final code = course['code'] ?? 'A course';
-          final name = teacher['full_name'] ?? 'another teacher';
-          return 'Slot already booked! $code was booked by $name first.';
-        }
-      }
-
-      final crBookingData = await SupabaseService.client
-          .from('cr_room_requests')
-          .select('''
-            id, course_code, start_time, end_time, created_at,
-            teachers!cr_room_requests_teacher_user_id_fkey ( full_name )
-          ''')
-          .inFilter('room_number', roomVariants)
-          .eq('request_date', bookingDate)
-          .eq('status', 'approved')
-          .order('created_at', ascending: true);
-
-      for (final row in (crBookingData as List)) {
-        final cStart = _fmt(row['start_time'] as String? ?? '');
-        final cEnd = _fmt(row['end_time'] as String? ?? '');
-        if (cStart.compareTo(reqEnd) < 0 && cEnd.compareTo(reqStart) > 0) {
-          final code = row['course_code'] ?? 'A course';
-          return 'Slot already taken! $code has an approved CR booking in this room.';
-        }
-      }
-
-      return null;
-    } catch (e) {
-      debugPrint('Error checking conflicts: $e');
-      return 'Failed to verify slot availability. Please try again.';
-    }
-  }
-
-  // ─── Fetch current teacher's active course offerings ──
   static Future<List<Map<String, dynamic>>> fetchTeacherOfferings() async {
     final userId = SupabaseService.currentUserId;
     if (userId == null) return [];
@@ -431,60 +332,6 @@ class RoomBookingService {
   }
 
   // ─── Sync a booking to routine_slots for schedule & TV display ──
-  static Future<void> _syncToRoutineSlot({
-    required String offeringId,
-    required String roomNumber,
-    required int dayOfWeek,
-    required String startTime,
-    required String endTime,
-    required String bookingDate,
-    String? section,
-  }) async {
-    try {
-      // Check if a routine_slot already exists for this exact slot
-      final existing = await SupabaseService.client
-          .from('routine_slots')
-          .select('id, section')
-          .eq('offering_id', offeringId)
-          .eq('day_of_week', dayOfWeek)
-          .eq('start_time', startTime)
-          .eq('end_time', endTime)
-          .eq('valid_from', bookingDate)
-          .eq('valid_until', bookingDate)
-          .limit(20);
-
-      final matching = (existing as List)
-          .map((row) => row as Map<String, dynamic>)
-          .where(
-            (row) =>
-                ((row['section'] as String?) ?? '').trim().toUpperCase() ==
-                (section ?? '').trim().toUpperCase(),
-          )
-          .toList();
-
-      if (matching.isNotEmpty) {
-        await SupabaseService.client
-            .from('routine_slots')
-            .update({'room_number': roomNumber, 'section': section})
-            .eq('id', matching.first['id']);
-        return;
-      }
-
-      await SupabaseService.client.from('routine_slots').insert({
-        'offering_id': offeringId,
-        'room_number': roomNumber,
-        'day_of_week': dayOfWeek,
-        'start_time': startTime,
-        'end_time': endTime,
-        'section': section,
-        'valid_from': bookingDate,
-        'valid_until': bookingDate,
-      });
-    } catch (e) {
-      debugPrint('Error syncing to routine_slots: $e');
-      // Non-fatal: booking itself succeeded, schedule sync is best-effort
-    }
-  }
 
   static String _fmt(String t) => t.length >= 5 ? t.substring(0, 5) : t;
 
@@ -497,62 +344,8 @@ class RoomBookingService {
   // ─── Notify students when teacher books a room ───────────────────────────
   /// Fire-and-forget: resolves course/term/section from offeringId and sends
   /// both a Supabase notification row and server-side FCM push to enrolled students.
-  static void _notifyStudentsRoomBooked({
-    required String offeringId,
-    required String roomNumber,
-    required String startTime,
-    required String endTime,
-    required String bookingDate,
-    String? section,
-  }) {
-    Future(() async {
-      try {
-        final offeringData = await SupabaseService.client
-            .from('course_offerings')
-            .select('term, section, courses(code)')
-            .eq('id', offeringId)
-            .maybeSingle();
-
-        if (offeringData == null) return;
-
-        final course = offeringData['courses'] as Map<String, dynamic>?;
-        final courseCode =
-            (course?['code'] as String?)?.trim();
-        if (courseCode == null || courseCode.isEmpty) return;
-
-        final term = (offeringData['term'] as String?)?.trim();
-        final effectiveSection =
-            section?.trim().isEmpty ?? true ? null : section?.trim();
-
-        final start = _fmt(startTime);
-        final end = _fmt(endTime);
-
-        final targetType = effectiveSection != null ? 'SECTION' : (term != null ? 'YEAR_TERM' : 'COURSE');
-        final targetValue = effectiveSection ?? term ?? courseCode;
-
-        await NotificationService.createNotification(
-          type: 'room_allocated',
-          title: 'Room $roomNumber Booked — $courseCode',
-          body: 'Class on $bookingDate, $start–$end has been assigned Room $roomNumber.',
-          targetType: targetType,
-          targetValue: targetValue,
-          targetYearTerm: effectiveSection != null ? term : null,
-          metadata: {
-            'course_code': courseCode,
-            'room_number': roomNumber,
-            'booking_date': bookingDate,
-            'start_time': start,
-            'end_time': end,
-          },
-        );
-      } catch (e) {
-        debugPrint('[RoomBookingService] _notifyStudentsRoomBooked error: $e');
-      }
-    });
-  }
 }
 
-/// Result of a booking attempt.
 class BookingResult {
   final bool success;
   final String message;

@@ -176,16 +176,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 },
               ),
               const SizedBox(height: 20),
-              _buildLabel('Roll Number or Teacher UID', isDarkMode),
+              _buildLabel('Recovery token', isDarkMode),
               const SizedBox(height: 8),
               _buildTextField(
                 controller: _verificationController,
-                hint: 'Example: 2107001 or T-ABC123456',
+                hint: 'Enter the token provided by your administrator',
                 icon: Icons.badge_outlined,
                 isDarkMode: isDarkMode,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please enter your roll number or teacher UID';
+                    return 'Please enter your recovery token';
                   }
                   return null;
                 },
@@ -204,8 +204,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   if (value == null || value.isEmpty) {
                     return 'Please enter a new password';
                   }
-                  if (value.length < 6) {
-                    return 'Password must be at least 6 characters';
+                  if (value.length < 12) {
+                    return 'Password must be at least 12 characters';
                   }
                   return null;
                 },
@@ -246,7 +246,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Students should use their roll number. Teachers should use their teacher UID. Passwords must be at least 6 characters.',
+                        'Students should use their roll number. Teachers should use their teacher UID. Passwords must be at least 12 characters.',
                         style: TextStyle(
                           fontSize: 12,
                           color: AppColors.textSecondary(isDarkMode),
