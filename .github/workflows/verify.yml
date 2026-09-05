@@ -18,3 +18,10 @@ jobs:
       - run: flutter analyze --no-fatal-infos
       - run: flutter test
       - run: flutter build apk --debug
+      - name: Build optimized testing APKs
+        run: flutter build apk --release --split-per-abi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-testing-apks
+          path: build/app/outputs/flutter-apk/*.apk
+          if-no-files-found: error

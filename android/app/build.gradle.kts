@@ -14,13 +14,20 @@ val releasePropertiesFile = rootProject.file("key.properties")
 if (releasePropertiesFile.exists()) releasePropertiesFile.inputStream().use { releaseProperties.load(it) }
 val productionAppId = providers.gradleProperty("productionApplicationId").orNull
 val releaseRequested = gradle.startParameter.taskNames.any { it.contains("release", ignoreCase = true) }
-if (releaseRequested) {
+val releaseBundleRequested = gradle.startParameter.taskNames.any {
+    it.contains("bundle", ignoreCase = true) && it.contains("release", ignoreCase = true)
+}
+val productionRequested = productionAppId != null || releasePropertiesFile.exists() || releaseBundleRequested
+if (releaseRequested && productionRequested) {
     require(!productionAppId.isNullOrBlank() && !productionAppId.startsWith("com.example.")) {
         "Set -PproductionApplicationId to your registered Android application ID and provide matching Firebase configuration."
     }
     require(listOf("storeFile", "storePassword", "keyAlias", "keyPassword").all { !releaseProperties.getProperty(it).isNullOrBlank() }) {
         "Release signing requires private android/key.properties; debug signing is not allowed for releases."
     }
+}
+if (releaseRequested && !productionRequested) {
+    logger.warn("Building a testing APK with debug signing and the existing application ID. This is not a production/store release.")
 }
 
 android {
@@ -61,8 +68,9 @@ android {
     }
     buildTypes {
         release {
-            // Production identity and private signing are checked above.
-            signingConfig = signingConfigs.getByName("production")
+            // Optimized APKs remain available for testing before production registration.
+            // Bundles and explicitly configured production builds require private signing.
+            signingConfig = signingConfigs.getByName(if (productionRequested) "production" else "debug")
             // Enable code shrinking, obfuscation, and resource shrinking for smaller APKs
             isMinifyEnabled = true
             isShrinkResources = true

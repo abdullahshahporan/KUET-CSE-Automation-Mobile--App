@@ -20,8 +20,10 @@ Attendance requires administrator-managed active enrolments and configured room 
 
 ## Android release configuration
 
+For optimized APKs to install and test directly, run `flutter build apk --release --split-per-abi`. With no production application ID or `android/key.properties`, these APKs use the existing application ID and debug signing. They are testing artifacts, not store releases. CI builds and uploads them as `android-testing-apks`. Java is selected through Flutter/JAVA_HOME rather than a committed Windows path.
+
 Debug builds retain `com.example.kuet_cse_automation`. No production identity has been chosen. Before a release, register a stable application ID and a matching Firebase Android app, then supply its `android/app/google-services.json` and private signing configuration. Create ignored `android/key.properties` containing `storeFile`, `storePassword`, `keyAlias` and `keyPassword` for your own release keystore.
 
-Pass the Gradle project property `productionApplicationId` with the registered ID. For example, in PowerShell set `$env:ORG_GRADLE_PROJECT_productionApplicationId` to your real ID before `flutter build appbundle --release`. The build rejects missing/example IDs and missing private signing properties. Do not substitute a guessed ID or debug signing key. Verify signing, login/logout/recovery, attendance permissions, denied location, background FCM and notification audience on real devices before release.
+Pass the Gradle project property `productionApplicationId` with the registered ID. For example, in PowerShell set `$env:ORG_GRADLE_PROJECT_productionApplicationId` to your real ID before `flutter build appbundle --release`. App bundles, or builds with either production configuration supplied, reject missing/example IDs and incomplete private signing properties. Do not substitute a guessed ID or debug signing key for a store release. Verify signing, login/logout/recovery, attendance permissions, denied location, background FCM and notification audience on real devices before release.
 
 The companion web repository's `docs/SETUP.md` describes database installation and staged upgrades. Deploy the matching server, policies and mobile client together. Existing deployment data, production signing, store publication, archive DOI and manuscript editing are outside this local verification run.
