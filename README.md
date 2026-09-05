@@ -1,3 +1,5 @@
+> **Current development and security setup:** follow [docs/SETUP.md](docs/SETUP.md). Use the matching authenticated backend and database migrations; legacy anonymous authentication and writes are no longer supported.
+
 # KUET CSE Automation (Mobile App)
 
 <div align="center">

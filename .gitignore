@@ -51,3 +51,9 @@ app.*.map.json
 # Supabase configuration (contains sensitive API keys)
 lib/config/supabase_config.dart
 lib/config/push_config.dart
+# Versioned setup and review documentation
+!docs/
+!docs/SETUP.md
+!docs/REVIEW_FIXES.md
+
+lib/config/ai_config.dart
