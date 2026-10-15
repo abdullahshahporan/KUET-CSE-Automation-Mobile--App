@@ -57,3 +57,6 @@ lib/config/push_config.dart
 !docs/REVIEW_FIXES.md
 
 lib/config/ai_config.dart
+
+# Generated Kotlin compiler cache.
+/android/.kotlin/

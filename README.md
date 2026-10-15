@@ -4,8 +4,8 @@
 
 <div align="center">
 
-![Flutter](https://img.shields.io/badge/Flutter-3.10.3+-02569B?style=for-the-badge&logo=flutter&logoColor=white)
-![Dart](https://img.shields.io/badge/Dart-3.10.3+-0175C2?style=for-the-badge&logo=dart&logoColor=white)
+![Flutter](https://img.shields.io/badge/Flutter-3.44.1-02569B?style=for-the-badge&logo=flutter&logoColor=white)
+![Dart](https://img.shields.io/badge/Dart-3.12.1-0175C2?style=for-the-badge&logo=dart&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
 
 A reusable Flutter client for a **Department Automation System**, providing connected academic workflows for **students**, **teachers**, and **class representatives**.
@@ -28,7 +28,7 @@ KUET CSE Automation is a role-aware mobile application designed to digitize and 
 - 🔐 **Secure Authentication**: Server-validated sign-in, persisted sessions, and optional device biometrics
 - 🌓 **Theme Support**: Beautiful Light and Dark themes with instant switching
 - 📍 **Geo-Attendance**: Time-, location-, enrolment-, code-, and biometric-aware attendance
-- 🔔 **Connected Notifications**: In-app inbox, Supabase Realtime, FCM push, reminders, and deep links
+- 🔔 **Connected Notifications**: Authenticated in-app inbox, polling, configured FCM push, reminders, and deep links
 - 📊 **Real-time Data**: Live updates from the shared Supabase backend
 - 📱 **Native Feel**: Material Design with custom animations and components
 - 🔄 **Session Persistence**: Automatic login with session management
@@ -59,7 +59,7 @@ KUET CSE Automation is a role-aware mobile application designed to digitize and 
 
 #### Notifications and Reminders
 - **Persistent Inbox**: Per-user notification history and read state
-- **Realtime Updates**: Supabase Realtime subscription with optional background polling
+- **Inbox Updates**: Authenticated polling and configured FCM; no anonymous private-inbox Realtime subscription
 - **Push Delivery**: Firebase Cloud Messaging for foreground, background, and terminated-app delivery
 - **Local Reminders**: Scheduled class and examination reminders
 - **Deep Links**: Open the relevant attendance, schedule, examination, notification, or request screen
@@ -231,8 +231,9 @@ dependencies:
 ### Prerequisites
 
 Before you begin, ensure you have:
-- **Flutter SDK** 3.10.3 or higher ([Install Flutter](https://flutter.dev/docs/get-started/install))
-- **Dart SDK** 3.10.3 or higher (comes with Flutter)
+- **Flutter SDK** 3.44.1, matching CI ([Install Flutter](https://docs.flutter.dev/get-started/install))
+- **Dart SDK** 3.12.1 (bundled with that Flutter release)
+- **Java** 17 for Android builds
 - **Android Studio** or **VS Code** with Flutter extensions
 - **Android SDK** (for Android development)
 - **Xcode** (for iOS development, macOS only)
@@ -248,22 +249,26 @@ cd KUET-CSE-Automation-Mobile--App
 ### Step 2: Install Dependencies
 
 ```bash
-flutter pub get
+dart tool/bootstrap.dart
+flutter pub get --enforce-lockfile
 ```
 
-### Step 3: Configure Supabase
+### Step 3: Configure the Backend and Supabase
 
 1. Create a Supabase project at [supabase.com](https://supabase.com)
-2. Create a file `lib/config/supabase_config.dart`:
+2. Edit the configuration copied by bootstrap in `lib/config/supabase_config.dart`:
 
 ```dart
 class SupabaseConfig {
+  static const String backendUrl = String.fromEnvironment(
+    'BACKEND_URL', defaultValue: 'http://10.0.2.2:3000');
   static const String supabaseUrl = 'YOUR_SUPABASE_URL';
   static const String supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
 }
 ```
 
-3. Set up your Supabase database schema (see [Database Schema](#database-schema) section)
+3. Follow the matching web repository's [database setup instructions](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/blob/master/docs/SETUP.md#database-installation). Obtain the separately managed SQL upgrade package from the maintainers and verify its manifest before installation. The web backend requires the matching atomic draft editing/publication operations. Historical SQL files in this mobile repository are not an alternative setup path.
+4. Configure the matching web backend for signed sessions and database JWTs. Use `--dart-define=BACKEND_URL=https://your-backend.example` with your actual HTTPS deployment for a device; `10.0.2.2` is the Android emulator's development host. Keep FCM disabled until Firebase registration is configured. See [SETUP.md](docs/SETUP.md).
 
 ### Step 4: Verify Installation
 
@@ -284,9 +289,15 @@ flutter run -d android
 flutter run -d ios
 ```
 
-### Building for Production
+### Testing Builds and Production Configuration
 
-#### Android (APK)
+Run `flutter analyze --no-fatal-infos` and `flutter test` first. Optimized APKs
+use debug signing when production configuration is absent; they are testing
+artifacts. Store releases require a registered application ID, matching Firebase
+configuration, and private signing keys as described in
+[Android release configuration](docs/SETUP.md#android-release-configuration).
+
+#### Android (testing APK unless production signing is configured)
 ```bash
 flutter build apk --release
 ```
@@ -475,12 +486,12 @@ test/
 - **Identity Binding**: Sensitive backend routes derive identity from the authenticated session
 - **Query Filtering**: Queries are filtered by role, enrolment, course assignment, term, and section where applicable
 - **SQL Injection Prevention**: Supabase parameterized queries
-- **HTTPS**: All API calls over secure HTTPS
+- **HTTPS**: Use HTTPS for deployments; the supplied Android-emulator backend uses HTTP for local development
 
 ### Best Practices
 - Supabase credentials in gitignored config file
 - No hardcoded secrets in source code
-- Row-level security policies in Supabase
+- The authenticated gateway relies on the matching web database grants and RLS policies; the matching October web release includes the reconstructed SQL and executed isolated database/transaction tests; hosted configuration still requires staging verification
 - Input validation on all forms
 - Service-role, FCM service-account, and AI-provider keys remain server-side
 
